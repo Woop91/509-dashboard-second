@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-16T01:03:38.951Z
+ * - Build Date: 2025-12-16T01:09:24.055Z
  * - Build Type: PRODUCTION
  * - Modules: 77 files
  * - Tests Included: No
@@ -1558,26 +1558,41 @@ function startNewGrievance() {
 
 /**
  * Recalculate all grievance deadlines and sync to Member Directory
+ * Uses hidden sheet formulas for self-healing calculations
  */
 function recalcAllGrievancesBatched() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast('Recalculating grievances and syncing...', '🔄 Refresh', 3);
+  ss.toast('Recalculating grievances...', '🔄 Refresh', 3);
 
-  // Sync grievance data to member directory
+  // Step 1: Sync calculated formulas from hidden sheet to Grievance Log
+  // This updates: Filing Deadline, Step Due dates, Days Open, Next Action Due, Days to Deadline
+  // Also updates: First Name, Last Name, Email, Unit, Location, Steward from Member Directory
+  syncGrievanceFormulasToLog();
+
+  // Step 2: Repair checkboxes (in case they were overwritten)
+  repairGrievanceCheckboxes();
+
+  // Step 3: Sync grievance data to member directory (updates AB-AD columns)
   syncGrievanceToMemberDirectory();
 
   ss.toast('Grievance data refreshed!', '✅ Success', 3);
 }
 
 /**
- * Refresh Member Directory calculated columns
+ * Refresh Member Directory calculated columns (AB-AD: Has Open Grievance, Status, Next Deadline)
  */
 function refreshMemberDirectoryFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast('Refreshing Member Directory...', '🔄 Refresh', 3);
 
-  // Sync grievance data to member directory
+  // Step 1: Refresh grievance formulas first (to get latest Next Action Due dates)
+  syncGrievanceFormulasToLog();
+
+  // Step 2: Sync grievance data to member directory (updates AB-AD columns)
   syncGrievanceToMemberDirectory();
+
+  // Step 3: Repair member checkboxes
+  repairMemberCheckboxes();
 
   ss.toast('Member Directory refreshed!', '✅ Success', 3);
 }
@@ -2981,6 +2996,10 @@ function SEED_GRIEVANCES(count) {
   var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
   var articles = DEFAULT_CONFIG.ARTICLES;
 
+  // Get config values for stewards
+  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
+  if (stewards.length === 0) stewards = ['Mary Steward'];
+
   var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
   var existingCount = startRow - 2;
 
@@ -2996,21 +3015,34 @@ function SEED_GRIEVANCES(count) {
     // Skip if no member ID
     if (!memberId) continue;
 
+    // Get member data directly from member row
+    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1] || '';
+    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1] || '';
+    var memberUnit = memberRow[MEMBER_COLS.UNIT - 1] || '';
+    var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
+    var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
+
     var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
-    // Generate grievance row - First Name, Last Name, Email, Unit, Location, Steward
-    // will be auto-populated by formulas based on Member ID
-    var row = generateSingleGrievanceRowForSeed(
+    // Generate grievance row with all data populated directly
+    var row = generateSingleGrievanceRow(
       grievanceId,
       memberId,
+      firstName,
+      lastName,
       status,
       step,
       incidentDate,
       randomChoice(articles),
-      randomChoice(categories)
+      randomChoice(categories),
+      memberEmail,
+      memberUnit,
+      memberLocation,
+      memberSteward
     );
 
     rows.push(row);
@@ -3030,7 +3062,7 @@ function SEED_GRIEVANCES(count) {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync data from hidden formulas sheet (self-healing)
+  // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
   syncGrievanceFormulasToLog();
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);

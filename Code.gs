@@ -1087,26 +1087,41 @@ function startNewGrievance() {
 
 /**
  * Recalculate all grievance deadlines and sync to Member Directory
+ * Uses hidden sheet formulas for self-healing calculations
  */
 function recalcAllGrievancesBatched() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast('Recalculating grievances and syncing...', '🔄 Refresh', 3);
+  ss.toast('Recalculating grievances...', '🔄 Refresh', 3);
 
-  // Sync grievance data to member directory
+  // Step 1: Sync calculated formulas from hidden sheet to Grievance Log
+  // This updates: Filing Deadline, Step Due dates, Days Open, Next Action Due, Days to Deadline
+  // Also updates: First Name, Last Name, Email, Unit, Location, Steward from Member Directory
+  syncGrievanceFormulasToLog();
+
+  // Step 2: Repair checkboxes (in case they were overwritten)
+  repairGrievanceCheckboxes();
+
+  // Step 3: Sync grievance data to member directory (updates AB-AD columns)
   syncGrievanceToMemberDirectory();
 
   ss.toast('Grievance data refreshed!', '✅ Success', 3);
 }
 
 /**
- * Refresh Member Directory calculated columns
+ * Refresh Member Directory calculated columns (AB-AD: Has Open Grievance, Status, Next Deadline)
  */
 function refreshMemberDirectoryFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast('Refreshing Member Directory...', '🔄 Refresh', 3);
 
-  // Sync grievance data to member directory
+  // Step 1: Refresh grievance formulas first (to get latest Next Action Due dates)
+  syncGrievanceFormulasToLog();
+
+  // Step 2: Sync grievance data to member directory (updates AB-AD columns)
   syncGrievanceToMemberDirectory();
+
+  // Step 3: Repair member checkboxes
+  repairMemberCheckboxes();
 
   ss.toast('Member Directory refreshed!', '✅ Success', 3);
 }
