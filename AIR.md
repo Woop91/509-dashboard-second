@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.0.0 (Fresh Start)
-**Last Updated:** 2025-12-14
+**Version:** 1.2.0 (Complete Self-Healing Architecture)
+**Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -95,24 +95,37 @@
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~600 lines)
-- `setupAllHiddenSheets()` - Create all 6 hidden sheets
-- `setupGrievanceCalcSheet()` - Hidden sheet: Grievance → Member Directory
-- `setupMemberLookupSheet()` - Hidden sheet: Member → Grievance Log
-- `setupStewardWorkloadCalcSheet()` - Hidden sheet: Steward workload metrics
-- `setupInteractiveDashboardCalcSheet()` - Hidden sheet: Dashboard metrics
-- `setupEngagementCalcSheet()` - Hidden sheet: Engagement (placeholder)
-- `setupStewardContactCalcSheet()` - Hidden sheet: Steward contact (placeholder)
-- `syncAllData()` - Sync all cross-sheet data
-- `syncGrievanceToMemberDirectory()` - Sync grievance data to members
-- `syncMemberToGrievanceLog()` - Sync member data to grievances
-- `syncStewardWorkload()` - Sync steward workload data
-- `onEditAutoSync()` - Auto-sync trigger handler
-- `installAutoSyncTrigger()` - Install the onEdit trigger
-- `removeAutoSyncTrigger()` - Remove the onEdit trigger
-- `repairAllHiddenSheets()` - Self-healing repair function
-- `verifyHiddenSheets()` - Verification and diagnostics
-- `refreshAllHiddenFormulas()` - Force recalculation and sync
+**HiddenSheets.gs** (~1600 lines)
+- `setupAllHiddenSheets()` - Create all 13 hidden calculation sheets
+- Hidden Sheet Setup Functions (13 total):
+  - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
+  - `setupGrievanceFormulasSheet()` - Member lookup formulas (First Name, Last Name, Email, etc.)
+  - `setupMemberLookupSheet()` - Member → Grievance Log sync
+  - `setupStewardWorkloadCalcSheet()` - Steward workload metrics
+  - `setupInteractiveDashboardCalcSheet()` - Dashboard metrics
+  - `setupEngagementCalcSheet()` - Member engagement metrics
+  - `setupStewardContactCalcSheet()` - Steward contact tracking
+  - `setupDashboardSummaryCalcSheet()` - 15 dashboard summary metrics
+  - `setupTrendsCalcSheet()` - 12-month time-series analytics
+  - `setupLocationAnalyticsCalcSheet()` - Location-based breakdown
+  - `setupTypeAnalysisCalcSheet()` - Issue category analysis
+  - `setupStewardPerformanceCalcSheet()` - Steward performance scores
+  - `setupCostImpactCalcSheet()` - Financial impact estimates
+- Sync Functions:
+  - `syncAllData()` - Sync all cross-sheet data
+  - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
+  - `syncMemberToGrievanceLog()` - Sync member data to grievances
+  - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
+  - `syncStewardWorkload()` - Sync steward workload data
+- Trigger & Repair Functions:
+  - `onEditAutoSync()` - Auto-sync trigger handler
+  - `installAutoSyncTrigger()` - Install the onEdit trigger
+  - `removeAutoSyncTrigger()` - Remove the onEdit trigger
+  - `repairAllHiddenSheets()` - Self-healing repair function
+  - `repairGrievanceCheckboxes()` - Re-apply checkboxes to Grievance Log AC column
+  - `repairMemberCheckboxes()` - Re-apply checkboxes to Member Directory AE column
+  - `verifyHiddenSheets()` - Verification and diagnostics
+  - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
 **ADHDFeatures.gs** (~400 lines) - ADHD Accessibility & Theming
 - `showADHDControlPanel()` - Main ADHD settings panel
@@ -369,6 +382,60 @@ var GRIEVANCE_COLS = {
 
 ---
 
+## Config Sheet & Dropdown Validations
+
+### Config Columns (15 columns + HOME_TOWNS at AF)
+
+| Column | Name | Used By |
+|--------|------|---------|
+| A | Job Titles | Member Directory (D) |
+| B | Office Locations | Member Directory (E), Grievance Log (Z) |
+| C | Units | Member Directory (F), Grievance Log (Y) |
+| D | Office Days | Member Directory (G) |
+| E | Yes/No | Member Directory (N, U, V, W) |
+| F | Supervisors | Member Directory (L) |
+| G | Managers | Member Directory (M) |
+| H | Stewards | Member Directory (P, Z), Grievance Log (AA) |
+| I | Grievance Status | Grievance Log (E) |
+| J | Grievance Step | Grievance Log (F) |
+| K | Issue Category | Grievance Log (W) |
+| L | Articles Violated | Grievance Log (V) |
+| M | Communication Methods | Member Directory (J) |
+| N | (blank) | - |
+| O | Grievance Coordinators | Admin use |
+| AF | Home Towns | Member Directory (X) |
+
+### Member Directory Dropdowns (14 columns)
+
+| Column | Field | Config Source |
+|--------|-------|---------------|
+| D | Job Title | JOB_TITLES (A) |
+| E | Work Location | OFFICE_LOCATIONS (B) |
+| F | Unit | UNITS (C) |
+| G | Office Days | OFFICE_DAYS (D) |
+| J | Preferred Communication | COMM_METHODS (M) |
+| L | Supervisor | SUPERVISORS (F) |
+| M | Manager | MANAGERS (G) |
+| N | Is Steward | YES_NO (E) |
+| P | Assigned Steward | STEWARDS (H) |
+| U | Interest: Local | YES_NO (E) |
+| V | Interest: Chapter | YES_NO (E) |
+| W | Interest: Allied | YES_NO (E) |
+| X | Home Town | HOME_TOWNS (AF) |
+| Z | Contact Steward | STEWARDS (H) |
+
+### Grievance Log Dropdowns (5 columns)
+
+| Column | Field | Config Source |
+|--------|-------|---------------|
+| B | Member ID | Member Directory (A) - dynamic |
+| E | Status | GRIEVANCE_STATUS (I) |
+| F | Current Step | GRIEVANCE_STEP (J) |
+| V | Articles Violated | ARTICLES (L) |
+| W | Issue Category | ISSUE_CATEGORY (K) |
+
+---
+
 ## Menu System
 
 ```
@@ -494,18 +561,25 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Hidden Sheet Architecture (Self-Healing)
 
-The system uses 6 hidden calculation sheets with auto-sync triggers for cross-sheet data population.
+The system uses 13 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
 
-### Hidden Sheets
+### Hidden Sheets (13 total)
 
-| Sheet | Source | Destination | Columns Updated |
-|-------|--------|-------------|-----------------|
+| Sheet | Source | Destination | Purpose |
+|-------|--------|-------------|---------|
 | `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open, Status, Deadline) |
-| `_Member_Lookup` | Member Directory | Grievance Log | C-D (Name), X-AA (Email, Unit, Location, Steward) |
+| `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), X-AA (Email, Unit, Location, Steward) |
+| `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Workload_Calc` | Grievance Log | Steward Workload | All workload metrics |
 | `_Interactive_Dashboard_Calc` | Both | Interactive Dashboard | 8 key metrics |
-| `_Engagement_Calc` | (Future) | Member Directory | Q-T (Engagement metrics) |
-| `_Steward_Contact_Calc` | (Future) | Member Directory | Y-AA (Contact tracking) |
+| `_Engagement_Calc` | Member Directory | Engagement Dashboard | Q-T (Engagement metrics) |
+| `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
+| `_Dashboard_Summary_Calc` | Grievance Log | Main Dashboard | 15 summary metrics |
+| `_Trends_Calc` | Grievance Log | Trends Dashboard | 12-month time-series |
+| `_Location_Analytics_Calc` | Grievance Log | Location Analytics | Location breakdown |
+| `_Type_Analysis_Calc` | Grievance Log | Type Analysis | Issue category stats |
+| `_Steward_Performance_Calc` | Grievance Log | Steward Reports | Performance scores |
+| `_Cost_Impact_Calc` | Grievance Log | Cost Impact | Financial estimates |
 
 ### Auto-Sync Trigger
 
@@ -536,6 +610,40 @@ This recreates all formulas and reinstalls the auto-sync trigger.
 ---
 
 ## Changelog
+
+### Version 1.2.0 (2025-12-16) - Complete Self-Healing Architecture
+
+**Major Updates:**
+
+- Expanded hidden sheets from 6 to 13 total calculation sheets
+- Added complete dropdown validation for all Config-referenced columns
+- Added Home Towns header to Config sheet (column AF)
+- Checkbox preservation after bulk setValues() operations
+
+**New Hidden Calculation Sheets (7 added):**
+
+- `_Grievance_Formulas` - Member lookup formulas for Grievance Log
+- `_Dashboard_Summary_Calc` - 15 dashboard summary metrics
+- `_Trends_Calc` - 12-month time-series analytics
+- `_Location_Analytics_Calc` - Location-based breakdown
+- `_Type_Analysis_Calc` - Issue category analysis
+- `_Steward_Performance_Calc` - Steward performance scores with Performance Score formula
+- `_Cost_Impact_Calc` - Financial impact estimates
+
+**Dropdown Validations Added:**
+
+- Member Directory: PREFERRED_COMM (J) → COMM_METHODS config
+- Member Directory: HOME_TOWN (X) → HOME_TOWNS config
+
+**Checkbox Repair Functions:**
+
+- `repairGrievanceCheckboxes()` - Re-apply checkboxes to Message Alert (AC)
+- `repairMemberCheckboxes()` - Re-apply checkboxes to Start Grievance (AE)
+
+**Config Sheet Improvements:**
+
+- Added "Home Towns" header at column AF (32) with consistent styling
+- Auto-resize for Home Towns column
 
 ### Version 1.1.0 (2025-12-14) - Hidden Sheet Architecture
 
