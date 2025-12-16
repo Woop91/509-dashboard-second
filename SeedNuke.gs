@@ -324,8 +324,8 @@ function SEED_GRIEVANCES(count) {
     }
   }
 
-  // Re-apply formulas after seeding (formulas are overwritten by setValues)
-  setupGrievanceFormulas(grievanceSheet);
+  // Sync data from hidden formulas sheet (self-healing)
+  syncGrievanceFormulasToLog();
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }

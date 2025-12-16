@@ -308,6 +308,9 @@ function createMemberDirectory(ss) {
 
 /**
  * Create or recreate the Grievance Log sheet
+ * NOTE: Calculated columns (First Name, Last Name, Email, Deadlines, Days Open, etc.)
+ * are managed by the hidden _Grievance_Formulas sheet for self-healing capability.
+ * Users can't accidentally erase formulas because they're in the hidden sheet.
  */
 function createGrievanceLog(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.GRIEVANCE_LOG);
@@ -331,137 +334,6 @@ function createGrievanceLog(ss) {
   var checkboxRange = sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 998, 1);
   checkboxRange.insertCheckboxes();
 
-  // Setup auto-calculated formulas
-  setupGrievanceFormulas(sheet);
-
-  // Auto-resize other columns
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Setup auto-calculated formulas for Grievance Log
- * These formulas auto-populate deadline and metric columns, plus member data lookups
- */
-function setupGrievanceFormulas(sheet) {
-  // Column letters for formulas
-  var memberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);                // B
-  var incidentDateCol = getColumnLetter(GRIEVANCE_COLS.INCIDENT_DATE);        // G
-  var dateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);              // I
-  var step1RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP1_RCVD);              // K
-  var step2AppealFiledCol = getColumnLetter(GRIEVANCE_COLS.STEP2_APPEAL_FILED); // M
-  var step2RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP2_RCVD);              // O
-  var dateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);            // R
-  var statusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);                     // E
-  var currentStepCol = getColumnLetter(GRIEVANCE_COLS.CURRENT_STEP);          // F
-
-  // Member Directory column letters for lookups
-  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);       // A
-  var mFirstNameCol = getColumnLetter(MEMBER_COLS.FIRST_NAME);     // B
-  var mLastNameCol = getColumnLetter(MEMBER_COLS.LAST_NAME);       // C
-  var mEmailCol = getColumnLetter(MEMBER_COLS.EMAIL);              // H
-  var mUnitCol = getColumnLetter(MEMBER_COLS.UNIT);                // F
-  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);   // E
-  var mStewardCol = getColumnLetter(MEMBER_COLS.ASSIGNED_STEWARD); // P
-
-  // Member data lookup range in Member Directory
-  var memberRange = "'" + SHEETS.MEMBER_DIR + "'!" + mMemberIdCol + ":" + mStewardCol;
-
-  // First Name (C) = VLOOKUP from Member Directory
-  var firstNameCol = getColumnLetter(GRIEVANCE_COLS.FIRST_NAME);
-  sheet.getRange(firstNameCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.FIRST_NAME + ',FALSE),"")))'
-  );
-
-  // Last Name (D) = VLOOKUP from Member Directory
-  var lastNameCol = getColumnLetter(GRIEVANCE_COLS.LAST_NAME);
-  sheet.getRange(lastNameCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.LAST_NAME + ',FALSE),"")))'
-  );
-
-  // Member Email (X) = VLOOKUP from Member Directory
-  var memberEmailCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_EMAIL);
-  sheet.getRange(memberEmailCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.EMAIL + ',FALSE),"")))'
-  );
-
-  // Unit (Y) = VLOOKUP from Member Directory
-  var unitCol = getColumnLetter(GRIEVANCE_COLS.UNIT);
-  sheet.getRange(unitCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.UNIT + ',FALSE),"")))'
-  );
-
-  // Location (Z) = VLOOKUP from Member Directory
-  var locationCol = getColumnLetter(GRIEVANCE_COLS.LOCATION);
-  sheet.getRange(locationCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.WORK_LOCATION + ',FALSE),"")))'
-  );
-
-  // Assigned Steward (AA) = VLOOKUP from Member Directory
-  var stewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);
-  sheet.getRange(stewardCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + memberIdCol + '2:' + memberIdCol + '="","",' +
-    'IFERROR(VLOOKUP(' + memberIdCol + '2:' + memberIdCol + ',' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
-  );
-
-  // Filing Deadline (H) = Incident Date + 21 days
-  var filingDeadlineCol = getColumnLetter(GRIEVANCE_COLS.FILING_DEADLINE);
-  sheet.getRange(filingDeadlineCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + incidentDateCol + '2:' + incidentDateCol + '=""," ",' + incidentDateCol + '2:' + incidentDateCol + '+21))'
-  );
-
-  // Step I Decision Due (J) = Date Filed + 30 days
-  var step1DueCol = getColumnLetter(GRIEVANCE_COLS.STEP1_DUE);
-  sheet.getRange(step1DueCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + dateFiledCol + '2:' + dateFiledCol + '=""," ",' + dateFiledCol + '2:' + dateFiledCol + '+30))'
-  );
-
-  // Step II Appeal Due (L) = Step I Rcvd + 10 days
-  var step2AppealDueCol = getColumnLetter(GRIEVANCE_COLS.STEP2_APPEAL_DUE);
-  sheet.getRange(step2AppealDueCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + step1RcvdCol + '2:' + step1RcvdCol + '=""," ",' + step1RcvdCol + '2:' + step1RcvdCol + '+10))'
-  );
-
-  // Step II Decision Due (N) = Step II Appeal Filed + 30 days
-  var step2DueCol = getColumnLetter(GRIEVANCE_COLS.STEP2_DUE);
-  sheet.getRange(step2DueCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + step2AppealFiledCol + '2:' + step2AppealFiledCol + '=""," ",' + step2AppealFiledCol + '2:' + step2AppealFiledCol + '+30))'
-  );
-
-  // Step III Appeal Due (P) = Step II Rcvd + 30 days
-  var step3AppealDueCol = getColumnLetter(GRIEVANCE_COLS.STEP3_APPEAL_DUE);
-  sheet.getRange(step3AppealDueCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + step2RcvdCol + '2:' + step2RcvdCol + '=""," ",' + step2RcvdCol + '2:' + step2RcvdCol + '+30))'
-  );
-
-  // Days Open (S) = IF closed: Date Closed - Date Filed, ELSE: Today - Date Filed
-  var daysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
-  sheet.getRange(daysOpenCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + dateFiledCol + '2:' + dateFiledCol + '=""," ",IF(' + dateClosedCol + '2:' + dateClosedCol + '<>"",' + dateClosedCol + '2:' + dateClosedCol + '-' + dateFiledCol + '2:' + dateFiledCol + ',TODAY()-' + dateFiledCol + '2:' + dateFiledCol + ')))'
-  );
-
-  // Next Action Due (T) = Based on current step and status
-  var nextActionDueCol = getColumnLetter(GRIEVANCE_COLS.NEXT_ACTION_DUE);
-  var filingDeadlineColLetter = getColumnLetter(GRIEVANCE_COLS.FILING_DEADLINE);
-  sheet.getRange(nextActionDueCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + statusCol + '2:' + statusCol + '=""," ",' +
-    'IF(OR(' + statusCol + '2:' + statusCol + '="Settled",' + statusCol + '2:' + statusCol + '="Withdrawn",' + statusCol + '2:' + statusCol + '="Denied",' + statusCol + '2:' + statusCol + '="Won",' + statusCol + '2:' + statusCol + '="Closed")," ",' +
-    'IF(' + currentStepCol + '2:' + currentStepCol + '="Informal",' + filingDeadlineColLetter + '2:' + filingDeadlineColLetter + ',' +
-    'IF(' + currentStepCol + '2:' + currentStepCol + '="Step I",' + step1DueCol + '2:' + step1DueCol + ',' +
-    'IF(' + currentStepCol + '2:' + currentStepCol + '="Step II",' + step2DueCol + '2:' + step2DueCol + ',' +
-    step3AppealDueCol + '2:' + step3AppealDueCol + '))))))'
-  );
-
-  // Days to Deadline (U) = Next Action Due - Today
-  var daysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
-  sheet.getRange(daysToDeadlineCol + '2').setFormula(
-    '=ARRAYFORMULA(IF(' + nextActionDueCol + '2:' + nextActionDueCol + '=""," ",IF(' + nextActionDueCol + '2:' + nextActionDueCol + '=" "," ",' + nextActionDueCol + '2:' + nextActionDueCol + '-TODAY())))'
-  );
-
   // Format date columns
   var dateColumns = [
     GRIEVANCE_COLS.INCIDENT_DATE,
@@ -482,6 +354,9 @@ function setupGrievanceFormulas(sheet) {
   dateColumns.forEach(function(col) {
     sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
   });
+
+  // Auto-resize other columns
+  sheet.autoResizeColumns(1, headers.length);
 }
 
 /**
