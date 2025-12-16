@@ -50,6 +50,7 @@ function SEED_SAMPLE_DATA() {
 
 /**
  * Seed Config sheet with dropdown values
+ * Note: Data starts at row 3 (row 1 = section headers, row 2 = column headers)
  */
 function seedConfigData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -60,6 +61,9 @@ function seedConfigData() {
     return;
   }
 
+  // Data row start (after section headers row 1 and column headers row 2)
+  var dataStartRow = 3;
+
   // Job Titles (Column A)
   var jobTitles = [
     'Social Worker', 'Case Manager', 'Program Coordinator', 'Administrative Assistant',
@@ -68,7 +72,7 @@ function seedConfigData() {
     'Executive Assistant', 'HR Coordinator', 'Finance Associate', 'IT Support',
     'Communications Specialist', 'Outreach Worker'
   ];
-  sheet.getRange(2, CONFIG_COLS.JOB_TITLES, jobTitles.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.JOB_TITLES, jobTitles.length, 1)
     .setValues(jobTitles.map(function(v) { return [v]; }));
 
   // Office Locations (Column B)
@@ -79,7 +83,7 @@ function seedConfigData() {
     'Lynn Regional', 'Haverhill Center', 'Malden Office', 'Medford Branch',
     'Waltham Regional', 'Newton Center', 'Brookline Office', 'Salem Branch'
   ];
-  sheet.getRange(2, CONFIG_COLS.OFFICE_LOCATIONS, locations.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.OFFICE_LOCATIONS, locations.length, 1)
     .setValues(locations.map(function(v) { return [v]; }));
 
   // Units (Column C)
@@ -88,7 +92,7 @@ function seedConfigData() {
     'Elder Affairs', 'Housing Assistance', 'Employment Services', 'Youth Services',
     'Family Support', 'Administration'
   ];
-  sheet.getRange(2, CONFIG_COLS.UNITS, units.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.UNITS, units.length, 1)
     .setValues(units.map(function(v) { return [v]; }));
 
   // Supervisors (Column F)
@@ -97,7 +101,7 @@ function seedConfigData() {
     'Jennifer Davis', 'Robert Taylor', 'Lisa Anderson', 'David Martinez',
     'Emily Johnson', 'Christopher Lee', 'Amanda White', 'Daniel Garcia'
   ];
-  sheet.getRange(2, CONFIG_COLS.SUPERVISORS, supervisors.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.SUPERVISORS, supervisors.length, 1)
     .setValues(supervisors.map(function(v) { return [v]; }));
 
   // Managers (Column G)
@@ -105,7 +109,7 @@ function seedConfigData() {
     'Patricia Thompson', 'William Jackson', 'Elizabeth Moore', 'Richard Harris',
     'Susan Clark', 'Joseph Lewis', 'Margaret Robinson', 'Charles Walker'
   ];
-  sheet.getRange(2, CONFIG_COLS.MANAGERS, managers.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.MANAGERS, managers.length, 1)
     .setValues(managers.map(function(v) { return [v]; }));
 
   // Stewards (Column H)
@@ -114,16 +118,16 @@ function seedConfigData() {
     'Michael Davis', 'Linda Miller', 'William Brown', 'Barbara Wilson',
     'David Moore', 'Susan Taylor', 'James Anderson', 'Karen Thomas'
   ];
-  sheet.getRange(2, CONFIG_COLS.STEWARDS, stewards.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.STEWARDS, stewards.length, 1)
     .setValues(stewards.map(function(v) { return [v]; }));
 
-  // Home Towns (Column AF - 32)
+  // Home Towns (Column AF)
   var homeTowns = [
     'Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell', 'Brockton',
     'Quincy', 'New Bedford', 'Fall River', 'Lawrence', 'Framingham', 'Somerville',
     'Lynn', 'Haverhill', 'Malden', 'Medford', 'Waltham', 'Newton', 'Brookline'
   ];
-  sheet.getRange(2, CONFIG_COLS.HOME_TOWNS, homeTowns.length, 1)
+  sheet.getRange(dataStartRow, CONFIG_COLS.HOME_TOWNS, homeTowns.length, 1)
     .setValues(homeTowns.map(function(v) { return [v]; }));
 
   SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
