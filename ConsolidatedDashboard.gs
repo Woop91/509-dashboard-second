@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-16T01:54:21.558Z
+ * - Build Date: 2025-12-16T02:02:43.899Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -263,6 +263,7 @@ var CONFIG_COLS = {
   ISSUE_CATEGORY: 11,      // K
   ARTICLES: 12,            // L
   COMM_METHODS: 13,        // M
+  BEST_TIMES: 14,          // N
   GRIEVANCE_COORDINATORS: 15, // O
   HOME_TOWNS: 32           // AF
 };
@@ -707,25 +708,41 @@ function createConfigSheet(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.CONFIG);
   sheet.clear();
 
-  // Set headers
+  // Set headers for all Config columns (A through AF)
+  // Columns A-O are primary dropdowns, P-AE are reserved, AF is Home Towns
   var headers = [
-    'Job Titles', 'Office Locations', 'Units', 'Office Days', 'Yes/No',
-    'Supervisors', 'Managers', 'Stewards', 'Grievance Status', 'Grievance Step',
-    'Issue Category', 'Articles Violated', 'Communication Methods', '', 'Grievance Coordinators'
+    'Job Titles',           // A (1) - User populated
+    'Office Locations',     // B (2) - User populated
+    'Units',                // C (3) - User populated
+    'Office Days',          // D (4) - System default
+    'Yes/No',               // E (5) - System default
+    'Supervisors',          // F (6) - User populated
+    'Managers',             // G (7) - User populated
+    'Stewards',             // H (8) - User populated
+    'Grievance Status',     // I (9) - System default
+    'Grievance Step',       // J (10) - System default
+    'Issue Category',       // K (11) - System default
+    'Articles Violated',    // L (12) - System default
+    'Comm Methods',         // M (13) - System default
+    'Best Times',           // N (14) - For Best Time to Contact dropdown
+    'Grievance Coordinators' // O (15) - User populated
   ];
 
+  // Apply headers with consistent styling
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setBackground(COLORS.PRIMARY_PURPLE)
     .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
 
-  // Add Home Towns header at column AF (32)
+  // Add Home Towns header at column AF (32) with same styling
   sheet.getRange(1, CONFIG_COLS.HOME_TOWNS).setValue('Home Towns')
     .setBackground(COLORS.PRIMARY_PURPLE)
     .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
+    .setFontWeight('bold')
+    .setHorizontalAlignment('center');
 
-  // Add default values for non-user-populated columns
+  // Add default values for system-populated columns
   var col = CONFIG_COLS.OFFICE_DAYS;
   sheet.getRange(2, col, DEFAULT_CONFIG.OFFICE_DAYS.length, 1)
     .setValues(DEFAULT_CONFIG.OFFICE_DAYS.map(function(v) { return [v]; }));
@@ -754,9 +771,22 @@ function createConfigSheet(ss) {
   sheet.getRange(2, col, DEFAULT_CONFIG.COMM_METHODS.length, 1)
     .setValues(DEFAULT_CONFIG.COMM_METHODS.map(function(v) { return [v]; }));
 
-  // Auto-resize columns
+  // Add Best Times default values (column N = 14)
+  var bestTimes = ['Morning', 'Afternoon', 'Evening', 'Any Time'];
+  sheet.getRange(2, 14, bestTimes.length, 1)
+    .setValues(bestTimes.map(function(v) { return [v]; }));
+
+  // Freeze header row
+  sheet.setFrozenRows(1);
+
+  // Auto-resize all columns with data
   sheet.autoResizeColumns(1, headers.length);
   sheet.autoResizeColumn(CONFIG_COLS.HOME_TOWNS);
+
+  // Set column widths for empty columns between O and AF to be narrow
+  for (var i = 16; i < 32; i++) {
+    sheet.setColumnWidth(i, 30);
+  }
 }
 
 /**
@@ -1344,12 +1374,13 @@ function setupDataValidations() {
     return;
   }
 
-  // Member Directory Validations
+  // Member Directory Validations (15 dropdowns)
   setDropdownValidation(memberSheet, MEMBER_COLS.JOB_TITLE, configSheet, CONFIG_COLS.JOB_TITLES);
   setDropdownValidation(memberSheet, MEMBER_COLS.WORK_LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   setDropdownValidation(memberSheet, MEMBER_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
   setDropdownValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
   setDropdownValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
+  setDropdownValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
   setDropdownValidation(memberSheet, MEMBER_COLS.IS_STEWARD, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.SUPERVISOR, configSheet, CONFIG_COLS.SUPERVISORS);
   setDropdownValidation(memberSheet, MEMBER_COLS.MANAGER, configSheet, CONFIG_COLS.MANAGERS);

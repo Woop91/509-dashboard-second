@@ -233,6 +233,7 @@ var CONFIG_COLS = {
   ISSUE_CATEGORY: 11,      // K
   ARTICLES: 12,            // L
   COMM_METHODS: 13,        // M
+  BEST_TIMES: 14,          // N
   GRIEVANCE_COORDINATORS: 15, // O
   HOME_TOWNS: 32           // AF
 };
