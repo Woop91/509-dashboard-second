@@ -14,10 +14,10 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-16T01:38:31.387Z
- * - Build Type: PRODUCTION
- * - Modules: 77 files
- * - Tests Included: No
+ * - Build Date: 2025-12-16T01:46:04.926Z
+ * - Build Type: DEVELOPMENT
+ * - Modules: 80 files
+ * - Tests Included: Yes
  *
  * ============================================================================
  */
@@ -719,6 +719,12 @@ function createConfigSheet(ss) {
     .setFontColor(COLORS.WHITE)
     .setFontWeight('bold');
 
+  // Add Home Towns header at column AF (32)
+  sheet.getRange(1, CONFIG_COLS.HOME_TOWNS).setValue('Home Towns')
+    .setBackground(COLORS.PRIMARY_PURPLE)
+    .setFontColor(COLORS.WHITE)
+    .setFontWeight('bold');
+
   // Add default values for non-user-populated columns
   var col = CONFIG_COLS.OFFICE_DAYS;
   sheet.getRange(2, col, DEFAULT_CONFIG.OFFICE_DAYS.length, 1)
@@ -750,6 +756,7 @@ function createConfigSheet(ss) {
 
   // Auto-resize columns
   sheet.autoResizeColumns(1, headers.length);
+  sheet.autoResizeColumn(CONFIG_COLS.HOME_TOWNS);
 }
 
 /**

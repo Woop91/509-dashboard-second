@@ -242,6 +242,12 @@ function createConfigSheet(ss) {
     .setFontColor(COLORS.WHITE)
     .setFontWeight('bold');
 
+  // Add Home Towns header at column AF (32)
+  sheet.getRange(1, CONFIG_COLS.HOME_TOWNS).setValue('Home Towns')
+    .setBackground(COLORS.PRIMARY_PURPLE)
+    .setFontColor(COLORS.WHITE)
+    .setFontWeight('bold');
+
   // Add default values for non-user-populated columns
   var col = CONFIG_COLS.OFFICE_DAYS;
   sheet.getRange(2, col, DEFAULT_CONFIG.OFFICE_DAYS.length, 1)
@@ -273,6 +279,7 @@ function createConfigSheet(ss) {
 
   // Auto-resize columns
   sheet.autoResizeColumns(1, headers.length);
+  sheet.autoResizeColumn(CONFIG_COLS.HOME_TOWNS);
 }
 
 /**
