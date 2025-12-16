@@ -1076,6 +1076,26 @@ function refreshAllFormulas() {
   refreshAllHiddenFormulas();
 }
 
+/**
+ * Run all tests (stub - TestingValidation.gs not included)
+ */
+function runAllTests() {
+  SpreadsheetApp.getUi().alert('🧪 Run All Tests',
+    'Test framework not yet implemented.\n\n' +
+    'To add tests, create TestingValidation.gs with test functions.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Run quick tests (stub - TestingValidation.gs not included)
+ */
+function runQuickTests() {
+  SpreadsheetApp.getUi().alert('⚡ Run Quick Tests',
+    'Test framework not yet implemented.\n\n' +
+    'To add tests, create TestingValidation.gs with test functions.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
 function viewTestResults() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.TEST_RESULTS);

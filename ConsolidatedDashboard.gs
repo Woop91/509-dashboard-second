@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-16T02:54:39.321Z
+ * - Build Date: 2025-12-16T02:58:39.329Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -1580,6 +1580,26 @@ function refreshAllFormulas() {
 
   // Use the full refresh from HiddenSheets.gs
   refreshAllHiddenFormulas();
+}
+
+/**
+ * Run all tests (stub - TestingValidation.gs not included)
+ */
+function runAllTests() {
+  SpreadsheetApp.getUi().alert('🧪 Run All Tests',
+    'Test framework not yet implemented.\n\n' +
+    'To add tests, create TestingValidation.gs with test functions.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Run quick tests (stub - TestingValidation.gs not included)
+ */
+function runQuickTests() {
+  SpreadsheetApp.getUi().alert('⚡ Run Quick Tests',
+    'Test framework not yet implemented.\n\n' +
+    'To add tests, create TestingValidation.gs with test functions.',
+    SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 function viewTestResults() {
