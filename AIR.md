@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.3.0 (Simplified Core Architecture)
+**Version:** 1.4.0 (Dashboard Views Added)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -19,7 +19,7 @@
 ## Quick Start
 
 1. Deploy the 9 `.gs` files to Google Apps Script
-2. Run `CREATE_509_DASHBOARD()` to create 3 core sheets + 4 hidden calculation sheets
+2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
 
@@ -46,7 +46,7 @@
 ### File Descriptions
 
 **Constants.gs** (~400 lines)
-- `SHEETS` - Sheet name constants (3 core + 4 hidden)
+- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
@@ -59,9 +59,9 @@
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~600 lines)
+**Code.gs** (~900 lines)
 - `onOpen()` - Creates menu system
-- `CREATE_509_DASHBOARD()` - Main setup function (creates 3 core sheets + 4 hidden)
+- `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
@@ -75,7 +75,7 @@
 - `searchMembers()` - Search members (stub)
 - `startNewGrievance()` - Start grievance (stub)
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- Sheet creation (3 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`
+- Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~500 lines)
 - `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 25 grievances
@@ -95,13 +95,14 @@
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~800 lines)
-- `setupAllHiddenSheets()` - Create all 4 hidden calculation sheets
-- Hidden Sheet Setup Functions (4 total):
+**HiddenSheets.gs** (~1500 lines)
+- `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
+- Hidden Sheet Setup Functions (5 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
   - `setupGrievanceFormulasSheet()` - Member lookup formulas (First Name, Last Name, Email, etc.)
   - `setupMemberLookupSheet()` - Member → Grievance Log sync
   - `setupStewardContactCalcSheet()` - Steward contact tracking
+  - `setupDashboardCalcSheet()` - Dashboard summary metrics (15 key metrics)
 - Sync Functions:
   - `syncAllData()` - Sync all cross-sheet data
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
@@ -343,15 +344,22 @@ var GRIEVANCE_COLS = {
 
 ---
 
-## Sheet Structure (3 Core + 4 Hidden)
+## Sheet Structure (5 Visible + 5 Hidden)
 
-### Core Sheets (User-Facing)
+### Core Data Sheets
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 1 | Config | Core | Master dropdown lists for validation (43 columns) |
-| 2 | Member Directory | Core | All member data (31 columns) |
-| 3 | Grievance Log | Core | All grievance cases (34 columns) |
+| 1 | Config | Data | Master dropdown lists for validation (43 columns) |
+| 2 | Member Directory | Data | All member data (31 columns) |
+| 3 | Grievance Log | Data | All grievance cases (34 columns) |
+
+### Dashboard Sheets
+
+| # | Sheet Name | Type | Purpose |
+|---|------------|------|---------|
+| 4 | 💼 Dashboard | View | Executive metrics dashboard (merged from old Dashboard + Executive) |
+| 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
 
 ### Hidden Calculation Sheets
 
@@ -361,6 +369,7 @@ var GRIEVANCE_COLS = {
 | 2 | `_Grievance_Formulas` | Member → Grievance Log sync (C-D, X-AA) |
 | 3 | `_Member_Lookup` | Member data lookup formulas |
 | 4 | `_Steward_Contact_Calc` | Steward contact tracking (Y-AA) |
+| 5 | `_Dashboard_Calc` | Dashboard summary metrics (15 key KPIs) |
 
 ---
 
@@ -543,9 +552,9 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Hidden Sheet Architecture (Self-Healing)
 
-The system uses 4 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
+The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
 
-### Hidden Sheets (4 total)
+### Hidden Sheets (5 total)
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
@@ -553,6 +562,7 @@ The system uses 4 hidden calculation sheets with auto-sync triggers for cross-sh
 | `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), X-AA (Email, Unit, Location, Steward) |
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
+| `_Dashboard_Calc` | Both | 💼 Dashboard | 15 summary metrics (Win Rate, Overdue, Due This Week, etc.) |
 
 ### Auto-Sync Trigger
 
@@ -564,13 +574,14 @@ The `onEditAutoSync` trigger automatically syncs data when:
 
 | Function | Purpose |
 |----------|---------|
-| `setupAllHiddenSheets()` | Create all 4 hidden sheets with formulas |
+| `setupAllHiddenSheets()` | Create all 5 hidden sheets with formulas |
 | `repairAllHiddenSheets()` | Recreate sheets, install trigger, sync data |
 | `installAutoSyncTrigger()` | Install the onEdit auto-sync trigger |
 | `verifyHiddenSheets()` | Verify all sheets and triggers are working |
 | `syncAllData()` | Manual sync of all cross-sheet data |
 | `syncGrievanceToMemberDirectory()` | Sync grievance data to members |
 | `syncMemberToGrievanceLog()` | Sync member data to grievances |
+| `setupDashboardCalcSheet()` | Create dashboard metrics calculation sheet |
 
 ### Self-Healing
 
@@ -583,6 +594,48 @@ This recreates all formulas and reinstalls the auto-sync trigger.
 ---
 
 ## Changelog
+
+### Version 1.4.0 (2025-12-16) - Dashboard Views Added
+
+**Major Updates:**
+
+- Re-added dashboard sheets from original 509dashboard project
+- Created unified 💼 Dashboard (merged Executive Dashboard + Dashboard themes)
+- Added 🎯 Interactive Dashboard with customizable metric selection
+- Added `_Dashboard_Calc` hidden sheet with 15 self-healing metric formulas
+
+**New Sheets (2):**
+
+- `💼 Dashboard` - Executive-style metrics view with:
+  - QUICK STATS section (green Union theme)
+  - MEMBER METRICS section (blue theme)
+  - GRIEVANCE METRICS section (orange theme)
+  - TIMELINE & PERFORMANCE section (purple theme)
+  - Real-time formulas linked to Member Directory and Grievance Log
+
+- `🎯 Interactive` - Customizable dashboard with:
+  - Dropdown metric selection (8 available metrics)
+  - Time range filtering
+  - Theme selection
+  - Live-updating values
+
+**New Hidden Sheet:**
+
+- `_Dashboard_Calc` - 15 key metrics with self-healing formulas:
+  - Total Members, Active Stewards
+  - Total/Open/Pending/Settled/Won/Denied/Withdrawn Grievances
+  - Win Rate %, Avg Days to Resolution
+  - Overdue Cases, Due This Week
+  - Filed This Month, Closed This Month
+
+**Code Changes:**
+
+- Constants.gs: Added DASHBOARD, INTERACTIVE, DASHBOARD_CALC to SHEETS
+- Code.gs: Added `createDashboard()`, `createInteractiveDashboard()` (~300 lines)
+- HiddenSheets.gs: Added `setupDashboardCalcSheet()` (~70 lines)
+- Updated CREATE_509_DASHBOARD, DIAGNOSE_SETUP, REPAIR_DASHBOARD for 5 sheets
+
+---
 
 ### Version 1.3.0 (2025-12-16) - Simplified Core Architecture
 

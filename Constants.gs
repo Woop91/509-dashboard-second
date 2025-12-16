@@ -20,11 +20,15 @@ var SHEETS = {
   CONFIG: 'Config',
   MEMBER_DIR: 'Member Directory',
   GRIEVANCE_LOG: 'Grievance Log',
+  // Dashboard sheets
+  DASHBOARD: '💼 Dashboard',
+  INTERACTIVE: '🎯 Interactive',
   // Hidden calculation sheets (self-healing formulas)
   GRIEVANCE_CALC: '_Grievance_Calc',
   GRIEVANCE_FORMULAS: '_Grievance_Formulas',
   MEMBER_LOOKUP: '_Member_Lookup',
   STEWARD_CONTACT_CALC: '_Steward_Contact_Calc',
+  DASHBOARD_CALC: '_Dashboard_Calc',
   // Optional source sheets
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
