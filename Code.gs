@@ -127,8 +127,7 @@ function onOpen() {
     .addSubMenu(ui.createMenu('🔄 Manual Sync')
       .addItem('🔄 Sync All Data Now', 'syncAllData')
       .addItem('🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory')
-      .addItem('🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog')
-      .addItem('🔄 Sync Steward Workload', 'syncStewardWorkload'))
+      .addItem('🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog'))
     .addToUi();
 }
 
@@ -138,7 +137,7 @@ function onOpen() {
 
 /**
  * Main setup function - creates the complete 509 Dashboard
- * Creates all 22 sheets with proper structure and formatting
+ * Creates the core sheets with proper structure and formatting
  */
 function CREATE_509_DASHBOARD() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -147,7 +146,10 @@ function CREATE_509_DASHBOARD() {
   // Confirm with user
   var response = ui.alert(
     '🏗️ Create 509 Dashboard',
-    'This will create the complete 509 Dashboard with all 22 sheets.\n\n' +
+    'This will create the 509 Dashboard with core sheets:\n\n' +
+    '• Config (dropdown sources)\n' +
+    '• Member Directory\n' +
+    '• Grievance Log\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -161,7 +163,7 @@ function CREATE_509_DASHBOARD() {
   ss.toast('Starting dashboard creation...', '🏗️ Setup', 5);
 
   try {
-    // Create sheets in order
+    // Create core sheets
     createConfigSheet(ss);
     ss.toast('Created Config sheet', '🏗️ Progress', 2);
 
@@ -171,29 +173,7 @@ function CREATE_509_DASHBOARD() {
     createGrievanceLog(ss);
     ss.toast('Created Grievance Log', '🏗️ Progress', 2);
 
-    createDashboard(ss);
-    ss.toast('Created Dashboard', '🏗️ Progress', 2);
-
-    createAnalyticsData(ss);
-    createMemberSatisfaction(ss);
-    createFeedback(ss);
-    createInteractiveDashboard(ss);
-    createGettingStarted(ss);
-    createFAQ(ss);
-    createUserSettings(ss);
-    createStewardWorkload(ss);
-    createTrends(ss);
-    createLocationAnalytics(ss);
-    createTypeAnalysis(ss);
-    createExecutiveDashboard(ss);
-    createKPIDashboard(ss);
-    createEngagement(ss);
-    createCostImpact(ss);
-    createArchive(ss);
-    createDiagnostics(ss);
-    createAuditLog(ss);
-
-    ss.toast('Created all sheets, setting up validations...', '🏗️ Progress', 3);
+    ss.toast('Setting up validations...', '🏗️ Progress', 3);
 
     // Setup data validations
     setupDataValidations();
@@ -210,7 +190,7 @@ function CREATE_509_DASHBOARD() {
 
     ss.toast('Dashboard creation complete!', '✅ Success', 5);
     ui.alert('✅ Success', '509 Dashboard has been created successfully!\n\n' +
-      '22 sheets created with all validations and formulas.\n\n' +
+      '3 core sheets created with all validations and formulas.\n\n' +
       'Use the Demo menu to seed sample data.', ui.ButtonSet.OK);
 
   } catch (error) {
@@ -449,458 +429,6 @@ function createGrievanceLog(ss) {
   sheet.autoResizeColumns(1, headers.length);
 }
 
-/**
- * Create the main Dashboard sheet
- */
-function createDashboard(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.DASHBOARD);
-  sheet.clear();
-
-  // Title
-  sheet.getRange('A1').setValue('📊 LOCAL 509 DASHBOARD')
-    .setFontSize(24)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:H1').merge();
-
-  // Member Metrics Section
-  sheet.getRange('A3').setValue('MEMBER METRICS')
-    .setFontWeight('bold')
-    .setBackground(COLORS.LIGHT_GRAY);
-  sheet.getRange('A3:D3').merge();
-
-  var memberMetrics = [
-    ['Total Members', 'Active Stewards', 'Avg Open Rate', 'YTD Vol. Hours'],
-    [
-      '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + getColumnLetter(MEMBER_COLS.MEMBER_ID) + ':' + getColumnLetter(MEMBER_COLS.MEMBER_ID) + ')-1',
-      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + getColumnLetter(MEMBER_COLS.IS_STEWARD) + ':' + getColumnLetter(MEMBER_COLS.IS_STEWARD) + ',"Yes")',
-      '=IFERROR(AVERAGE(\'' + SHEETS.MEMBER_DIR + '\'!' + getColumnLetter(MEMBER_COLS.OPEN_RATE) + ':' + getColumnLetter(MEMBER_COLS.OPEN_RATE) + '),0)',
-      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + getColumnLetter(MEMBER_COLS.VOLUNTEER_HOURS) + ':' + getColumnLetter(MEMBER_COLS.VOLUNTEER_HOURS) + ')'
-    ]
-  ];
-  sheet.getRange('A4:D5').setValues(memberMetrics);
-  sheet.getRange('A4:D4').setFontWeight('bold').setBackground(COLORS.PRIMARY_BLUE);
-  sheet.getRange('A5:D5').setFontSize(18).setHorizontalAlignment('center');
-
-  // Grievance Metrics Section
-  sheet.getRange('A7').setValue('GRIEVANCE METRICS')
-    .setFontWeight('bold')
-    .setBackground(COLORS.LIGHT_GRAY);
-  sheet.getRange('A7:D7').merge();
-
-  var statusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
-  var grievanceMetrics = [
-    ['Open Grievances', 'Pending Info', 'Settled (This Month)', 'Avg Days Open'],
-    [
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + statusCol + ':' + statusCol + ',"Open")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + statusCol + ':' + statusCol + ',"Pending Info")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + statusCol + ':' + statusCol + ',"Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED) + ':' + getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED) + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
-      '=IFERROR(AVERAGE(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN) + ':' + getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN) + '),0)'
-    ]
-  ];
-  sheet.getRange('A8:D9').setValues(grievanceMetrics);
-  sheet.getRange('A8:D8').setFontWeight('bold').setBackground(COLORS.PRIMARY_BLUE);
-  sheet.getRange('A9:D9').setFontSize(18).setHorizontalAlignment('center');
-
-  sheet.autoResizeColumns(1, 8);
-}
-
-/**
- * Create Analytics Data sheet (hidden)
- */
-function createAnalyticsData(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.ANALYTICS_DATA);
-  sheet.clear();
-  sheet.getRange('A1').setValue('Analytics Data - Auto-Generated')
-    .setFontWeight('bold');
-  sheet.hideSheet();
-}
-
-/**
- * Create Member Satisfaction sheet
- */
-function createMemberSatisfaction(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.MEMBER_SATISFACTION);
-  sheet.clear();
-
-  var headers = ['Survey Date', 'Member ID', 'Member Name', 'Overall Satisfaction', 'Steward Support', 'Communication', 'Comments'];
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(1);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Feedback & Development sheet
- */
-function createFeedback(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.FEEDBACK);
-  sheet.clear();
-
-  var headers = ['Date', 'Type', 'Title', 'Description', 'Status', 'Priority', 'Submitted By'];
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(1);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Interactive Dashboard sheet
- */
-function createInteractiveDashboard(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.INTERACTIVE);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('🎯 Interactive Dashboard')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:F1').merge();
-
-  sheet.getRange('A3').setValue('Select metrics and chart types using the dropdowns below.');
-  sheet.getRange('A3:F3').merge();
-
-  // Dropdown labels
-  sheet.getRange('A5:F5').setValues([['Metric 1', 'Chart Type 1', 'Metric 2', 'Chart Type 2', 'Theme', 'Show Comparison']]);
-  sheet.getRange('A5:F5').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
-
-  // Placeholder for dropdowns (will be set up by setupInteractiveDashboardLiveSync)
-  sheet.getRange('A7:F7').setValues([['Total Members', 'Donut', 'Open Grievances', 'Bar', 'Default', 'Yes']]);
-}
-
-/**
- * Create Getting Started sheet
- */
-function createGettingStarted(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.GETTING_STARTED);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('📚 Getting Started with 509 Dashboard')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var content = [
-    [''],
-    ['Welcome to the 509 Dashboard! This guide will help you get started.'],
-    [''],
-    ['QUICK START:'],
-    ['1. Go to Config sheet and add your organization\'s Job Titles, Locations, Units, etc.'],
-    ['2. Add members to the Member Directory sheet'],
-    ['3. Create grievances using the Start Grievance checkbox or Dashboard menu'],
-    ['4. View metrics on the Dashboard and Executive Dashboard sheets'],
-    [''],
-    ['For more help, see the FAQ sheet or contact your administrator.']
-  ];
-
-  sheet.getRange(2, 1, content.length, 1).setValues(content);
-  sheet.setColumnWidth(1, 600);
-}
-
-/**
- * Create FAQ sheet
- */
-function createFAQ(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.FAQ);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('❓ Frequently Asked Questions')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Category', 'Question', 'Answer'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  var faqs = [
-    ['Getting Started', 'How do I start a new grievance?', 'Go to Dashboard menu → Grievance Tools → Start New Grievance, or check the "Start Grievance" checkbox in Member Directory.'],
-    ['Getting Started', 'How do I add a new member?', 'Go to the Member Directory sheet and add a new row with the member\'s information.'],
-    ['Grievances', 'What do the deadline colors mean?', 'Red = Overdue, Orange = Due within 3 days, Yellow = Due within 7 days, Green = On track.'],
-    ['Grievances', 'How are deadlines calculated?', 'Filing Deadline = Incident Date + 21 days. Step deadlines follow CBA timelines.']
-  ];
-  sheet.getRange(4, 1, faqs.length, 3).setValues(faqs);
-
-  sheet.setFrozenRows(3);
-  sheet.setColumnWidth(3, 500);
-  sheet.autoResizeColumns(1, 2);
-}
-
-/**
- * Create User Settings sheet
- */
-function createUserSettings(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.USER_SETTINGS);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('⚙️ User Settings')
-    .setFontSize(20)
-    .setFontWeight('bold');
-
-  var headers = ['User Email', 'Theme', 'Notifications', 'Default View', 'Last Login'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Steward Workload sheet
- */
-function createStewardWorkload(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.STEWARD_WORKLOAD);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('👨‍⚖️ Steward Workload')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Steward Name', 'Total Cases', 'Active Cases', 'Resolved', 'Win Rate', 'Avg Days', 'Overdue', 'Due This Week', 'Capacity Status'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Trends & Timeline sheet
- */
-function createTrends(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.TRENDS);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('📈 Trends & Timeline')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Month', 'New Grievances', 'Resolved', 'Win Rate', 'Avg Resolution Days', 'Active at Month End'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Location Analytics sheet
- */
-function createLocationAnalytics(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.LOCATION_ANALYTICS);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('🗺️ Location Analytics')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Location', 'Members', 'Grievances', 'Win Rate', 'Avg Satisfaction'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Type Analysis sheet
- */
-function createTypeAnalysis(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.TYPE_ANALYSIS);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('📊 Type Analysis')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Issue Category', 'Total Cases', 'Open', 'Resolved', 'Win Rate', 'Avg Days to Resolution'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Executive Dashboard sheet
- */
-function createExecutiveDashboard(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.EXECUTIVE);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('💼 Executive Dashboard')
-    .setFontSize(24)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:F1').merge();
-
-  // Quick Stats Section
-  sheet.getRange('A3').setValue('QUICK STATS')
-    .setFontWeight('bold')
-    .setBackground(COLORS.UNION_GREEN)
-    .setFontColor(COLORS.WHITE);
-  sheet.getRange('A3:C3').merge();
-
-  var statsLabels = [
-    ['Total Members', 'Active Grievances', 'Win Rate'],
-    [
-      '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + getColumnLetter(MEMBER_COLS.MEMBER_ID) + ':' + getColumnLetter(MEMBER_COLS.MEMBER_ID) + ')-1',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ':' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ',"Open")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ':' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ',"Pending Info")',
-      '=IFERROR(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.RESOLUTION) + ':' + getColumnLetter(GRIEVANCE_COLS.RESOLUTION) + ',"*Won*")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ':' + getColumnLetter(GRIEVANCE_COLS.STATUS) + ',"<>"),0)'
-    ]
-  ];
-  sheet.getRange('A4:C5').setValues(statsLabels);
-  sheet.getRange('A4:C4').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
-  sheet.getRange('A5:C5').setFontSize(20).setHorizontalAlignment('center');
-
-  sheet.autoResizeColumns(1, 6);
-}
-
-/**
- * Create KPI Performance Dashboard sheet
- */
-function createKPIDashboard(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.KPI);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('📊 KPI Performance Dashboard')
-    .setFontSize(24)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:L1').merge();
-
-  var headers = ['KPI Name', 'Current Value', 'Target', 'Variance', '% Change', 'Status', 'Last Month', 'YTD Average', 'Best', 'Worst', 'Owner', 'Last Updated'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Member Engagement sheet
- */
-function createEngagement(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.ENGAGEMENT);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('👥 Member Engagement')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Member ID', 'Member Name', 'Engagement Score', 'Last Contact', 'Meetings Attended', 'Volunteer Hours', 'Interests', 'Status'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Cost Impact sheet
- */
-function createCostImpact(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.COST_IMPACT);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('💰 Cost Impact Analysis')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Category', 'Grievances Won', 'Est. Value Recovered', 'Hours Invested', 'Cost per Case', 'ROI'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Archive sheet
- */
-function createArchive(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.ARCHIVE);
-  sheet.clear();
-
-  var headers = ['Item Type', 'Item ID', 'Archive Date', 'Reason', 'Archived By', 'Original Data'];
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(1);
-  sheet.setColumnWidth(6, 500);
-  sheet.autoResizeColumns(1, 5);
-}
-
-/**
- * Create Diagnostics sheet
- */
-function createDiagnostics(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.DIAGNOSTICS);
-  sheet.clear();
-
-  sheet.getRange('A1').setValue('🔧 System Diagnostics')
-    .setFontSize(20)
-    .setFontWeight('bold')
-    .setFontColor(COLORS.PRIMARY_PURPLE);
-
-  var headers = ['Check', 'Status', 'Details', 'Last Run'];
-  sheet.getRange(3, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(3);
-  sheet.autoResizeColumns(1, headers.length);
-}
-
-/**
- * Create Audit Log sheet
- */
-function createAuditLog(ss) {
-  var sheet = getOrCreateSheet(ss, SHEETS.AUDIT_LOG);
-  sheet.clear();
-
-  var headers = ['Timestamp', 'User', 'Action', 'Sheet', 'Row', 'Column', 'Old Value', 'New Value', 'Details'];
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-    .setBackground(COLORS.SOLIDARITY_RED)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold');
-
-  sheet.setFrozenRows(1);
-  sheet.autoResizeColumns(1, headers.length);
-}
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -1036,12 +564,11 @@ function DIAGNOSE_SETUP() {
   report.push('================================');
   report.push('');
 
-  // Check all required sheets
+  // Check all required sheets (core sheets only)
   var requiredSheets = [
     SHEETS.CONFIG,
     SHEETS.MEMBER_DIR,
-    SHEETS.GRIEVANCE_LOG,
-    SHEETS.DASHBOARD
+    SHEETS.GRIEVANCE_LOG
   ];
 
   report.push('📋 SHEET CHECK:');
@@ -1085,15 +612,13 @@ function DIAGNOSE_SETUP() {
 
   report.push('');
 
-  // Check hidden sheets
+  // Check hidden sheets (4 core hidden sheets)
   report.push('🔒 HIDDEN SHEETS:');
   var hiddenSheets = [
     SHEETS.GRIEVANCE_CALC,
+    SHEETS.GRIEVANCE_FORMULAS,
     SHEETS.MEMBER_LOOKUP,
-    SHEETS.STEWARD_CONTACT_CALC,
-    SHEETS.ENGAGEMENT_CALC,
-    SHEETS.STEWARD_WORKLOAD_CALC,
-    SHEETS.INTERACTIVE_CALC
+    SHEETS.STEWARD_CONTACT_CALC
   ];
 
   hiddenSheets.forEach(function(sheetName) {
@@ -1130,7 +655,7 @@ function REPAIR_DASHBOARD() {
   var response = ui.alert(
     '🔧 Repair Dashboard',
     'This will:\n\n' +
-    '• Recreate all 6 hidden calculation sheets with formulas\n' +
+    '• Recreate all 4 hidden calculation sheets with formulas\n' +
     '• Install auto-sync trigger\n' +
     '• Sync all cross-sheet data\n' +
     '• Reapply data validations\n\n' +
@@ -1222,8 +747,15 @@ function refreshMemberDirectoryFormulas() {
 
 function rebuildDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  createDashboard(ss);
-  ss.toast('Dashboard rebuilt!', '✅ Success', 3);
+  ss.toast('Refreshing data and validations...', '🔄 Refresh', 3);
+
+  // Refresh hidden sheet formulas and sync data
+  refreshAllHiddenFormulas();
+
+  // Reapply data validations
+  setupDataValidations();
+
+  ss.toast('Dashboard refreshed!', '✅ Success', 3);
 }
 
 /**
