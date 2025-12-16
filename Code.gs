@@ -225,89 +225,143 @@ function CREATE_509_DASHBOARD() {
 
 /**
  * Create or recreate the Config sheet with dropdown values
+ * Comprehensive configuration with section groupings and organization settings
  */
 function createConfigSheet(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.CONFIG);
   sheet.clear();
 
-  // Set headers for all Config columns (A through AF)
-  // Columns A-O are primary dropdowns, P-AE are reserved, AF is Home Towns
-  var headers = [
-    'Job Titles',           // A (1) - User populated
-    'Office Locations',     // B (2) - User populated
-    'Units',                // C (3) - User populated
-    'Office Days',          // D (4) - System default
-    'Yes/No',               // E (5) - System default
-    'Supervisors',          // F (6) - User populated
-    'Managers',             // G (7) - User populated
-    'Stewards',             // H (8) - User populated
-    'Grievance Status',     // I (9) - System default
-    'Grievance Step',       // J (10) - System default
-    'Issue Category',       // K (11) - System default
-    'Articles Violated',    // L (12) - System default
-    'Comm Methods',         // M (13) - System default
-    'Best Times',           // N (14) - For Best Time to Contact dropdown
-    'Grievance Coordinators' // O (15) - User populated
+  // Row 1: Section Headers (grouped categories)
+  var sectionHeaders = [
+    '── EMPLOYMENT INFO ──', '', '', '', '',           // A-E (5 cols)
+    '── SUPERVISION ──', '',                            // F-G (2 cols)
+    '── STEWARD INFO ──', '',                           // H-I (2 cols)
+    '── GRIEVANCE SETTINGS ──', '', '', '',             // J-M (4 cols)
+    '── LINKS & COORDINATORS ──', '', '', '',           // N-Q (4 cols)
+    '── NOTIFICATIONS ──', '', '',                      // R-T (3 cols)
+    '── ORGANIZATION ──', '', '', '',                   // U-X (4 cols)
+    '── INTEGRATION ──', '',                            // Y-Z (2 cols)
+    '── DEADLINES ──', '', '', '',                      // AA-AD (4 cols)
+    '── MULTI-SELECT OPTIONS ──', '',                   // AE-AF (2 cols)
+    '── CONTRACT & LEGAL ──', '', '', '',               // AG-AJ (4 cols)
+    '── ORG IDENTITY ──', '', '',                       // AK-AM (3 cols)
+    '── EXTENDED CONTACT ──', '', '', ''                // AN-AQ (4 cols)
   ];
 
-  // Apply headers with consistent styling
-  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+  // Row 2: Column Headers
+  var columnHeaders = [
+    'Job Titles', 'Office Locations', 'Units', 'Office Days', 'Yes/No (Dropdowns)',
+    'Supervisors', 'Managers',
+    'Stewards', 'Steward Committees',
+    'Grievance Status', 'Grievance Step', 'Issue Category', 'Articles Violated',
+    'Communication Methods', 'Grievance Coordinators', 'Grievance Form URL', 'Contact Form URL',
+    'Admin Emails', 'Alert Days Before Deadline', 'Notification Recipients',
+    'Organization Name', 'Local Number', 'Main Office Address', 'Main Phone',
+    'Google Drive Folder ID', 'Google Calendar ID',
+    'Filing Deadline Days', 'Step I Response Days', 'Step II Appeal Days', 'Step II Response Days',
+    'Best Times to Contact', 'Home Towns',
+    'Contract Article (Grievance)', 'Contract Article (Discipline)', 'Contract Article (Workload)', 'Contract Name',
+    'Union Parent', 'State/Region', 'Organization Website',
+    'Office Addresses', 'Main Fax', 'Main Contact Name', 'Main Contact Email'
+  ];
+
+  // Apply section headers (Row 1)
+  sheet.getRange(1, 1, 1, sectionHeaders.length).setValues([sectionHeaders])
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setFontColor(COLORS.TEXT_DARK)
+    .setFontWeight('bold')
+    .setFontStyle('italic')
+    .setHorizontalAlignment('center');
+
+  // Apply column headers (Row 2)
+  sheet.getRange(2, 1, 1, columnHeaders.length).setValues([columnHeaders])
     .setBackground(COLORS.PRIMARY_PURPLE)
     .setFontColor(COLORS.WHITE)
     .setFontWeight('bold')
     .setHorizontalAlignment('center');
 
-  // Add Home Towns header at column AF (32) with same styling
-  sheet.getRange(1, CONFIG_COLS.HOME_TOWNS).setValue('Home Towns')
-    .setBackground(COLORS.PRIMARY_PURPLE)
-    .setFontColor(COLORS.WHITE)
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center');
-
-  // Add default values for system-populated columns
-  var col = CONFIG_COLS.OFFICE_DAYS;
-  sheet.getRange(2, col, DEFAULT_CONFIG.OFFICE_DAYS.length, 1)
+  // Add default dropdown values (Row 3+)
+  // Office Days (D)
+  sheet.getRange(3, CONFIG_COLS.OFFICE_DAYS, DEFAULT_CONFIG.OFFICE_DAYS.length, 1)
     .setValues(DEFAULT_CONFIG.OFFICE_DAYS.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.YES_NO;
-  sheet.getRange(2, col, DEFAULT_CONFIG.YES_NO.length, 1)
+  // Yes/No (E)
+  sheet.getRange(3, CONFIG_COLS.YES_NO, DEFAULT_CONFIG.YES_NO.length, 1)
     .setValues(DEFAULT_CONFIG.YES_NO.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.GRIEVANCE_STATUS;
-  sheet.getRange(2, col, DEFAULT_CONFIG.GRIEVANCE_STATUS.length, 1)
+  // Steward Committees (I)
+  var committees = ['Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
+                    'Political Action Committee', 'Membership Committee', 'Executive Board'];
+  sheet.getRange(3, CONFIG_COLS.STEWARD_COMMITTEES, committees.length, 1)
+    .setValues(committees.map(function(v) { return [v]; }));
+
+  // Grievance Status (J)
+  sheet.getRange(3, CONFIG_COLS.GRIEVANCE_STATUS, DEFAULT_CONFIG.GRIEVANCE_STATUS.length, 1)
     .setValues(DEFAULT_CONFIG.GRIEVANCE_STATUS.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.GRIEVANCE_STEP;
-  sheet.getRange(2, col, DEFAULT_CONFIG.GRIEVANCE_STEP.length, 1)
+  // Grievance Step (K)
+  sheet.getRange(3, CONFIG_COLS.GRIEVANCE_STEP, DEFAULT_CONFIG.GRIEVANCE_STEP.length, 1)
     .setValues(DEFAULT_CONFIG.GRIEVANCE_STEP.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.ISSUE_CATEGORY;
-  sheet.getRange(2, col, DEFAULT_CONFIG.ISSUE_CATEGORY.length, 1)
+  // Issue Category (L)
+  sheet.getRange(3, CONFIG_COLS.ISSUE_CATEGORY, DEFAULT_CONFIG.ISSUE_CATEGORY.length, 1)
     .setValues(DEFAULT_CONFIG.ISSUE_CATEGORY.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.ARTICLES;
-  sheet.getRange(2, col, DEFAULT_CONFIG.ARTICLES.length, 1)
+  // Articles (M)
+  sheet.getRange(3, CONFIG_COLS.ARTICLES, DEFAULT_CONFIG.ARTICLES.length, 1)
     .setValues(DEFAULT_CONFIG.ARTICLES.map(function(v) { return [v]; }));
 
-  col = CONFIG_COLS.COMM_METHODS;
-  sheet.getRange(2, col, DEFAULT_CONFIG.COMM_METHODS.length, 1)
+  // Communication Methods (N)
+  sheet.getRange(3, CONFIG_COLS.COMM_METHODS, DEFAULT_CONFIG.COMM_METHODS.length, 1)
     .setValues(DEFAULT_CONFIG.COMM_METHODS.map(function(v) { return [v]; }));
 
-  // Add Best Times default values (column N = 14)
-  var bestTimes = ['Morning', 'Afternoon', 'Evening', 'Any Time'];
-  sheet.getRange(2, 14, bestTimes.length, 1)
+  // Alert Days (S) - default notification intervals
+  sheet.getRange(3, CONFIG_COLS.ALERT_DAYS, 1, 1).setValue('3, 7, 14');
+
+  // Organization defaults (SEIU Local 509)
+  sheet.getRange(3, CONFIG_COLS.ORG_NAME, 1, 1).setValue('SEIU Local 509');
+  sheet.getRange(3, CONFIG_COLS.LOCAL_NUMBER, 1, 1).setValue('509');
+  sheet.getRange(3, CONFIG_COLS.MAIN_ADDRESS, 1, 1).setValue('293 Boston Post Road West, 4th Floor, Marlborough, MA 01752');
+  sheet.getRange(3, CONFIG_COLS.MAIN_PHONE, 1, 1).setValue('774-843-7509');
+
+  // Deadline defaults (in days)
+  sheet.getRange(3, CONFIG_COLS.FILING_DEADLINE_DAYS, 1, 1).setValue(21);
+  sheet.getRange(3, CONFIG_COLS.STEP1_RESPONSE_DAYS, 1, 1).setValue(30);
+  sheet.getRange(3, CONFIG_COLS.STEP2_APPEAL_DAYS, 1, 1).setValue(10);
+  sheet.getRange(3, CONFIG_COLS.STEP2_RESPONSE_DAYS, 1, 1).setValue(30);
+
+  // Best Times to Contact (AE)
+  var bestTimes = ['Morning (8am-12pm)', 'Afternoon (12pm-5pm)', 'Evening (5pm-8pm)', 'Weekends', 'Flexible'];
+  sheet.getRange(3, CONFIG_COLS.BEST_TIMES, bestTimes.length, 1)
     .setValues(bestTimes.map(function(v) { return [v]; }));
 
-  // Freeze header row
-  sheet.setFrozenRows(1);
+  // Contract articles
+  sheet.getRange(3, CONFIG_COLS.CONTRACT_GRIEVANCE, 1, 1).setValue('Article 23A');
+  sheet.getRange(3, CONFIG_COLS.CONTRACT_DISCIPLINE, 1, 1).setValue('Article 12');
+  sheet.getRange(3, CONFIG_COLS.CONTRACT_WORKLOAD, 1, 1).setValue('Article 15');
+  sheet.getRange(3, CONFIG_COLS.CONTRACT_NAME, 1, 1).setValue('2023-2026 CBA');
 
-  // Auto-resize all columns with data
-  sheet.autoResizeColumns(1, headers.length);
-  sheet.autoResizeColumn(CONFIG_COLS.HOME_TOWNS);
+  // Org identity
+  sheet.getRange(3, CONFIG_COLS.UNION_PARENT, 1, 1).setValue('SEIU');
+  sheet.getRange(3, CONFIG_COLS.STATE_REGION, 1, 1).setValue('Massachusetts');
+  sheet.getRange(3, CONFIG_COLS.ORG_WEBSITE, 1, 1).setValue('https://www.seiu509.org/');
 
-  // Set column widths for empty columns between O and AF to be narrow
-  for (var i = 16; i < 32; i++) {
-    sheet.setColumnWidth(i, 30);
+  // Extended contact
+  sheet.getRange(3, CONFIG_COLS.MAIN_FAX, 1, 1).setValue('508-485-8529');
+  sheet.getRange(3, CONFIG_COLS.MAIN_CONTACT_NAME, 1, 1).setValue('Marc');
+  sheet.getRange(3, CONFIG_COLS.MAIN_CONTACT_EMAIL, 1, 1).setValue('marc@seiu509.org');
+
+  // Freeze header rows (1 and 2)
+  sheet.setFrozenRows(2);
+
+  // Auto-resize all columns
+  sheet.autoResizeColumns(1, columnHeaders.length);
+
+  // Set minimum column widths for readability
+  for (var i = 1; i <= columnHeaders.length; i++) {
+    if (sheet.getColumnWidth(i) < 100) {
+      sheet.setColumnWidth(i, 100);
+    }
   }
 }
 
@@ -955,7 +1009,8 @@ function setMemberIdValidation(grievanceSheet, memberSheet) {
  * @param {number} sourceCol - Column number in Config sheet
  */
 function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
-  var sourceRange = configSheet.getRange(2, sourceCol, 100, 1);
+  // Config data starts at row 3 (row 1 = section headers, row 2 = column headers)
+  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(sourceRange, true)
     .setAllowInvalid(false)

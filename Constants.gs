@@ -220,22 +220,74 @@ var GRIEVANCE_COLS = {
  * @const {Object}
  */
 var CONFIG_COLS = {
-  JOB_TITLES: 1,           // A
-  OFFICE_LOCATIONS: 2,     // B
-  UNITS: 3,                // C
-  OFFICE_DAYS: 4,          // D
-  YES_NO: 5,               // E
-  SUPERVISORS: 6,          // F
-  MANAGERS: 7,             // G
-  STEWARDS: 8,             // H
-  GRIEVANCE_STATUS: 9,     // I
-  GRIEVANCE_STEP: 10,      // J
-  ISSUE_CATEGORY: 11,      // K
-  ARTICLES: 12,            // L
-  COMM_METHODS: 13,        // M
-  BEST_TIMES: 14,          // N
+  // ── EMPLOYMENT INFO ── (A-E)
+  JOB_TITLES: 1,              // A
+  OFFICE_LOCATIONS: 2,        // B
+  UNITS: 3,                   // C
+  OFFICE_DAYS: 4,             // D
+  YES_NO: 5,                  // E
+
+  // ── SUPERVISION ── (F-G)
+  SUPERVISORS: 6,             // F
+  MANAGERS: 7,                // G
+
+  // ── STEWARD INFO ── (H-I)
+  STEWARDS: 8,                // H
+  STEWARD_COMMITTEES: 9,      // I
+
+  // ── GRIEVANCE SETTINGS ── (J-M)
+  GRIEVANCE_STATUS: 10,       // J
+  GRIEVANCE_STEP: 11,         // K
+  ISSUE_CATEGORY: 12,         // L
+  ARTICLES: 13,               // M
+
+  // ── LINKS & COORDINATORS ── (N-Q)
+  COMM_METHODS: 14,           // N
   GRIEVANCE_COORDINATORS: 15, // O
-  HOME_TOWNS: 32           // AF
+  GRIEVANCE_FORM_URL: 16,     // P
+  CONTACT_FORM_URL: 17,       // Q
+
+  // ── NOTIFICATIONS ── (R-S)
+  ADMIN_EMAILS: 18,           // R
+  ALERT_DAYS: 19,             // S
+  NOTIFICATION_RECIPIENTS: 20, // T
+
+  // ── ORGANIZATION ── (U-X)
+  ORG_NAME: 21,               // U
+  LOCAL_NUMBER: 22,           // V
+  MAIN_ADDRESS: 23,           // W
+  MAIN_PHONE: 24,             // X
+
+  // ── INTEGRATION ── (Y-Z)
+  DRIVE_FOLDER_ID: 25,        // Y
+  CALENDAR_ID: 26,            // Z
+
+  // ── DEADLINES ── (AA-AD)
+  FILING_DEADLINE_DAYS: 27,   // AA
+  STEP1_RESPONSE_DAYS: 28,    // AB
+  STEP2_APPEAL_DAYS: 29,      // AC
+  STEP2_RESPONSE_DAYS: 30,    // AD
+
+  // ── MULTI-SELECT OPTIONS ── (AE-AF)
+  BEST_TIMES: 31,             // AE
+  HOME_TOWNS: 32,             // AF
+
+  // ── CONTRACT & LEGAL ── (AG-AJ)
+  CONTRACT_GRIEVANCE: 33,     // AG
+  CONTRACT_DISCIPLINE: 34,    // AH
+  CONTRACT_WORKLOAD: 35,      // AI
+  CONTRACT_NAME: 36,          // AJ
+
+  // ── ORG IDENTITY ── (AK-AM)
+  UNION_PARENT: 37,           // AK
+  STATE_REGION: 38,           // AL
+  ORG_WEBSITE: 39,            // AM
+
+  // ── EXTENDED CONTACT ── (AN-AQ)
+  OFFICE_ADDRESSES: 40,       // AN
+  MAIN_FAX: 41,               // AO
+  MAIN_CONTACT_NAME: 42,      // AP
+  MAIN_CONTACT_EMAIL: 43      // AQ
 };
 
 // ============================================================================
