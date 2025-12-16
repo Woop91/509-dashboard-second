@@ -152,6 +152,7 @@ function SEED_MEMBERS(count) {
   var supervisors = getConfigValues(configSheet, CONFIG_COLS.SUPERVISORS);
   var managers = getConfigValues(configSheet, CONFIG_COLS.MANAGERS);
   var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
+  var homeTowns = getConfigValues(configSheet, CONFIG_COLS.HOME_TOWNS);
 
   // If config is empty, use defaults
   if (jobTitles.length === 0) jobTitles = ['Social Worker', 'Case Manager', 'Supervisor'];
@@ -160,6 +161,7 @@ function SEED_MEMBERS(count) {
   if (supervisors.length === 0) supervisors = ['Jane Supervisor'];
   if (managers.length === 0) managers = ['John Manager'];
   if (stewards.length === 0) stewards = ['Mary Steward'];
+  if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
 
   var firstNames = ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen'];
   var lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
@@ -171,6 +173,7 @@ function SEED_MEMBERS(count) {
 
   var rows = [];
   var batchSize = 50;
+  var today = new Date();
 
   for (var i = 0; i < count; i++) {
     var memberId = 'M' + String(existingCount + i + 1).padStart(6, '0');
@@ -179,6 +182,12 @@ function SEED_MEMBERS(count) {
     var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + (existingCount + i + 1) + '@example.org';
     var phone = '617-555-' + String(1000 + i).padStart(4, '0');
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
+    var assignedSteward = randomChoice(stewards);
+
+    // Generate recent contact data (50% chance of having recent contact)
+    var hasRecentContact = Math.random() < 0.5;
+    var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
+    var contactSteward = hasRecentContact ? assignedSteward : '';
 
     var row = generateSingleMemberRow(
       memberId, firstName, lastName,
@@ -193,7 +202,10 @@ function SEED_MEMBERS(count) {
       randomChoice(managers),
       isSteward,
       isSteward === 'Yes' ? 'Grievance Committee' : '',
-      randomChoice(stewards)
+      assignedSteward,
+      randomChoice(homeTowns),
+      recentContactDate,
+      contactSteward
     );
 
     rows.push(row);
@@ -213,48 +225,70 @@ function SEED_MEMBERS(count) {
     sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
   }
 
+  // Sync grievance data to Member Directory (populates AB-AD: Has Open Grievance, Status, Next Deadline)
+  syncGrievanceToMemberDirectory();
+
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
 }
 
 /**
  * Generate a single member row with all 31 columns
+ * @param {string} memberId - Member ID
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {string} jobTitle - Job title
+ * @param {string} location - Work location
+ * @param {string} unit - Unit
+ * @param {string} officeDays - Office days
+ * @param {string} email - Email
+ * @param {string} phone - Phone
+ * @param {string} prefComm - Preferred communication
+ * @param {string} bestTime - Best time to contact
+ * @param {string} supervisor - Supervisor
+ * @param {string} manager - Manager
+ * @param {string} isSteward - Is steward (Yes/No)
+ * @param {string} committees - Committees
+ * @param {string} assignedSteward - Assigned steward
+ * @param {string} homeTown - Home town
+ * @param {Date|string} recentContactDate - Recent contact date
+ * @param {string} contactSteward - Steward who made contact
  */
-function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward) {
+function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward) {
   var today = new Date();
   var lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
   return [
-    memberId,                                    // 1: Member ID
-    firstName,                                   // 2: First Name
-    lastName,                                    // 3: Last Name
-    jobTitle,                                    // 4: Job Title
-    location,                                    // 5: Work Location
-    unit,                                        // 6: Unit
-    officeDays,                                  // 7: Office Days
-    email,                                       // 8: Email
-    phone,                                       // 9: Phone
-    prefComm,                                    // 10: Preferred Communication
-    bestTime,                                    // 11: Best Time
-    supervisor,                                  // 12: Supervisor
-    manager,                                     // 13: Manager
-    isSteward,                                   // 14: Is Steward
-    committees,                                  // 15: Committees
-    assignedSteward,                             // 16: Assigned Steward
-    randomDate(lastMonth, today),                // 17: Last Virtual Mtg
-    randomDate(lastMonth, today),                // 18: Last In-Person Mtg
-    Math.floor(Math.random() * 100),             // 19: Open Rate %
-    Math.floor(Math.random() * 20),              // 20: Volunteer Hours
-    Math.random() < 0.3 ? 'Yes' : 'No',          // 21: Interest Local
-    Math.random() < 0.2 ? 'Yes' : 'No',          // 22: Interest Chapter
-    Math.random() < 0.1 ? 'Yes' : 'No',          // 23: Interest Allied
-    '',                                          // 24: Home Town
-    '',                                          // 25: Recent Contact Date
-    '',                                          // 26: Contact Steward
-    '',                                          // 27: Contact Notes
-    '',                                          // 28: Has Open Grievance (calculated)
-    '',                                          // 29: Grievance Status (calculated)
-    '',                                          // 30: Next Deadline (calculated)
-    false                                        // 31: Start Grievance (checkbox)
+    memberId,                                    // 1: Member ID (A)
+    firstName,                                   // 2: First Name (B)
+    lastName,                                    // 3: Last Name (C)
+    jobTitle,                                    // 4: Job Title (D)
+    location,                                    // 5: Work Location (E)
+    unit,                                        // 6: Unit (F)
+    officeDays,                                  // 7: Office Days (G)
+    email,                                       // 8: Email (H)
+    phone,                                       // 9: Phone (I)
+    prefComm,                                    // 10: Preferred Communication (J)
+    bestTime,                                    // 11: Best Time (K)
+    supervisor,                                  // 12: Supervisor (L)
+    manager,                                     // 13: Manager (M)
+    isSteward,                                   // 14: Is Steward (N)
+    committees,                                  // 15: Committees (O)
+    assignedSteward,                             // 16: Assigned Steward (P)
+    randomDate(lastMonth, today),                // 17: Last Virtual Mtg (Q)
+    randomDate(lastMonth, today),                // 18: Last In-Person Mtg (R)
+    Math.floor(Math.random() * 100),             // 19: Open Rate % (S)
+    Math.floor(Math.random() * 20),              // 20: Volunteer Hours (T)
+    Math.random() < 0.3 ? 'Yes' : 'No',          // 21: Interest Local (U)
+    Math.random() < 0.2 ? 'Yes' : 'No',          // 22: Interest Chapter (V)
+    Math.random() < 0.1 ? 'Yes' : 'No',          // 23: Interest Allied (W)
+    homeTown || '',                              // 24: Home Town (X)
+    recentContactDate || '',                     // 25: Recent Contact Date (Y)
+    contactSteward || '',                        // 26: Contact Steward (Z)
+    '',                                          // 27: Contact Notes (AA) - manual entry
+    '',                                          // 28: Has Open Grievance (AB) - auto-calculated from Grievance Log
+    '',                                          // 29: Grievance Status (AC) - auto-calculated from Grievance Log
+    '',                                          // 30: Next Deadline (AD) - auto-calculated from Grievance Log
+    false                                        // 31: Start Grievance (AE) - checkbox (re-applied after setValues)
   ];
 }
 
