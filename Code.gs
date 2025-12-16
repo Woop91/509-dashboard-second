@@ -308,6 +308,9 @@ function createMemberDirectory(ss) {
 
 /**
  * Create or recreate the Grievance Log sheet
+ * NOTE: Calculated columns (First Name, Last Name, Email, Deadlines, Days Open, etc.)
+ * are managed by the hidden _Grievance_Formulas sheet for self-healing capability.
+ * Users can't accidentally erase formulas because they're in the hidden sheet.
  */
 function createGrievanceLog(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.GRIEVANCE_LOG);
@@ -327,9 +330,30 @@ function createGrievanceLog(ss) {
   sheet.setColumnWidth(GRIEVANCE_COLS.RESOLUTION, 250);
   sheet.setColumnWidth(GRIEVANCE_COLS.COORDINATOR_MESSAGE, 250);
 
-  // Add checkbox for Message Alert column
+  // Add checkbox for Message Alert column (AC)
   var checkboxRange = sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 998, 1);
   checkboxRange.insertCheckboxes();
+
+  // Format date columns
+  var dateColumns = [
+    GRIEVANCE_COLS.INCIDENT_DATE,
+    GRIEVANCE_COLS.FILING_DEADLINE,
+    GRIEVANCE_COLS.DATE_FILED,
+    GRIEVANCE_COLS.STEP1_DUE,
+    GRIEVANCE_COLS.STEP1_RCVD,
+    GRIEVANCE_COLS.STEP2_APPEAL_DUE,
+    GRIEVANCE_COLS.STEP2_APPEAL_FILED,
+    GRIEVANCE_COLS.STEP2_DUE,
+    GRIEVANCE_COLS.STEP2_RCVD,
+    GRIEVANCE_COLS.STEP3_APPEAL_DUE,
+    GRIEVANCE_COLS.STEP3_APPEAL_FILED,
+    GRIEVANCE_COLS.DATE_CLOSED,
+    GRIEVANCE_COLS.NEXT_ACTION_DUE
+  ];
+
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
+  });
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -851,15 +875,37 @@ function setupDataValidations() {
   setDropdownValidation(memberSheet, MEMBER_COLS.CONTACT_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
+  // Member ID dropdown - links to valid Member IDs from Member Directory
+  setMemberIdValidation(grievanceSheet, memberSheet);
+
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STATUS, configSheet, CONFIG_COLS.GRIEVANCE_STATUS);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.CURRENT_STEP, configSheet, CONFIG_COLS.GRIEVANCE_STEP);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.ISSUE_CATEGORY, configSheet, CONFIG_COLS.ISSUE_CATEGORY);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.ARTICLES, configSheet, CONFIG_COLS.ARTICLES);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STEWARD, configSheet, CONFIG_COLS.STEWARDS);
+
+  // Note: Unit, Location, Steward columns now use formulas for auto-lookup
+  // No need for manual dropdown validation on those columns
 
   SpreadsheetApp.getActiveSpreadsheet().toast('Data validations applied successfully!', '✅ Success', 3);
+}
+
+/**
+ * Set Member ID validation dropdown from Member Directory
+ * @param {Sheet} grievanceSheet - Grievance Log sheet
+ * @param {Sheet} memberSheet - Member Directory sheet
+ */
+function setMemberIdValidation(grievanceSheet, memberSheet) {
+  // Get the Member ID column from Member Directory
+  var memberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var sourceRange = memberSheet.getRange(memberIdCol + '2:' + memberIdCol + '1000');
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(false)
+    .build();
+
+  var targetRange = grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1);
+  targetRange.setDataValidation(rule);
 }
 
 /**

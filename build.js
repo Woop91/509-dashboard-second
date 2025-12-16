@@ -112,6 +112,7 @@ const CORE_MODULES = [
   'GracefulDegradation.gs',
   'GrievanceFloatToggle.gs',
   'GrievanceWorkflow.gs',
+  'HiddenSheets.gs',
   'IdempotentOperations.gs',
   'IncrementalBackupSystem.gs',
   'InteractiveDashboard.gs',

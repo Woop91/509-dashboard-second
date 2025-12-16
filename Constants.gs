@@ -41,6 +41,7 @@ var SHEETS = {
   AUDIT_LOG: '📋 Audit_Log',
   // Hidden calculation sheets
   GRIEVANCE_CALC: '_Grievance_Calc',
+  GRIEVANCE_FORMULAS: '_Grievance_Formulas',
   MEMBER_LOOKUP: '_Member_Lookup',
   STEWARD_CONTACT_CALC: '_Steward_Contact_Calc',
   ENGAGEMENT_CALC: '_Engagement_Calc',

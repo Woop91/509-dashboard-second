@@ -126,7 +126,350 @@ function syncGrievanceToMemberDirectory() {
 }
 
 // ============================================================================
-// HIDDEN SHEET 2: _Member_Lookup
+// HIDDEN SHEET 2: _Grievance_Formulas (SELF-HEALING)
+// Source: Grievance Log → Destination: Grievance Log (calculated columns)
+// This sheet contains all auto-calculated formulas and syncs them back
+// ============================================================================
+
+/**
+ * Setup the _Grievance_Formulas hidden sheet with self-healing formulas
+ * Calculates: First Name, Last Name, Email, Unit, Location, Steward (from Member Dir)
+ *            Filing Deadline, Step I-III dates, Days Open, Next Action Due, Days to Deadline
+ */
+function setupGrievanceFormulasSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.GRIEVANCE_FORMULAS);
+  }
+
+  sheet.clear();
+
+  // Headers matching Grievance Log columns that need formulas
+  var headers = [
+    'Row Index',           // A - For tracking which row in Grievance Log
+    'Member ID',           // B - From Grievance Log
+    'First Name',          // C - Lookup from Member Directory
+    'Last Name',           // D - Lookup from Member Directory
+    'Incident Date',       // E - From Grievance Log
+    'Date Filed',          // F - From Grievance Log
+    'Step I Rcvd',         // G - From Grievance Log
+    'Step II Appeal Filed',// H - From Grievance Log
+    'Step II Rcvd',        // I - From Grievance Log
+    'Status',              // J - From Grievance Log
+    'Current Step',        // K - From Grievance Log
+    'Date Closed',         // L - From Grievance Log
+    'Filing Deadline',     // M - CALCULATED
+    'Step I Due',          // N - CALCULATED
+    'Step II Appeal Due',  // O - CALCULATED
+    'Step II Due',         // P - CALCULATED
+    'Step III Appeal Due', // Q - CALCULATED
+    'Days Open',           // R - CALCULATED
+    'Next Action Due',     // S - CALCULATED
+    'Days to Deadline',    // T - CALCULATED
+    'Member Email',        // U - Lookup from Member Directory
+    'Unit',                // V - Lookup from Member Directory
+    'Location',            // W - Lookup from Member Directory
+    'Steward'              // X - Lookup from Member Directory
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters for Grievance Log source data
+  var gGrievanceIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);     // A
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);           // B
+  var gIncidentDateCol = getColumnLetter(GRIEVANCE_COLS.INCIDENT_DATE);   // G
+  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);         // I
+  var gStep1RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP1_RCVD);         // K
+  var gStep2AppealFiledCol = getColumnLetter(GRIEVANCE_COLS.STEP2_APPEAL_FILED); // M
+  var gStep2RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP2_RCVD);         // O
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);                // E
+  var gCurrentStepCol = getColumnLetter(GRIEVANCE_COLS.CURRENT_STEP);     // F
+  var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);       // R
+
+  // Member Directory columns for lookups
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mStewardCol = getColumnLetter(MEMBER_COLS.ASSIGNED_STEWARD);
+  var memberRange = "'" + SHEETS.MEMBER_DIR + "'!" + mMemberIdCol + ":" + mStewardCol;
+
+  // Column A: Row Index (ROW()-1 to match Grievance Log rows)
+  // Pull unique grievance IDs to create row mapping
+  sheet.getRange('A2').setFormula(
+    '=IFERROR(FILTER(ROW(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gGrievanceIdCol + '2:' + gGrievanceIdCol + ')-1,' +
+    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gGrievanceIdCol + '2:' + gGrievanceIdCol + '<>""),"")'
+  );
+
+  // Column B: Member ID (from Grievance Log)
+  sheet.getRange('B2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A+1)))'
+  );
+
+  // Column C: First Name (VLOOKUP from Member Directory)
+  sheet.getRange('C2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.FIRST_NAME + ',FALSE),"")))'
+  );
+
+  // Column D: Last Name (VLOOKUP from Member Directory)
+  sheet.getRange('D2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.LAST_NAME + ',FALSE),"")))'
+  );
+
+  // Column E: Incident Date (from Grievance Log)
+  sheet.getRange('E2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIncidentDateCol + ':' + gIncidentDateCol + ',A2:A+1)))'
+  );
+
+  // Column F: Date Filed (from Grievance Log)
+  sheet.getRange('F2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',A2:A+1)))'
+  );
+
+  // Column G: Step I Rcvd (from Grievance Log)
+  sheet.getRange('G2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep1RcvdCol + ':' + gStep1RcvdCol + ',A2:A+1)))'
+  );
+
+  // Column H: Step II Appeal Filed (from Grievance Log)
+  sheet.getRange('H2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep2AppealFiledCol + ':' + gStep2AppealFiledCol + ',A2:A+1)))'
+  );
+
+  // Column I: Step II Rcvd (from Grievance Log)
+  sheet.getRange('I2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep2RcvdCol + ':' + gStep2RcvdCol + ',A2:A+1)))'
+  );
+
+  // Column J: Status (from Grievance Log)
+  sheet.getRange('J2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',A2:A+1)))'
+  );
+
+  // Column K: Current Step (from Grievance Log)
+  sheet.getRange('K2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCurrentStepCol + ':' + gCurrentStepCol + ',A2:A+1)))'
+  );
+
+  // Column L: Date Closed (from Grievance Log)
+  sheet.getRange('L2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',A2:A+1)))'
+  );
+
+  // =========== CALCULATED COLUMNS ===========
+
+  // Column M: Filing Deadline = Incident Date + 21 days
+  sheet.getRange('M2').setFormula(
+    '=ARRAYFORMULA(IF(E2:E="","",E2:E+21))'
+  );
+
+  // Column N: Step I Due = Date Filed + 30 days
+  sheet.getRange('N2').setFormula(
+    '=ARRAYFORMULA(IF(F2:F="","",F2:F+30))'
+  );
+
+  // Column O: Step II Appeal Due = Step I Rcvd + 10 days
+  sheet.getRange('O2').setFormula(
+    '=ARRAYFORMULA(IF(G2:G="","",G2:G+10))'
+  );
+
+  // Column P: Step II Due = Step II Appeal Filed + 30 days
+  sheet.getRange('P2').setFormula(
+    '=ARRAYFORMULA(IF(H2:H="","",H2:H+30))'
+  );
+
+  // Column Q: Step III Appeal Due = Step II Rcvd + 30 days
+  sheet.getRange('Q2').setFormula(
+    '=ARRAYFORMULA(IF(I2:I="","",I2:I+30))'
+  );
+
+  // Column R: Days Open = IF closed: Date Closed - Date Filed, ELSE: Today - Date Filed
+  sheet.getRange('R2').setFormula(
+    '=ARRAYFORMULA(IF(F2:F="","",IF(L2:L<>"",L2:L-F2:F,TODAY()-F2:F)))'
+  );
+
+  // Column S: Next Action Due = Based on current step and status
+  // If closed status, leave blank; otherwise return appropriate deadline
+  sheet.getRange('S2').setFormula(
+    '=ARRAYFORMULA(IF(J2:J="","",' +
+    'IF(OR(J2:J="Settled",J2:J="Withdrawn",J2:J="Denied",J2:J="Won",J2:J="Closed"),"",' +
+    'IF(K2:K="Informal",M2:M,' +
+    'IF(K2:K="Step I",N2:N,' +
+    'IF(K2:K="Step II",P2:P,' +
+    'Q2:Q))))))'
+  );
+
+  // Column T: Days to Deadline = Next Action Due - Today
+  sheet.getRange('T2').setFormula(
+    '=ARRAYFORMULA(IF(S2:S="","",S2:S-TODAY()))'
+  );
+
+  // =========== MEMBER LOOKUP COLUMNS ===========
+
+  // Column U: Member Email (VLOOKUP from Member Directory)
+  sheet.getRange('U2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.EMAIL + ',FALSE),"")))'
+  );
+
+  // Column V: Unit (VLOOKUP from Member Directory)
+  sheet.getRange('V2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.UNIT + ',FALSE),"")))'
+  );
+
+  // Column W: Location (VLOOKUP from Member Directory)
+  sheet.getRange('W2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.WORK_LOCATION + ',FALSE),"")))'
+  );
+
+  // Column X: Steward (VLOOKUP from Member Directory)
+  sheet.getRange('X2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
+  );
+
+  // Format date columns
+  sheet.getRange('E:E').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('F:F').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('G:G').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('H:H').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('I:I').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('L:L').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('M:M').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('N:N').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('O:O').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('P:P').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('Q:Q').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('S:S').setNumberFormat('yyyy-mm-dd');
+
+  // Hide the sheet
+  sheet.hideSheet();
+
+  Logger.log('_Grievance_Formulas sheet setup complete');
+}
+
+/**
+ * Sync calculated formulas from hidden sheet to Grievance Log
+ * This is the self-healing function - it copies calculated values to the Grievance Log
+ */
+function syncGrievanceFormulasToLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var formulaSheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!formulaSheet || !grievanceSheet) {
+    Logger.log('Required sheets not found for grievance formula sync');
+    return;
+  }
+
+  // Get formula sheet data
+  var formulaData = formulaSheet.getDataRange().getValues();
+  if (formulaData.length < 2) return;
+
+  // Create lookup map by row index
+  var lookup = {};
+  for (var i = 1; i < formulaData.length; i++) {
+    var rowIndex = formulaData[i][0]; // Column A: Row Index
+    if (rowIndex) {
+      lookup[rowIndex] = {
+        firstName: formulaData[i][2],        // C: First Name
+        lastName: formulaData[i][3],         // D: Last Name
+        filingDeadline: formulaData[i][12],  // M: Filing Deadline
+        step1Due: formulaData[i][13],        // N: Step I Due
+        step2AppealDue: formulaData[i][14],  // O: Step II Appeal Due
+        step2Due: formulaData[i][15],        // P: Step II Due
+        step3AppealDue: formulaData[i][16],  // Q: Step III Appeal Due
+        daysOpen: formulaData[i][17],        // R: Days Open
+        nextActionDue: formulaData[i][18],   // S: Next Action Due
+        daysToDeadline: formulaData[i][19],  // T: Days to Deadline
+        email: formulaData[i][20],           // U: Email
+        unit: formulaData[i][21],            // V: Unit
+        location: formulaData[i][22],        // W: Location
+        steward: formulaData[i][23]          // X: Steward
+      };
+    }
+  }
+
+  // Get grievance data
+  var grievanceData = grievanceSheet.getDataRange().getValues();
+  if (grievanceData.length < 2) return;
+
+  // Prepare updates
+  var nameUpdates = [];           // Columns C-D
+  var deadlineUpdates = [];       // Columns H, J, L, N, P (Filing Deadline, Step I Due, Step II Appeal Due, Step II Due, Step III Appeal Due)
+  var metricsUpdates = [];        // Columns S, T, U (Days Open, Next Action Due, Days to Deadline)
+  var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
+
+  for (var j = 1; j < grievanceData.length; j++) {
+    var data = lookup[j] || {};
+
+    // Names (C-D)
+    nameUpdates.push([
+      data.firstName || '',
+      data.lastName || ''
+    ]);
+
+    // Deadlines (H, J, L, N, P)
+    deadlineUpdates.push([
+      data.filingDeadline || '',
+      data.step1Due || '',
+      data.step2AppealDue || '',
+      data.step2Due || '',
+      data.step3AppealDue || ''
+    ]);
+
+    // Metrics (S, T, U)
+    metricsUpdates.push([
+      data.daysOpen || '',
+      data.nextActionDue || '',
+      data.daysToDeadline || ''
+    ]);
+
+    // Contact info (X, Y, Z, AA)
+    contactUpdates.push([
+      data.email || '',
+      data.unit || '',
+      data.location || '',
+      data.steward || ''
+    ]);
+  }
+
+  // Apply updates to Grievance Log
+  if (nameUpdates.length > 0) {
+    // C-D: First Name, Last Name
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FIRST_NAME, nameUpdates.length, 2).setValues(nameUpdates);
+
+    // H: Filing Deadline (column 8)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[0]]; }));
+
+    // J: Step I Due (column 10)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[1]]; }));
+
+    // L: Step II Appeal Due (column 12)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[2]]; }));
+
+    // N: Step II Due (column 14)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[3]]; }));
+
+    // P: Step III Appeal Due (column 16)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
+
+    // S, T, U: Days Open, Next Action Due, Days to Deadline
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
+
+    // X, Y, Z, AA: Email, Unit, Location, Steward
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
+  }
+
+  Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+}
+
+// ============================================================================
+// HIDDEN SHEET 3: _Member_Lookup
 // Source: Member Directory → Destination: Grievance Log (C,D,X-AA)
 // ============================================================================
 
@@ -448,10 +791,12 @@ function onEditAutoSync(e) {
 
   try {
     if (sheetName === SHEETS.GRIEVANCE_LOG) {
-      // Grievance Log changed - sync to Member Directory
+      // Grievance Log changed - sync formulas and update Member Directory
+      syncGrievanceFormulasToLog();
       syncGrievanceToMemberDirectory();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
       // Member Directory changed - sync to Grievance Log
+      syncGrievanceFormulasToLog();
       syncMemberToGrievanceLog();
     }
   } catch (error) {
@@ -511,6 +856,7 @@ function setupAllHiddenSheets() {
   ss.toast('Setting up hidden calculation sheets...', '🔧 Setup', 3);
 
   setupGrievanceCalcSheet();
+  setupGrievanceFormulasSheet();
   setupMemberLookupSheet();
   setupStewardWorkloadCalcSheet();
   setupInteractiveDashboardCalcSheet();
@@ -537,6 +883,7 @@ function repairAllHiddenSheets() {
 
   // Run initial sync
   ss.toast('Running initial data sync...', '🔧 Sync', 3);
+  syncGrievanceFormulasToLog();
   syncGrievanceToMemberDirectory();
   syncMemberToGrievanceLog();
   syncStewardWorkload();
@@ -544,10 +891,11 @@ function repairAllHiddenSheets() {
   ss.toast('Hidden sheets repaired and synced!', '✅ Success', 5);
   ui.alert('✅ Repair Complete',
     'Hidden calculation sheets have been repaired:\n\n' +
-    '• 6 hidden sheets recreated with formulas\n' +
+    '• 7 hidden sheets recreated with self-healing formulas\n' +
     '• Auto-sync trigger installed\n' +
     '• Initial data sync completed\n\n' +
-    'Data will now auto-sync when you edit Member Directory or Grievance Log.',
+    'Data will now auto-sync when you edit Member Directory or Grievance Log.\n' +
+    'Formulas cannot be accidentally erased - they are stored in hidden sheets.',
     ui.ButtonSet.OK);
 }
 
@@ -566,6 +914,7 @@ function verifyHiddenSheets() {
   // Check each hidden sheet
   var hiddenSheets = [
     {name: SHEETS.GRIEVANCE_CALC, purpose: 'Grievance → Member Directory'},
+    {name: SHEETS.GRIEVANCE_FORMULAS, purpose: 'Self-healing Grievance formulas'},
     {name: SHEETS.MEMBER_LOOKUP, purpose: 'Member → Grievance Log'},
     {name: SHEETS.STEWARD_WORKLOAD_CALC, purpose: 'Steward workload metrics'},
     {name: SHEETS.INTERACTIVE_CALC, purpose: 'Dashboard metrics'},
@@ -619,6 +968,7 @@ function syncAllData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast('Syncing all data...', '🔄 Sync', 3);
 
+  syncGrievanceFormulasToLog();
   syncGrievanceToMemberDirectory();
   syncMemberToGrievanceLog();
   syncStewardWorkload();
@@ -635,6 +985,7 @@ function refreshAllHiddenFormulas() {
   // Touch each hidden sheet to force recalc
   var hiddenSheetNames = [
     SHEETS.GRIEVANCE_CALC,
+    SHEETS.GRIEVANCE_FORMULAS,
     SHEETS.MEMBER_LOOKUP,
     SHEETS.STEWARD_WORKLOAD_CALC,
     SHEETS.INTERACTIVE_CALC
