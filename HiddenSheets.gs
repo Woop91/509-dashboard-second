@@ -1329,6 +1329,75 @@ function removeAutoSyncTrigger() {
 }
 
 // ============================================================================
+// HIDDEN SHEET 5: _Dashboard_Calc
+// Source: Member Directory + Grievance Log → Dashboard Summary Statistics
+// ============================================================================
+
+/**
+ * Setup the _Dashboard_Calc hidden sheet with self-healing formulas
+ * Calculates key dashboard metrics that auto-update
+ */
+function setupDashboardCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.DASHBOARD_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.DASHBOARD_CALC);
+  }
+
+  sheet.clear();
+
+  // Headers
+  var headers = ['Metric', 'Value', 'Description'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Column references
+  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
+  var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
+  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+  var gDaysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
+  var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);
+
+  // Metrics with formulas (15 key metrics)
+  var metrics = [
+    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
+    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
+    ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
+    ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
+    ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],
+    ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")', 'Cases won (full or partial)'],
+    ['Denied', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")', 'Cases denied'],
+    ['Withdrawn', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")', 'Cases withdrawn'],
+    ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*"))*100,1),0)', 'Wins / (Wins + Settled + Denied)'],
+    ['Avg Days to Resolution', '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)', 'Average days for closed cases'],
+    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")', 'Cases past deadline'],
+    ['Due This Week', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")', 'Cases due in next 7 days'],
+    ['Filed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())', 'Grievances filed this month'],
+    ['Closed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())', 'Grievances closed this month']
+  ];
+
+  for (var i = 0; i < metrics.length; i++) {
+    sheet.getRange(i + 2, 1).setValue(metrics[i][0]);
+    sheet.getRange(i + 2, 2).setFormula(metrics[i][1]);
+    sheet.getRange(i + 2, 3).setValue(metrics[i][2]);
+  }
+
+  sheet.setColumnWidth(1, 180);
+  sheet.setColumnWidth(2, 100);
+  sheet.setColumnWidth(3, 300);
+
+  sheet.hideSheet();
+  Logger.log('_Dashboard_Calc sheet setup complete');
+}
+
+// ============================================================================
 // MASTER SETUP & REPAIR FUNCTIONS
 // ============================================================================
 
@@ -1339,13 +1408,14 @@ function setupAllHiddenSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast('Setting up hidden calculation sheets...', '🔧 Setup', 3);
 
-  // Core grievance/member calculation sheets (4 total)
+  // Core grievance/member calculation sheets (5 total)
   setupGrievanceCalcSheet();
   setupGrievanceFormulasSheet();
   setupMemberLookupSheet();
   setupStewardContactCalcSheet();
+  setupDashboardCalcSheet();
 
-  ss.toast('All 4 hidden sheets created!', '✅ Success', 3);
+  ss.toast('All 5 hidden sheets created!', '✅ Success', 3);
 }
 
 /**
@@ -1376,9 +1446,9 @@ function repairAllHiddenSheets() {
   ss.toast('Hidden sheets repaired and synced!', '✅ Success', 5);
   ui.alert('✅ Repair Complete',
     'Hidden calculation sheets have been repaired:\n\n' +
-    '• 4 hidden sheets recreated with self-healing formulas\n' +
+    '• 5 hidden sheets recreated with self-healing formulas\n' +
     '• Auto-sync trigger installed\n' +
-    '• All data synced (grievances, members)\n' +
+    '• All data synced (grievances, members, dashboard)\n' +
     '• Checkboxes repaired in Grievance Log and Member Directory\n\n' +
     'Data will now auto-sync when you edit Member Directory or Grievance Log.\n' +
     'Formulas cannot be accidentally erased - they are stored in hidden sheets.',
@@ -1397,12 +1467,13 @@ function verifyHiddenSheets() {
   report.push('============================');
   report.push('');
 
-  // Check each hidden sheet (4 core sheets)
+  // Check each hidden sheet (5 hidden sheets)
   var hiddenSheets = [
     {name: SHEETS.GRIEVANCE_CALC, purpose: 'Grievance → Member Directory'},
     {name: SHEETS.GRIEVANCE_FORMULAS, purpose: 'Self-healing Grievance formulas'},
     {name: SHEETS.MEMBER_LOOKUP, purpose: 'Member → Grievance Log'},
-    {name: SHEETS.STEWARD_CONTACT_CALC, purpose: 'Steward contact tracking'}
+    {name: SHEETS.STEWARD_CONTACT_CALC, purpose: 'Steward contact tracking'},
+    {name: SHEETS.DASHBOARD_CALC, purpose: 'Dashboard summary metrics'}
   ];
 
   report.push('📋 HIDDEN SHEETS:');
