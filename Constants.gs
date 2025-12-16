@@ -39,7 +39,7 @@ var SHEETS = {
   ARCHIVE: '📦 Archive',
   DIAGNOSTICS: '🔧 Diagnostics',
   AUDIT_LOG: '📋 Audit_Log',
-  // Hidden calculation sheets
+  // Hidden calculation sheets (self-healing formulas)
   GRIEVANCE_CALC: '_Grievance_Calc',
   GRIEVANCE_FORMULAS: '_Grievance_Formulas',
   MEMBER_LOOKUP: '_Member_Lookup',
@@ -47,6 +47,12 @@ var SHEETS = {
   ENGAGEMENT_CALC: '_Engagement_Calc',
   STEWARD_WORKLOAD_CALC: '_Steward_Workload_Calc',
   INTERACTIVE_CALC: '_Interactive_Dashboard_Calc',
+  DASHBOARD_SUMMARY_CALC: '_Dashboard_Summary_Calc',
+  TRENDS_CALC: '_Trends_Calc',
+  LOCATION_ANALYTICS_CALC: '_Location_Analytics_Calc',
+  TYPE_ANALYSIS_CALC: '_Type_Analysis_Calc',
+  STEWARD_PERFORMANCE_CALC: '_Steward_Performance_Calc',
+  COST_IMPACT_CALC: '_Cost_Impact_Calc',
   // Optional source sheets
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
