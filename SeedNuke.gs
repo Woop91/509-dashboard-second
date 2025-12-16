@@ -276,15 +276,6 @@ function SEED_GRIEVANCES(count) {
     return;
   }
 
-  // Get config values
-  var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
-  var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
-  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
-
-  if (locations.length === 0) locations = ['Boston Main Office'];
-  if (units.length === 0) units = ['Child Welfare'];
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
   var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
   var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
@@ -298,32 +289,28 @@ function SEED_GRIEVANCES(count) {
   var today = new Date();
 
   for (var i = 0; i < count; i++) {
-    // Pick a random member
+    // Pick a random member - ensure we get a valid member with an ID
     var memberRow = memberData[1 + Math.floor(Math.random() * (memberData.length - 1))];
     var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
-    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1];
-    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1];
-    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1];
+
+    // Skip if no member ID
+    if (!memberId) continue;
 
     var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
-    var row = generateSingleGrievanceRow(
+    // Generate grievance row - First Name, Last Name, Email, Unit, Location, Steward
+    // will be auto-populated by formulas based on Member ID
+    var row = generateSingleGrievanceRowForSeed(
       grievanceId,
       memberId,
-      firstName,
-      lastName,
       status,
       step,
       incidentDate,
       randomChoice(articles),
-      randomChoice(categories),
-      memberEmail,
-      randomChoice(units),
-      randomChoice(locations),
-      randomChoice(stewards)
+      randomChoice(categories)
     );
 
     rows.push(row);
@@ -337,57 +324,247 @@ function SEED_GRIEVANCES(count) {
     }
   }
 
+  // Re-apply formulas after seeding (formulas are overwritten by setValues)
+  setupGrievanceFormulas(grievanceSheet);
+
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }
 
 /**
+ * Generate a grievance row for seeding - leaves formula columns empty
+ * Formula columns (C, D, H, J, L, N, P, S, T, U, X, Y, Z, AA) will be auto-populated
+ */
+function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, incidentDate, articles, category) {
+  var today = new Date();
+
+  // Calculate dates for manual entry columns only
+  // Date Filed - always set if status is not brand new
+  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
+
+  // Initialize timeline variables for manual entry columns
+  var step1Rcvd = '';
+  var step2AppealFiled = '';
+  var step2Rcvd = '';
+  var step3AppealFiled = '';
+  var dateClosed = '';
+
+  // Determine if case is closed
+  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+
+  // Populate timeline based on current step
+  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
+
+  // Step I Due calculated by formula, but Step I Rcvd is manual
+  var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
+
+  // If Step I or beyond, Step I has been completed
+  if (stepIndex >= 1 || isClosed) {
+    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
+    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
+  }
+
+  // If Step II or beyond
+  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
+    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
+    var step2Due = addDays(step2AppealFiled, 30);
+    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
+    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
+  }
+
+  // If Step III or beyond
+  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
+    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
+  }
+
+  // Set date closed for resolved cases
+  if (isClosed) {
+    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
+    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
+  }
+
+  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
+  var resolution = dateClosed ? randomChoice(resolutions) : '';
+
+  // Return row with empty strings for formula columns
+  // Formula columns: C, D (names), H, J, L, N, P (deadlines), S, T, U (metrics), X, Y, Z, AA (member info)
+  return [
+    grievanceId,              // 1: Grievance ID (A)
+    memberId,                 // 2: Member ID (B)
+    '',                       // 3: First Name (C) - FORMULA
+    '',                       // 4: Last Name (D) - FORMULA
+    status,                   // 5: Status (E)
+    step,                     // 6: Current Step (F)
+    incidentDate,             // 7: Incident Date (G)
+    '',                       // 8: Filing Deadline (H) - FORMULA
+    dateFiled,                // 9: Date Filed (I)
+    '',                       // 10: Step I Due (J) - FORMULA
+    step1Rcvd,                // 11: Step I Rcvd (K)
+    '',                       // 12: Step II Appeal Due (L) - FORMULA
+    step2AppealFiled,         // 13: Step II Appeal Filed (M)
+    '',                       // 14: Step II Due (N) - FORMULA
+    step2Rcvd,                // 15: Step II Rcvd (O)
+    '',                       // 16: Step III Appeal Due (P) - FORMULA
+    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
+    dateClosed,               // 18: Date Closed (R)
+    '',                       // 19: Days Open (S) - FORMULA
+    '',                       // 20: Next Action Due (T) - FORMULA
+    '',                       // 21: Days to Deadline (U) - FORMULA
+    articles,                 // 22: Articles Violated (V)
+    category,                 // 23: Issue Category (W)
+    '',                       // 24: Member Email (X) - FORMULA
+    '',                       // 25: Unit (Y) - FORMULA
+    '',                       // 26: Location (Z) - FORMULA
+    '',                       // 27: Steward (AA) - FORMULA
+    resolution,               // 28: Resolution (AB)
+    false,                    // 29: Message Alert (AC) - checkbox
+    '',                       // 30: Coordinator Message (AD)
+    '',                       // 31: Acknowledged By (AE)
+    '',                       // 32: Acknowledged Date (AF)
+    '',                       // 33: Drive Folder ID (AG)
+    ''                        // 34: Drive Folder URL (AH)
+  ];
+}
+
+/**
  * Generate a single grievance row with all 34 columns
+ * Properly calculates all timeline fields based on grievance step progression
  */
 function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward) {
+  var today = new Date();
   var filingDeadline = addDays(incidentDate, 21);
-  var dateFiled = status !== 'Open' ? addDays(incidentDate, Math.floor(Math.random() * 14) + 1) : '';
+
+  // Date Filed - always set if status is not brand new
+  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
+
+  // Step I Due (30 days after filing)
   var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
-  var dateClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won') ?
-    addDays(incidentDate, Math.floor(Math.random() * 60) + 30) : '';
+
+  // Initialize timeline variables
+  var step1Rcvd = '';
+  var step2AppealDue = '';
+  var step2AppealFiled = '';
+  var step2Due = '';
+  var step2Rcvd = '';
+  var step3AppealDue = '';
+  var step3AppealFiled = '';
+  var dateClosed = '';
+
+  // Determine if case is closed
+  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+
+  // Populate timeline based on current step
+  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
+
+  // If Step I or beyond, Step I has been completed
+  if (stepIndex >= 1 || isClosed) {
+    // Step I Decision Received (sometime after Step I Due or earlier)
+    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
+    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
+
+    // Step II Appeal Due (10 days after Step I Decision Received)
+    step2AppealDue = addDays(step1Rcvd, 10);
+  }
+
+  // If Step II or beyond
+  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
+    // Step II Appeal Filed (within appeal window)
+    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
+
+    // Step II Decision Due (30 days after appeal filed)
+    step2Due = addDays(step2AppealFiled, 30);
+
+    // Step II Decision Received
+    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
+    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
+
+    // Step III Appeal Due (30 days after Step II Decision Received)
+    step3AppealDue = addDays(step2Rcvd, 30);
+  }
+
+  // If Step III or beyond
+  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
+    // Step III Appeal Filed
+    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
+  }
+
+  // Set date closed for resolved cases
+  if (isClosed) {
+    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
+    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
+  }
+
+  // Calculate Days Open
+  var daysOpen = '';
+  if (dateFiled) {
+    var endDate = dateClosed || today;
+    daysOpen = Math.floor((endDate - dateFiled) / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate Next Action Due based on current step
+  var nextActionDue = '';
+  if (!isClosed) {
+    switch (step) {
+      case 'Informal':
+        nextActionDue = filingDeadline;
+        break;
+      case 'Step I':
+        nextActionDue = step1Due || filingDeadline;
+        break;
+      case 'Step II':
+        nextActionDue = step2Due || step2AppealDue || step1Due;
+        break;
+      case 'Step III':
+      case 'Mediation':
+      case 'Arbitration':
+        nextActionDue = step3AppealDue || step2Due;
+        break;
+    }
+  }
+
+  // Calculate Days to Deadline
+  var daysToDeadline = '';
+  if (nextActionDue && !isClosed) {
+    daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+  }
 
   var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
   var resolution = dateClosed ? randomChoice(resolutions) : '';
 
   return [
-    grievanceId,              // 1: Grievance ID
-    memberId,                 // 2: Member ID
-    firstName,                // 3: First Name
-    lastName,                 // 4: Last Name
-    status,                   // 5: Status
-    step,                     // 6: Current Step
-    incidentDate,             // 7: Incident Date
-    filingDeadline,           // 8: Filing Deadline (calc)
-    dateFiled,                // 9: Date Filed
-    step1Due,                 // 10: Step I Due (calc)
-    '',                       // 11: Step I Rcvd
-    '',                       // 12: Step II Appeal Due (calc)
-    '',                       // 13: Step II Appeal Filed
-    '',                       // 14: Step II Due (calc)
-    '',                       // 15: Step II Rcvd
-    '',                       // 16: Step III Appeal Due (calc)
-    '',                       // 17: Step III Appeal Filed
-    dateClosed,               // 18: Date Closed
-    '',                       // 19: Days Open (calc)
-    '',                       // 20: Next Action Due (calc)
-    '',                       // 21: Days to Deadline (calc)
-    articles,                 // 22: Articles Violated
-    category,                 // 23: Issue Category
-    email,                    // 24: Member Email
-    unit,                     // 25: Unit
-    location,                 // 26: Location
-    steward,                  // 27: Steward
-    resolution,               // 28: Resolution
-    false,                    // 29: Message Alert
-    '',                       // 30: Coordinator Message
-    '',                       // 31: Acknowledged By
-    '',                       // 32: Acknowledged Date
-    '',                       // 33: Drive Folder ID
-    ''                        // 34: Drive Folder URL
+    grievanceId,              // 1: Grievance ID (A)
+    memberId,                 // 2: Member ID (B)
+    firstName,                // 3: First Name (C)
+    lastName,                 // 4: Last Name (D)
+    status,                   // 5: Status (E)
+    step,                     // 6: Current Step (F)
+    incidentDate,             // 7: Incident Date (G)
+    filingDeadline,           // 8: Filing Deadline (H)
+    dateFiled,                // 9: Date Filed (I)
+    step1Due,                 // 10: Step I Due (J)
+    step1Rcvd,                // 11: Step I Rcvd (K)
+    step2AppealDue,           // 12: Step II Appeal Due (L)
+    step2AppealFiled,         // 13: Step II Appeal Filed (M)
+    step2Due,                 // 14: Step II Due (N)
+    step2Rcvd,                // 15: Step II Rcvd (O)
+    step3AppealDue,           // 16: Step III Appeal Due (P)
+    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
+    dateClosed,               // 18: Date Closed (R)
+    daysOpen,                 // 19: Days Open (S)
+    nextActionDue,            // 20: Next Action Due (T)
+    daysToDeadline,           // 21: Days to Deadline (U)
+    articles,                 // 22: Articles Violated (V)
+    category,                 // 23: Issue Category (W)
+    email,                    // 24: Member Email (X)
+    unit,                     // 25: Unit (Y)
+    location,                 // 26: Location (Z)
+    steward,                  // 27: Steward (AA)
+    resolution,               // 28: Resolution (AB)
+    false,                    // 29: Message Alert (AC) - checkbox
+    '',                       // 30: Coordinator Message (AD)
+    '',                       // 31: Acknowledged By (AE)
+    '',                       // 32: Acknowledged Date (AF)
+    '',                       // 33: Drive Folder ID (AG)
+    ''                        // 34: Drive Folder URL (AH)
   ];
 }
 
