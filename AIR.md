@@ -593,6 +593,40 @@ This recreates all formulas and reinstalls the auto-sync trigger.
 
 ---
 
+## Known Issues / Later TODO
+
+### BUG: Days to Deadline Shows Duplicate Values
+
+**Status:** Open
+**Discovered:** 2025-12-16
+**Severity:** Medium
+
+**Issue:**
+The "Days to Deadline" column (U) in the Grievance Log displays identical values for multiple rows (e.g., `17.71857539` repeated for all grievances).
+
+**Expected Behavior:**
+Each grievance should have a unique Days to Deadline value calculated as: `Next Action Due - TODAY()`
+
+**Likely Root Cause:**
+The issue appears to be in the `syncGrievanceFormulasToLog()` function in `HiddenSheets.gs`. The hidden sheet `_Grievance_Formulas` calculates Days to Deadline using an ARRAYFORMULA, but the sync function may be:
+1. Reading the same value for all rows from the hidden sheet
+2. The FILTER formula in Column A may not be properly expanding dependent ARRAYFORMULA columns
+3. The lookup map keying by row index may have a mismatch
+
+**Relevant Code:**
+- `HiddenSheets.gs:304-306` - Days to Deadline ARRAYFORMULA: `=ARRAYFORMULA(IF(S2:S="","",S2:S-TODAY()))`
+- `HiddenSheets.gs:382-383` - Reading `daysToDeadline: formulaData[i][19]`
+- `HiddenSheets.gs:420-425` - Building metricsUpdates array
+- `HiddenSheets.gs:461-462` - Writing to Grievance Log columns S, T, U
+
+**To Fix:**
+1. Investigate if the ARRAYFORMULA in the hidden sheet is expanding correctly
+2. Check if the FILTER formula output is properly aligning with ARRAYFORMULA calculations
+3. Consider using INDEX/MATCH instead of FILTER for row mapping
+4. Test with manual inspection of `_Grievance_Formulas` hidden sheet values
+
+---
+
 ## Changelog
 
 ### Version 1.4.0 (2025-12-16) - Dashboard Views Added
