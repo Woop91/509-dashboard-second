@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-16T00:37:57.153Z
+ * - Build Date: 2025-12-16T01:03:38.951Z
  * - Build Type: PRODUCTION
  * - Modules: 77 files
  * - Tests Included: No
@@ -2506,12 +2506,17 @@ function repairAllHiddenSheets() {
   syncMemberToGrievanceLog();
   syncStewardWorkload();
 
+  // Repair checkboxes
+  repairGrievanceCheckboxes();
+  repairMemberCheckboxes();
+
   ss.toast('Hidden sheets repaired and synced!', '✅ Success', 5);
   ui.alert('✅ Repair Complete',
     'Hidden calculation sheets have been repaired:\n\n' +
     '• 7 hidden sheets recreated with self-healing formulas\n' +
     '• Auto-sync trigger installed\n' +
-    '• Initial data sync completed\n\n' +
+    '• Initial data sync completed\n' +
+    '• Checkboxes repaired in Grievance Log and Member Directory\n\n' +
     'Data will now auto-sync when you edit Member Directory or Grievance Log.\n' +
     'Formulas cannot be accidentally erased - they are stored in hidden sheets.',
     ui.ButtonSet.OK);
@@ -2591,6 +2596,10 @@ function syncAllData() {
   syncMemberToGrievanceLog();
   syncStewardWorkload();
 
+  // Repair checkboxes after sync
+  repairGrievanceCheckboxes();
+  repairMemberCheckboxes();
+
   ss.toast('All data synced!', '✅ Success', 3);
 }
 
@@ -2620,7 +2629,60 @@ function refreshAllHiddenFormulas() {
   // Then sync
   syncAllData();
 
+  // Repair checkboxes
+  repairGrievanceCheckboxes();
+
   ss.toast('Formulas refreshed and data synced!', '✅ Success', 3);
+}
+
+/**
+ * Repair checkboxes in Grievance Log (Message Alert column AC)
+ * Call this after any bulk data operations that might overwrite checkboxes
+ */
+function repairGrievanceCheckboxes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!grievanceSheet) return;
+
+  var lastRow = grievanceSheet.getLastRow();
+  if (lastRow < 2) return;
+
+  // Re-apply checkboxes to Message Alert column (AC = column 29)
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
+
+  Logger.log('Repaired checkboxes for ' + (lastRow - 1) + ' grievance rows');
+}
+
+/**
+ * Repair checkboxes in Member Directory (Start Grievance column AE)
+ */
+function repairMemberCheckboxes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet) return;
+
+  var lastRow = memberSheet.getLastRow();
+  if (lastRow < 2) return;
+
+  // Re-apply checkboxes to Start Grievance column (AE = column 31)
+  memberSheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+
+  Logger.log('Repaired checkboxes for ' + (lastRow - 1) + ' member rows');
+}
+
+/**
+ * Repair all checkboxes in both sheets
+ */
+function repairAllCheckboxes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Repairing checkboxes...', '🔧 Repair', 2);
+
+  repairGrievanceCheckboxes();
+  repairMemberCheckboxes();
+
+  ss.toast('All checkboxes repaired!', '✅ Success', 3);
 }
 
 
@@ -2839,6 +2901,12 @@ function SEED_MEMBERS(count) {
     }
   }
 
+  // Re-apply checkboxes to Start Grievance column (AE) - setValues overwrites them
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+  }
+
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
 }
 
@@ -2954,6 +3022,12 @@ function SEED_GRIEVANCES(count) {
       rows = [];
       Utilities.sleep(100);
     }
+  }
+
+  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  var lastRow = grievanceSheet.getLastRow();
+  if (lastRow >= 2) {
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
   // Sync data from hidden formulas sheet (self-healing)

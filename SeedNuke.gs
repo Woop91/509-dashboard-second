@@ -207,6 +207,12 @@ function SEED_MEMBERS(count) {
     }
   }
 
+  // Re-apply checkboxes to Start Grievance column (AE) - setValues overwrites them
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+  }
+
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
 }
 
@@ -322,6 +328,12 @@ function SEED_GRIEVANCES(count) {
       rows = [];
       Utilities.sleep(100);
     }
+  }
+
+  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  var lastRow = grievanceSheet.getLastRow();
+  if (lastRow >= 2) {
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
   // Sync data from hidden formulas sheet (self-healing)
