@@ -14,9 +14,9 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-15T02:40:06.944Z
+ * - Build Date: 2025-12-16T00:37:57.153Z
  * - Build Type: PRODUCTION
- * - Modules: 76 files
+ * - Modules: 77 files
  * - Tests Included: No
  *
  * ============================================================================
@@ -71,6 +71,7 @@ var SHEETS = {
   AUDIT_LOG: '📋 Audit_Log',
   // Hidden calculation sheets
   GRIEVANCE_CALC: '_Grievance_Calc',
+  GRIEVANCE_FORMULAS: '_Grievance_Formulas',
   MEMBER_LOOKUP: '_Member_Lookup',
   STEWARD_CONTACT_CALC: '_Steward_Contact_Calc',
   ENGAGEMENT_CALC: '_Engagement_Calc',
@@ -78,7 +79,9 @@ var SHEETS = {
   INTERACTIVE_CALC: '_Interactive_Dashboard_Calc',
   // Optional source sheets
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
-  VOLUNTEER_HOURS: '🤝 Volunteer Hours'
+  VOLUNTEER_HOURS: '🤝 Volunteer Hours',
+  // Test Results
+  TEST_RESULTS: 'Test Results'
 };
 
 // ============================================================================
@@ -489,6 +492,8 @@ function onOpen() {
   ui.createMenu('👤 Dashboard')
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
+    .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
+    .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addSeparator()
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
       .addItem('➕ Start New Grievance', 'startNewGrievance')
@@ -500,14 +505,57 @@ function onOpen() {
   ui.createMenu('📊 Sheet Manager')
     .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
     .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📁 Google Drive')
+      .addItem('📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance')
+      .addItem('📁 View Grievance Files', 'showGrievanceFiles')
+      .addItem('📁 Batch Create Folders', 'batchCreateGrievanceFolders'))
+    .addSubMenu(ui.createMenu('📅 Calendar')
+      .addItem('📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar')
+      .addItem('📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar')
+      .addItem('🗑️ Clear Calendar Events', 'clearAllCalendarEvents'))
+    .addSubMenu(ui.createMenu('📬 Notifications')
+      .addItem('⚙️ Notification Settings', 'showNotificationSettings')
+      .addItem('🧪 Test Notifications', 'testDeadlineNotifications'))
+    .addToUi();
+
+  // Tools Menu (NEW)
+  ui.createMenu('🔧 Tools')
+    .addSubMenu(ui.createMenu('♿ ADHD & Accessibility')
+      .addItem('♿ ADHD Control Panel', 'showADHDControlPanel')
+      .addItem('🎯 Focus Mode', 'activateFocusMode')
+      .addItem('🔲 Toggle Zebra Stripes', 'toggleZebraStripes')
+      .addItem('📝 Quick Capture', 'showQuickCaptureNotepad')
+      .addItem('🍅 Pomodoro Timer', 'startPomodoroTimer'))
+    .addSubMenu(ui.createMenu('🎨 Theming')
+      .addItem('🎨 Theme Manager', 'showThemeManager')
+      .addItem('🌙 Toggle Dark Mode', 'quickToggleDarkMode')
+      .addItem('🔄 Reset Theme', 'resetToDefaultTheme'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('↩️ Undo/Redo')
+      .addItem('↩️ Undo Last Action', 'undoLastAction')
+      .addItem('↪️ Redo Action', 'redoLastAction')
+      .addItem('📋 View History', 'showUndoRedoPanel')
+      .addItem('🗑️ Clear History', 'clearUndoHistory'))
+    .addSubMenu(ui.createMenu('🗄️ Cache & Performance')
+      .addItem('🗄️ Cache Status', 'showCacheStatusDashboard')
+      .addItem('🔥 Warm Up Caches', 'warmUpCaches')
+      .addItem('🗑️ Clear All Caches', 'invalidateAllCaches'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('✅ Validation')
+      .addItem('🔍 Run Bulk Validation', 'runBulkValidation')
+      .addItem('⚙️ Validation Settings', 'showValidationSettings')
+      .addItem('🧹 Clear Indicators', 'clearValidationIndicators')
+      .addItem('⚡ Install Validation Trigger', 'installValidationTrigger'))
     .addToUi();
 
   // Setup Menu
-  ui.createMenu('🔧 Setup')
+  ui.createMenu('🏗️ Setup')
     .addItem('🏗️ CREATE 509 DASHBOARD', 'CREATE_509_DASHBOARD')
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
+    .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
     .addToUi();
 
   // Demo Menu
@@ -528,15 +576,30 @@ function onOpen() {
       .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
     .addToUi();
 
+  // Testing Menu (NEW)
+  ui.createMenu('🧪 Testing')
+    .addItem('🧪 Run All Tests', 'runAllTests')
+    .addItem('⚡ Run Quick Tests', 'runQuickTests')
+    .addSeparator()
+    .addItem('📊 View Test Results', 'viewTestResults')
+    .addToUi();
+
   // Administrator Menu
   ui.createMenu('⚙️ Administrator')
     .addItem('🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP')
-    .addItem('🔍 Verify Hidden Sheets', 'VERIFY_HIDDEN_SHEETS')
+    .addItem('🔍 Verify Hidden Sheets', 'verifyHiddenSheets')
     .addSeparator()
     .addSubMenu(ui.createMenu('🔧 Setup & Triggers')
-      .addItem('📅 Setup Engagement Tracking', 'setupEngagementTracking')
-      .addItem('👨‍⚖️ Setup Steward Workload Auto-Sync', 'setupStewardWorkloadAutoSync')
-      .addItem('🎯 Setup Interactive Dashboard Live-Wire', 'setupInteractiveDashboardLiveSync'))
+      .addItem('🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets')
+      .addItem('🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets')
+      .addItem('⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger')
+      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🔄 Manual Sync')
+      .addItem('🔄 Sync All Data Now', 'syncAllData')
+      .addItem('🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory')
+      .addItem('🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog')
+      .addItem('🔄 Sync Steward Workload', 'syncStewardWorkload'))
     .addToUi();
 }
 
@@ -716,6 +779,9 @@ function createMemberDirectory(ss) {
 
 /**
  * Create or recreate the Grievance Log sheet
+ * NOTE: Calculated columns (First Name, Last Name, Email, Deadlines, Days Open, etc.)
+ * are managed by the hidden _Grievance_Formulas sheet for self-healing capability.
+ * Users can't accidentally erase formulas because they're in the hidden sheet.
  */
 function createGrievanceLog(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.GRIEVANCE_LOG);
@@ -735,9 +801,30 @@ function createGrievanceLog(ss) {
   sheet.setColumnWidth(GRIEVANCE_COLS.RESOLUTION, 250);
   sheet.setColumnWidth(GRIEVANCE_COLS.COORDINATOR_MESSAGE, 250);
 
-  // Add checkbox for Message Alert column
+  // Add checkbox for Message Alert column (AC)
   var checkboxRange = sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 998, 1);
   checkboxRange.insertCheckboxes();
+
+  // Format date columns
+  var dateColumns = [
+    GRIEVANCE_COLS.INCIDENT_DATE,
+    GRIEVANCE_COLS.FILING_DEADLINE,
+    GRIEVANCE_COLS.DATE_FILED,
+    GRIEVANCE_COLS.STEP1_DUE,
+    GRIEVANCE_COLS.STEP1_RCVD,
+    GRIEVANCE_COLS.STEP2_APPEAL_DUE,
+    GRIEVANCE_COLS.STEP2_APPEAL_FILED,
+    GRIEVANCE_COLS.STEP2_DUE,
+    GRIEVANCE_COLS.STEP2_RCVD,
+    GRIEVANCE_COLS.STEP3_APPEAL_DUE,
+    GRIEVANCE_COLS.STEP3_APPEAL_FILED,
+    GRIEVANCE_COLS.DATE_CLOSED,
+    GRIEVANCE_COLS.NEXT_ACTION_DUE
+  ];
+
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
+  });
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -1216,25 +1303,14 @@ function getOrCreateSheet(ss, name) {
 
 /**
  * Setup hidden calculation sheets for cross-sheet data sync
+ * Calls the full implementation in HiddenSheets.gs
  */
 function setupHiddenSheets(ss) {
-  // Create hidden sheets (simplified - full implementation in separate module)
-  var hiddenSheets = [
-    SHEETS.GRIEVANCE_CALC,
-    SHEETS.MEMBER_LOOKUP,
-    SHEETS.STEWARD_CONTACT_CALC,
-    SHEETS.ENGAGEMENT_CALC,
-    SHEETS.STEWARD_WORKLOAD_CALC,
-    SHEETS.INTERACTIVE_CALC
-  ];
+  // Call the full hidden sheet setup from HiddenSheets.gs
+  setupAllHiddenSheets();
 
-  hiddenSheets.forEach(function(sheetName) {
-    var sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-    }
-    sheet.hideSheet();
-  });
+  // Install the auto-sync trigger
+  installAutoSyncTrigger();
 }
 
 // ============================================================================
@@ -1270,15 +1346,37 @@ function setupDataValidations() {
   setDropdownValidation(memberSheet, MEMBER_COLS.CONTACT_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
+  // Member ID dropdown - links to valid Member IDs from Member Directory
+  setMemberIdValidation(grievanceSheet, memberSheet);
+
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STATUS, configSheet, CONFIG_COLS.GRIEVANCE_STATUS);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.CURRENT_STEP, configSheet, CONFIG_COLS.GRIEVANCE_STEP);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.ISSUE_CATEGORY, configSheet, CONFIG_COLS.ISSUE_CATEGORY);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.ARTICLES, configSheet, CONFIG_COLS.ARTICLES);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
-  setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STEWARD, configSheet, CONFIG_COLS.STEWARDS);
+
+  // Note: Unit, Location, Steward columns now use formulas for auto-lookup
+  // No need for manual dropdown validation on those columns
 
   SpreadsheetApp.getActiveSpreadsheet().toast('Data validations applied successfully!', '✅ Success', 3);
+}
+
+/**
+ * Set Member ID validation dropdown from Member Directory
+ * @param {Sheet} grievanceSheet - Grievance Log sheet
+ * @param {Sheet} memberSheet - Member Directory sheet
+ */
+function setMemberIdValidation(grievanceSheet, memberSheet) {
+  // Get the Member ID column from Member Directory
+  var memberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var sourceRange = memberSheet.getRange(memberIdCol + '2:' + memberIdCol + '1000');
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(false)
+    .build();
+
+  var targetRange = grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1);
+  targetRange.setDataValidation(rule);
 }
 
 /**
@@ -1400,7 +1498,7 @@ function DIAGNOSE_SETUP() {
 // ============================================================================
 
 /**
- * Repair dashboard - recreates hidden sheets and triggers
+ * Repair dashboard - recreates hidden sheets, triggers, and syncs data
  */
 function REPAIR_DASHBOARD() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -1408,7 +1506,11 @@ function REPAIR_DASHBOARD() {
 
   var response = ui.alert(
     '🔧 Repair Dashboard',
-    'This will repair hidden calculation sheets and reinstall triggers.\n\n' +
+    'This will:\n\n' +
+    '• Recreate all 6 hidden calculation sheets with formulas\n' +
+    '• Install auto-sync trigger\n' +
+    '• Sync all cross-sheet data\n' +
+    '• Reapply data validations\n\n' +
     'Your data will NOT be affected.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -1421,11 +1523,13 @@ function REPAIR_DASHBOARD() {
   ss.toast('Repairing dashboard...', '🔧 Repair', 3);
 
   try {
-    setupHiddenSheets(ss);
+    // Use the full repair function from HiddenSheets.gs
+    repairAllHiddenSheets();
+
+    // Also reapply data validations
     setupDataValidations();
 
-    ss.toast('Dashboard repaired successfully!', '✅ Success', 5);
-    ui.alert('✅ Success', 'Dashboard has been repaired.\n\nHidden sheets and triggers restored.', ui.ButtonSet.OK);
+    // Final message handled by repairAllHiddenSheets
   } catch (error) {
     Logger.log('Error in REPAIR_DASHBOARD: ' + error.message);
     ui.alert('❌ Error', 'Repair failed: ' + error.message, ui.ButtonSet.OK);
@@ -1433,7 +1537,7 @@ function REPAIR_DASHBOARD() {
 }
 
 // ============================================================================
-// STUB FUNCTIONS (for menu items - full implementation in separate modules)
+// MENU HANDLER FUNCTIONS
 // ============================================================================
 
 function searchMembers() {
@@ -1452,12 +1556,30 @@ function startNewGrievance() {
   SpreadsheetApp.getUi().alert('Start New Grievance feature - Coming soon!\n\nFor now, add grievances directly to the Grievance Log sheet.');
 }
 
+/**
+ * Recalculate all grievance deadlines and sync to Member Directory
+ */
 function recalcAllGrievancesBatched() {
-  SpreadsheetApp.getActiveSpreadsheet().toast('Grievance recalculation - Coming soon!', 'Info', 3);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Recalculating grievances and syncing...', '🔄 Refresh', 3);
+
+  // Sync grievance data to member directory
+  syncGrievanceToMemberDirectory();
+
+  ss.toast('Grievance data refreshed!', '✅ Success', 3);
 }
 
+/**
+ * Refresh Member Directory calculated columns
+ */
 function refreshMemberDirectoryFormulas() {
-  SpreadsheetApp.getActiveSpreadsheet().toast('Member Directory refresh - Coming soon!', 'Info', 3);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Refreshing Member Directory...', '🔄 Refresh', 3);
+
+  // Sync grievance data to member directory
+  syncGrievanceToMemberDirectory();
+
+  ss.toast('Member Directory refreshed!', '✅ Success', 3);
 }
 
 function rebuildDashboard() {
@@ -1466,24 +1588,1039 @@ function rebuildDashboard() {
   ss.toast('Dashboard rebuilt!', '✅ Success', 3);
 }
 
+/**
+ * Refresh all formulas and sync all data
+ */
 function refreshAllFormulas() {
-  SpreadsheetApp.getActiveSpreadsheet().toast('Refreshing all formulas...', 'Info', 3);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Refreshing all formulas and syncing data...', '🔄 Refresh', 3);
+
+  // Use the full refresh from HiddenSheets.gs
+  refreshAllHiddenFormulas();
 }
 
-function VERIFY_HIDDEN_SHEETS() {
-  DIAGNOSE_SETUP();
+function viewTestResults() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.TEST_RESULTS);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert('No test results yet. Run tests first using 🧪 Testing menu.');
+  }
 }
 
-function setupEngagementTracking() {
-  SpreadsheetApp.getUi().alert('Engagement Tracking setup - Coming soon!');
+
+
+// ================================================================================
+// MODULE: HiddenSheets.gs
+// Source: HiddenSheets.gs
+// ================================================================================
+
+/**
+ * 509 Dashboard - Hidden Sheet Architecture
+ *
+ * Self-healing hidden calculation sheets with auto-sync triggers.
+ * Provides automatic cross-sheet data population.
+ *
+ * @version 1.0.0
+ * @license Free for use by non-profit collective bargaining groups and unions
+ */
+
+// ============================================================================
+// HIDDEN SHEET 1: _Grievance_Calc
+// Source: Grievance Log → Destination: Member Directory (AB-AD)
+// ============================================================================
+
+/**
+ * Setup the _Grievance_Calc hidden sheet with self-healing formulas
+ * Calculates: Has Open Grievance, Grievance Status, Next Deadline per member
+ */
+function setupGrievanceCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.GRIEVANCE_CALC);
+  }
+
+  sheet.clear();
+
+  // Headers
+  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Next Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters for dynamic formulas
+  var memberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
+  var gNextActionCol = getColumnLetter(GRIEVANCE_COLS.NEXT_ACTION_DUE);
+  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
+
+  // Formula for Member IDs (Column A) - pulls unique member IDs from Member Directory
+  var memberIdFormula = '=IFERROR(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + memberIdCol + ':' + memberIdCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + memberIdCol + ':' + memberIdCol + '<>"Member ID"),"")';
+  sheet.getRange('A2').setFormula(memberIdFormula);
+
+  // Formulas for calculations (using ARRAYFORMULA for efficiency)
+  // Column B: Has Open Grievance
+  var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
+  sheet.getRange('B2').setFormula(hasOpenFormula);
+
+  // Column C: Grievance Status (most recent active grievance status)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  sheet.getRange('C2').setFormula(statusFormula);
+
+  // Column D: Next Deadline
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gNextActionCol + ':' + gNextActionCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  sheet.getRange('D2').setFormula(deadlineFormula);
+
+  // Column E: Total Grievance Count
+  var countFormula = '=ARRAYFORMULA(IF(A2:A="","",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A)))';
+  sheet.getRange('E2').setFormula(countFormula);
+
+  // Column F: Win Rate %
+  var winRateFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A)*100,0)))';
+  sheet.getRange('F2').setFormula(winRateFormula);
+
+  // Column G: Last Grievance Date
+  var lastDateFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MAXIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A),"")))';
+  sheet.getRange('G2').setFormula(lastDateFormula);
+
+  // Hide the sheet
+  sheet.hideSheet();
+
+  Logger.log('_Grievance_Calc sheet setup complete');
 }
 
-function setupStewardWorkloadAutoSync() {
-  SpreadsheetApp.getUi().alert('Steward Workload Auto-Sync setup - Coming soon!');
+/**
+ * Sync grievance data from hidden sheet to Member Directory
+ */
+function syncGrievanceToMemberDirectory() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var calcSheet = ss.getSheetByName(SHEETS.GRIEVANCE_CALC);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!calcSheet || !memberSheet) {
+    Logger.log('Required sheets not found for grievance sync');
+    return;
+  }
+
+  // Get data from hidden sheet
+  var calcData = calcSheet.getDataRange().getValues();
+  if (calcData.length < 2) return;
+
+  // Create lookup map: memberId -> {hasOpen, status, deadline}
+  var lookup = {};
+  for (var i = 1; i < calcData.length; i++) {
+    var memberId = calcData[i][0];
+    if (memberId) {
+      lookup[memberId] = {
+        hasOpen: calcData[i][1],
+        status: calcData[i][2],
+        deadline: calcData[i][3]
+      };
+    }
+  }
+
+  // Get member data
+  var memberData = memberSheet.getDataRange().getValues();
+  if (memberData.length < 2) return;
+
+  // Update columns AB-AD
+  var updates = [];
+  for (var j = 1; j < memberData.length; j++) {
+    var memberId = memberData[j][MEMBER_COLS.MEMBER_ID - 1];
+    var data = lookup[memberId] || {hasOpen: 'No', status: '', deadline: ''};
+    updates.push([data.hasOpen, data.status, data.deadline]);
+  }
+
+  if (updates.length > 0) {
+    memberSheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE, updates.length, 3).setValues(updates);
+  }
+
+  Logger.log('Synced grievance data to ' + updates.length + ' members');
 }
 
-function setupInteractiveDashboardLiveSync() {
-  SpreadsheetApp.getUi().alert('Interactive Dashboard Live-Wire setup - Coming soon!');
+// ============================================================================
+// HIDDEN SHEET 2: _Grievance_Formulas (SELF-HEALING)
+// Source: Grievance Log → Destination: Grievance Log (calculated columns)
+// This sheet contains all auto-calculated formulas and syncs them back
+// ============================================================================
+
+/**
+ * Setup the _Grievance_Formulas hidden sheet with self-healing formulas
+ * Calculates: First Name, Last Name, Email, Unit, Location, Steward (from Member Dir)
+ *            Filing Deadline, Step I-III dates, Days Open, Next Action Due, Days to Deadline
+ */
+function setupGrievanceFormulasSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.GRIEVANCE_FORMULAS);
+  }
+
+  sheet.clear();
+
+  // Headers matching Grievance Log columns that need formulas
+  var headers = [
+    'Row Index',           // A - For tracking which row in Grievance Log
+    'Member ID',           // B - From Grievance Log
+    'First Name',          // C - Lookup from Member Directory
+    'Last Name',           // D - Lookup from Member Directory
+    'Incident Date',       // E - From Grievance Log
+    'Date Filed',          // F - From Grievance Log
+    'Step I Rcvd',         // G - From Grievance Log
+    'Step II Appeal Filed',// H - From Grievance Log
+    'Step II Rcvd',        // I - From Grievance Log
+    'Status',              // J - From Grievance Log
+    'Current Step',        // K - From Grievance Log
+    'Date Closed',         // L - From Grievance Log
+    'Filing Deadline',     // M - CALCULATED
+    'Step I Due',          // N - CALCULATED
+    'Step II Appeal Due',  // O - CALCULATED
+    'Step II Due',         // P - CALCULATED
+    'Step III Appeal Due', // Q - CALCULATED
+    'Days Open',           // R - CALCULATED
+    'Next Action Due',     // S - CALCULATED
+    'Days to Deadline',    // T - CALCULATED
+    'Member Email',        // U - Lookup from Member Directory
+    'Unit',                // V - Lookup from Member Directory
+    'Location',            // W - Lookup from Member Directory
+    'Steward'              // X - Lookup from Member Directory
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters for Grievance Log source data
+  var gGrievanceIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);     // A
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);           // B
+  var gIncidentDateCol = getColumnLetter(GRIEVANCE_COLS.INCIDENT_DATE);   // G
+  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);         // I
+  var gStep1RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP1_RCVD);         // K
+  var gStep2AppealFiledCol = getColumnLetter(GRIEVANCE_COLS.STEP2_APPEAL_FILED); // M
+  var gStep2RcvdCol = getColumnLetter(GRIEVANCE_COLS.STEP2_RCVD);         // O
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);                // E
+  var gCurrentStepCol = getColumnLetter(GRIEVANCE_COLS.CURRENT_STEP);     // F
+  var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);       // R
+
+  // Member Directory columns for lookups
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mStewardCol = getColumnLetter(MEMBER_COLS.ASSIGNED_STEWARD);
+  var memberRange = "'" + SHEETS.MEMBER_DIR + "'!" + mMemberIdCol + ":" + mStewardCol;
+
+  // Column A: Row Index (ROW()-1 to match Grievance Log rows)
+  // Pull unique grievance IDs to create row mapping
+  sheet.getRange('A2').setFormula(
+    '=IFERROR(FILTER(ROW(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gGrievanceIdCol + '2:' + gGrievanceIdCol + ')-1,' +
+    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gGrievanceIdCol + '2:' + gGrievanceIdCol + '<>""),"")'
+  );
+
+  // Column B: Member ID (from Grievance Log)
+  sheet.getRange('B2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A+1)))'
+  );
+
+  // Column C: First Name (VLOOKUP from Member Directory)
+  sheet.getRange('C2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.FIRST_NAME + ',FALSE),"")))'
+  );
+
+  // Column D: Last Name (VLOOKUP from Member Directory)
+  sheet.getRange('D2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.LAST_NAME + ',FALSE),"")))'
+  );
+
+  // Column E: Incident Date (from Grievance Log)
+  sheet.getRange('E2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIncidentDateCol + ':' + gIncidentDateCol + ',A2:A+1)))'
+  );
+
+  // Column F: Date Filed (from Grievance Log)
+  sheet.getRange('F2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',A2:A+1)))'
+  );
+
+  // Column G: Step I Rcvd (from Grievance Log)
+  sheet.getRange('G2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep1RcvdCol + ':' + gStep1RcvdCol + ',A2:A+1)))'
+  );
+
+  // Column H: Step II Appeal Filed (from Grievance Log)
+  sheet.getRange('H2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep2AppealFiledCol + ':' + gStep2AppealFiledCol + ',A2:A+1)))'
+  );
+
+  // Column I: Step II Rcvd (from Grievance Log)
+  sheet.getRange('I2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStep2RcvdCol + ':' + gStep2RcvdCol + ',A2:A+1)))'
+  );
+
+  // Column J: Status (from Grievance Log)
+  sheet.getRange('J2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',A2:A+1)))'
+  );
+
+  // Column K: Current Step (from Grievance Log)
+  sheet.getRange('K2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCurrentStepCol + ':' + gCurrentStepCol + ',A2:A+1)))'
+  );
+
+  // Column L: Date Closed (from Grievance Log)
+  sheet.getRange('L2').setFormula(
+    '=ARRAYFORMULA(IF(A2:A="","",INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',A2:A+1)))'
+  );
+
+  // =========== CALCULATED COLUMNS ===========
+
+  // Column M: Filing Deadline = Incident Date + 21 days
+  sheet.getRange('M2').setFormula(
+    '=ARRAYFORMULA(IF(E2:E="","",E2:E+21))'
+  );
+
+  // Column N: Step I Due = Date Filed + 30 days
+  sheet.getRange('N2').setFormula(
+    '=ARRAYFORMULA(IF(F2:F="","",F2:F+30))'
+  );
+
+  // Column O: Step II Appeal Due = Step I Rcvd + 10 days
+  sheet.getRange('O2').setFormula(
+    '=ARRAYFORMULA(IF(G2:G="","",G2:G+10))'
+  );
+
+  // Column P: Step II Due = Step II Appeal Filed + 30 days
+  sheet.getRange('P2').setFormula(
+    '=ARRAYFORMULA(IF(H2:H="","",H2:H+30))'
+  );
+
+  // Column Q: Step III Appeal Due = Step II Rcvd + 30 days
+  sheet.getRange('Q2').setFormula(
+    '=ARRAYFORMULA(IF(I2:I="","",I2:I+30))'
+  );
+
+  // Column R: Days Open = IF closed: Date Closed - Date Filed, ELSE: Today - Date Filed
+  sheet.getRange('R2').setFormula(
+    '=ARRAYFORMULA(IF(F2:F="","",IF(L2:L<>"",L2:L-F2:F,TODAY()-F2:F)))'
+  );
+
+  // Column S: Next Action Due = Based on current step and status
+  // If closed status, leave blank; otherwise return appropriate deadline
+  sheet.getRange('S2').setFormula(
+    '=ARRAYFORMULA(IF(J2:J="","",' +
+    'IF(OR(J2:J="Settled",J2:J="Withdrawn",J2:J="Denied",J2:J="Won",J2:J="Closed"),"",' +
+    'IF(K2:K="Informal",M2:M,' +
+    'IF(K2:K="Step I",N2:N,' +
+    'IF(K2:K="Step II",P2:P,' +
+    'Q2:Q))))))'
+  );
+
+  // Column T: Days to Deadline = Next Action Due - Today
+  sheet.getRange('T2').setFormula(
+    '=ARRAYFORMULA(IF(S2:S="","",S2:S-TODAY()))'
+  );
+
+  // =========== MEMBER LOOKUP COLUMNS ===========
+
+  // Column U: Member Email (VLOOKUP from Member Directory)
+  sheet.getRange('U2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.EMAIL + ',FALSE),"")))'
+  );
+
+  // Column V: Unit (VLOOKUP from Member Directory)
+  sheet.getRange('V2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.UNIT + ',FALSE),"")))'
+  );
+
+  // Column W: Location (VLOOKUP from Member Directory)
+  sheet.getRange('W2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.WORK_LOCATION + ',FALSE),"")))'
+  );
+
+  // Column X: Steward (VLOOKUP from Member Directory)
+  sheet.getRange('X2').setFormula(
+    '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
+  );
+
+  // Format date columns
+  sheet.getRange('E:E').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('F:F').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('G:G').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('H:H').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('I:I').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('L:L').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('M:M').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('N:N').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('O:O').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('P:P').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('Q:Q').setNumberFormat('yyyy-mm-dd');
+  sheet.getRange('S:S').setNumberFormat('yyyy-mm-dd');
+
+  // Hide the sheet
+  sheet.hideSheet();
+
+  Logger.log('_Grievance_Formulas sheet setup complete');
+}
+
+/**
+ * Sync calculated formulas from hidden sheet to Grievance Log
+ * This is the self-healing function - it copies calculated values to the Grievance Log
+ */
+function syncGrievanceFormulasToLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var formulaSheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!formulaSheet || !grievanceSheet) {
+    Logger.log('Required sheets not found for grievance formula sync');
+    return;
+  }
+
+  // Get formula sheet data
+  var formulaData = formulaSheet.getDataRange().getValues();
+  if (formulaData.length < 2) return;
+
+  // Create lookup map by row index
+  var lookup = {};
+  for (var i = 1; i < formulaData.length; i++) {
+    var rowIndex = formulaData[i][0]; // Column A: Row Index
+    if (rowIndex) {
+      lookup[rowIndex] = {
+        firstName: formulaData[i][2],        // C: First Name
+        lastName: formulaData[i][3],         // D: Last Name
+        filingDeadline: formulaData[i][12],  // M: Filing Deadline
+        step1Due: formulaData[i][13],        // N: Step I Due
+        step2AppealDue: formulaData[i][14],  // O: Step II Appeal Due
+        step2Due: formulaData[i][15],        // P: Step II Due
+        step3AppealDue: formulaData[i][16],  // Q: Step III Appeal Due
+        daysOpen: formulaData[i][17],        // R: Days Open
+        nextActionDue: formulaData[i][18],   // S: Next Action Due
+        daysToDeadline: formulaData[i][19],  // T: Days to Deadline
+        email: formulaData[i][20],           // U: Email
+        unit: formulaData[i][21],            // V: Unit
+        location: formulaData[i][22],        // W: Location
+        steward: formulaData[i][23]          // X: Steward
+      };
+    }
+  }
+
+  // Get grievance data
+  var grievanceData = grievanceSheet.getDataRange().getValues();
+  if (grievanceData.length < 2) return;
+
+  // Prepare updates
+  var nameUpdates = [];           // Columns C-D
+  var deadlineUpdates = [];       // Columns H, J, L, N, P (Filing Deadline, Step I Due, Step II Appeal Due, Step II Due, Step III Appeal Due)
+  var metricsUpdates = [];        // Columns S, T, U (Days Open, Next Action Due, Days to Deadline)
+  var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
+
+  for (var j = 1; j < grievanceData.length; j++) {
+    var data = lookup[j] || {};
+
+    // Names (C-D)
+    nameUpdates.push([
+      data.firstName || '',
+      data.lastName || ''
+    ]);
+
+    // Deadlines (H, J, L, N, P)
+    deadlineUpdates.push([
+      data.filingDeadline || '',
+      data.step1Due || '',
+      data.step2AppealDue || '',
+      data.step2Due || '',
+      data.step3AppealDue || ''
+    ]);
+
+    // Metrics (S, T, U)
+    metricsUpdates.push([
+      data.daysOpen || '',
+      data.nextActionDue || '',
+      data.daysToDeadline || ''
+    ]);
+
+    // Contact info (X, Y, Z, AA)
+    contactUpdates.push([
+      data.email || '',
+      data.unit || '',
+      data.location || '',
+      data.steward || ''
+    ]);
+  }
+
+  // Apply updates to Grievance Log
+  if (nameUpdates.length > 0) {
+    // C-D: First Name, Last Name
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FIRST_NAME, nameUpdates.length, 2).setValues(nameUpdates);
+
+    // H: Filing Deadline (column 8)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[0]]; }));
+
+    // J: Step I Due (column 10)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[1]]; }));
+
+    // L: Step II Appeal Due (column 12)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[2]]; }));
+
+    // N: Step II Due (column 14)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[3]]; }));
+
+    // P: Step III Appeal Due (column 16)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
+      .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
+
+    // S, T, U: Days Open, Next Action Due, Days to Deadline
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
+
+    // X, Y, Z, AA: Email, Unit, Location, Steward
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
+  }
+
+  Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+}
+
+// ============================================================================
+// HIDDEN SHEET 3: _Member_Lookup
+// Source: Member Directory → Destination: Grievance Log (C,D,X-AA)
+// ============================================================================
+
+/**
+ * Setup the _Member_Lookup hidden sheet with self-healing formulas
+ * Looks up: First Name, Last Name, Email, Unit, Location, Steward from Member Directory
+ */
+function setupMemberLookupSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_LOOKUP);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.MEMBER_LOOKUP);
+  }
+
+  sheet.clear();
+
+  // Headers
+  var headers = ['Member ID', 'First Name', 'Last Name', 'Email', 'Unit', 'Location', 'Assigned Steward'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters
+  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mFirstCol = getColumnLetter(MEMBER_COLS.FIRST_NAME);
+  var mLastCol = getColumnLetter(MEMBER_COLS.LAST_NAME);
+  var mEmailCol = getColumnLetter(MEMBER_COLS.EMAIL);
+  var mUnitCol = getColumnLetter(MEMBER_COLS.UNIT);
+  var mLocCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
+  var mStewardCol = getColumnLetter(MEMBER_COLS.ASSIGNED_STEWARD);
+
+  // Formula to get unique member IDs from Grievance Log
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);
+  var memberIdFormula = '=IFERROR(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + '<>"Member ID",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + '<>"")),"")';
+  sheet.getRange('A2').setFormula(memberIdFormula);
+
+  // VLOOKUP formulas for member data
+  var vlookupBase = 'VLOOKUP(A2:A,\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mStewardCol + ',';
+
+  sheet.getRange('B2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '2,FALSE),"")))'); // First Name
+  sheet.getRange('C2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '3,FALSE),"")))'); // Last Name
+  sheet.getRange('D2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '8,FALSE),"")))'); // Email
+  sheet.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '6,FALSE),"")))'); // Unit
+  sheet.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '5,FALSE),"")))'); // Location
+  sheet.getRange('G2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(' + vlookupBase + '16,FALSE),"")))'); // Steward
+
+  // Hide the sheet
+  sheet.hideSheet();
+
+  Logger.log('_Member_Lookup sheet setup complete');
+}
+
+/**
+ * Sync member data from hidden sheet to Grievance Log
+ */
+function syncMemberToGrievanceLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var lookupSheet = ss.getSheetByName(SHEETS.MEMBER_LOOKUP);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!lookupSheet || !grievanceSheet) {
+    Logger.log('Required sheets not found for member sync');
+    return;
+  }
+
+  // Get lookup data
+  var lookupData = lookupSheet.getDataRange().getValues();
+  if (lookupData.length < 2) return;
+
+  // Create lookup map
+  var lookup = {};
+  for (var i = 1; i < lookupData.length; i++) {
+    var memberId = lookupData[i][0];
+    if (memberId) {
+      lookup[memberId] = {
+        firstName: lookupData[i][1],
+        lastName: lookupData[i][2],
+        email: lookupData[i][3],
+        unit: lookupData[i][4],
+        location: lookupData[i][5],
+        steward: lookupData[i][6]
+      };
+    }
+  }
+
+  // Get grievance data
+  var grievanceData = grievanceSheet.getDataRange().getValues();
+  if (grievanceData.length < 2) return;
+
+  // Update grievance rows
+  var nameUpdates = [];
+  var infoUpdates = [];
+
+  for (var j = 1; j < grievanceData.length; j++) {
+    var memberId = grievanceData[j][GRIEVANCE_COLS.MEMBER_ID - 1];
+    var data = lookup[memberId] || {firstName: '', lastName: '', email: '', unit: '', location: '', steward: ''};
+    nameUpdates.push([data.firstName, data.lastName]);
+    infoUpdates.push([data.email, data.unit, data.location, data.steward]);
+  }
+
+  if (nameUpdates.length > 0) {
+    // Update C-D (First Name, Last Name)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FIRST_NAME, nameUpdates.length, 2).setValues(nameUpdates);
+    // Update X-AA (Email, Unit, Location, Steward)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, infoUpdates.length, 4).setValues(infoUpdates);
+  }
+
+  Logger.log('Synced member data to ' + nameUpdates.length + ' grievances');
+}
+
+// ============================================================================
+// HIDDEN SHEET 3: _Steward_Workload_Calc
+// Source: Grievance Log + Member Directory → Destination: Steward Workload
+// ============================================================================
+
+/**
+ * Setup the _Steward_Workload_Calc hidden sheet
+ */
+function setupStewardWorkloadCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.STEWARD_WORKLOAD_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.STEWARD_WORKLOAD_CALC);
+  }
+
+  sheet.clear();
+
+  // Headers
+  var headers = ['Steward Name', 'Total Cases', 'Active Cases', 'Resolved', 'Win Rate %', 'Avg Days', 'Overdue', 'Due This Week'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  var gStewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
+  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+  var gDaysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+
+  // Get unique stewards
+  var stewardFormula = '=IFERROR(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + '<>"Assigned Steward",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + '<>"")),"")';
+  sheet.getRange('A2').setFormula(stewardFormula);
+
+  // Total Cases
+  sheet.getRange('B2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A)))');
+
+  // Active Cases (Open + Pending Info)
+  sheet.getRange('C2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")))');
+
+  // Resolved
+  sheet.getRange('D2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")))');
+
+  // Win Rate
+  sheet.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(ROUND(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/B2:B*100,1),0)))');
+
+  // Avg Days (placeholder - needs AVERAGEIF which is complex in ARRAYFORMULA)
+  sheet.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)))');
+
+  // Overdue (Days to Deadline < 0 or blank with active status)
+  sheet.getRange('G2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")))');
+
+  // Due This Week (0-7 days)
+  sheet.getRange('H2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStewardCol + ':' + gStewardCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")))');
+
+  sheet.hideSheet();
+  Logger.log('_Steward_Workload_Calc sheet setup complete');
+}
+
+/**
+ * Sync steward workload data to visible sheet
+ */
+function syncStewardWorkload() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var calcSheet = ss.getSheetByName(SHEETS.STEWARD_WORKLOAD_CALC);
+  var destSheet = ss.getSheetByName(SHEETS.STEWARD_WORKLOAD);
+
+  if (!calcSheet || !destSheet) return;
+
+  var data = calcSheet.getDataRange().getValues();
+  if (data.length < 2) return;
+
+  // Clear existing data (keep headers)
+  var lastRow = destSheet.getLastRow();
+  if (lastRow > 3) {
+    destSheet.getRange(4, 1, lastRow - 3, 9).clear();
+  }
+
+  // Copy data (skip header row from calc sheet)
+  var outputData = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      // Add Capacity Status based on active cases
+      var activeCases = data[i][2];
+      var capacity = activeCases > 10 ? 'Overloaded' : (activeCases > 5 ? 'High' : 'Normal');
+      outputData.push([data[i][0], data[i][1], data[i][2], data[i][3], data[i][4], data[i][5], data[i][6], data[i][7], capacity]);
+    }
+  }
+
+  if (outputData.length > 0) {
+    destSheet.getRange(4, 1, outputData.length, 9).setValues(outputData);
+  }
+
+  Logger.log('Synced steward workload: ' + outputData.length + ' stewards');
+}
+
+// ============================================================================
+// HIDDEN SHEET 4: _Interactive_Dashboard_Calc
+// Source: Member Directory + Grievance Log → Destination: Interactive Dashboard
+// ============================================================================
+
+/**
+ * Setup the _Interactive_Dashboard_Calc hidden sheet
+ */
+function setupInteractiveDashboardCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.INTERACTIVE_CALC);
+  }
+
+  sheet.clear();
+
+  // Headers
+  var headers = ['Metric', 'Value'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
+  var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
+  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+
+  // Metrics
+  var metrics = [
+    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1'],
+    ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")'],
+    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1'],
+    ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")'],
+    ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")'],
+    ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")'],
+    ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")'],
+    ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)*100,1),0)']
+  ];
+
+  for (var i = 0; i < metrics.length; i++) {
+    sheet.getRange(i + 2, 1).setValue(metrics[i][0]);
+    sheet.getRange(i + 2, 2).setFormula(metrics[i][1]);
+  }
+
+  sheet.hideSheet();
+  Logger.log('_Interactive_Dashboard_Calc sheet setup complete');
+}
+
+// ============================================================================
+// HIDDEN SHEET 5: _Engagement_Calc (placeholder)
+// ============================================================================
+
+function setupEngagementCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.ENGAGEMENT_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.ENGAGEMENT_CALC);
+  }
+
+  sheet.clear();
+  sheet.getRange('A1').setValue('Engagement Calc - Ready for future implementation');
+  sheet.hideSheet();
+  Logger.log('_Engagement_Calc sheet setup complete');
+}
+
+// ============================================================================
+// HIDDEN SHEET 6: _Steward_Contact_Calc (placeholder)
+// ============================================================================
+
+function setupStewardContactCalcSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.STEWARD_CONTACT_CALC);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.STEWARD_CONTACT_CALC);
+  }
+
+  sheet.clear();
+  sheet.getRange('A1').setValue('Steward Contact Calc - Ready for future implementation');
+  sheet.hideSheet();
+  Logger.log('_Steward_Contact_Calc sheet setup complete');
+}
+
+// ============================================================================
+// AUTO-SYNC TRIGGERS
+// ============================================================================
+
+/**
+ * Master onEdit trigger - routes to appropriate sync function
+ * Install this as an installable trigger
+ */
+function onEditAutoSync(e) {
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Debounce - use cache to prevent rapid re-syncs
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'lastSync_' + sheetName;
+  var lastSync = cache.get(cacheKey);
+
+  if (lastSync) {
+    return; // Skip if synced within last 2 seconds
+  }
+
+  cache.put(cacheKey, 'true', 2); // 2 second debounce
+
+  try {
+    if (sheetName === SHEETS.GRIEVANCE_LOG) {
+      // Grievance Log changed - sync formulas and update Member Directory
+      syncGrievanceFormulasToLog();
+      syncGrievanceToMemberDirectory();
+    } else if (sheetName === SHEETS.MEMBER_DIR) {
+      // Member Directory changed - sync to Grievance Log
+      syncGrievanceFormulasToLog();
+      syncMemberToGrievanceLog();
+    }
+  } catch (error) {
+    Logger.log('Auto-sync error: ' + error.message);
+  }
+}
+
+/**
+ * Install the auto-sync trigger
+ */
+function installAutoSyncTrigger() {
+  // Remove existing triggers first
+  var triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onEditAutoSync') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Install new trigger
+  ScriptApp.newTrigger('onEditAutoSync')
+    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+    .onEdit()
+    .create();
+
+  Logger.log('Auto-sync trigger installed');
+  SpreadsheetApp.getActiveSpreadsheet().toast('Auto-sync trigger installed!', '✅ Success', 3);
+}
+
+/**
+ * Remove the auto-sync trigger
+ */
+function removeAutoSyncTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
+
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onEditAutoSync') {
+      ScriptApp.deleteTrigger(trigger);
+      removed++;
+    }
+  });
+
+  Logger.log('Removed ' + removed + ' auto-sync triggers');
+  SpreadsheetApp.getActiveSpreadsheet().toast('Auto-sync trigger removed', 'Info', 3);
+}
+
+// ============================================================================
+// MASTER SETUP & REPAIR FUNCTIONS
+// ============================================================================
+
+/**
+ * Setup all hidden calculation sheets
+ */
+function setupAllHiddenSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Setting up hidden calculation sheets...', '🔧 Setup', 3);
+
+  setupGrievanceCalcSheet();
+  setupGrievanceFormulasSheet();
+  setupMemberLookupSheet();
+  setupStewardWorkloadCalcSheet();
+  setupInteractiveDashboardCalcSheet();
+  setupEngagementCalcSheet();
+  setupStewardContactCalcSheet();
+
+  ss.toast('All hidden sheets created!', '✅ Success', 3);
+}
+
+/**
+ * Repair all hidden sheets - recreates formulas and syncs data
+ */
+function repairAllHiddenSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  ss.toast('Repairing hidden sheets...', '🔧 Repair', 3);
+
+  // Recreate all hidden sheets with formulas
+  setupAllHiddenSheets();
+
+  // Install trigger
+  installAutoSyncTrigger();
+
+  // Run initial sync
+  ss.toast('Running initial data sync...', '🔧 Sync', 3);
+  syncGrievanceFormulasToLog();
+  syncGrievanceToMemberDirectory();
+  syncMemberToGrievanceLog();
+  syncStewardWorkload();
+
+  ss.toast('Hidden sheets repaired and synced!', '✅ Success', 5);
+  ui.alert('✅ Repair Complete',
+    'Hidden calculation sheets have been repaired:\n\n' +
+    '• 7 hidden sheets recreated with self-healing formulas\n' +
+    '• Auto-sync trigger installed\n' +
+    '• Initial data sync completed\n\n' +
+    'Data will now auto-sync when you edit Member Directory or Grievance Log.\n' +
+    'Formulas cannot be accidentally erased - they are stored in hidden sheets.',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Verify all hidden sheets and triggers
+ */
+function verifyHiddenSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var report = [];
+
+  report.push('🔍 HIDDEN SHEET VERIFICATION');
+  report.push('============================');
+  report.push('');
+
+  // Check each hidden sheet
+  var hiddenSheets = [
+    {name: SHEETS.GRIEVANCE_CALC, purpose: 'Grievance → Member Directory'},
+    {name: SHEETS.GRIEVANCE_FORMULAS, purpose: 'Self-healing Grievance formulas'},
+    {name: SHEETS.MEMBER_LOOKUP, purpose: 'Member → Grievance Log'},
+    {name: SHEETS.STEWARD_WORKLOAD_CALC, purpose: 'Steward workload metrics'},
+    {name: SHEETS.INTERACTIVE_CALC, purpose: 'Dashboard metrics'},
+    {name: SHEETS.ENGAGEMENT_CALC, purpose: 'Engagement metrics'},
+    {name: SHEETS.STEWARD_CONTACT_CALC, purpose: 'Steward contact tracking'}
+  ];
+
+  report.push('📋 HIDDEN SHEETS:');
+  hiddenSheets.forEach(function(hs) {
+    var sheet = ss.getSheetByName(hs.name);
+    if (sheet) {
+      var isHidden = sheet.isSheetHidden();
+      var hasData = sheet.getLastRow() > 1;
+      var status = isHidden && hasData ? '✅' : (sheet ? '⚠️' : '❌');
+      report.push('  ' + status + ' ' + hs.name);
+      report.push('      Hidden: ' + (isHidden ? 'Yes' : 'NO - Should be hidden'));
+      report.push('      Has formulas: ' + (hasData ? 'Yes' : 'No'));
+    } else {
+      report.push('  ❌ ' + hs.name + ' - NOT FOUND');
+    }
+  });
+
+  report.push('');
+
+  // Check triggers
+  report.push('⚡ AUTO-SYNC TRIGGER:');
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasAutoSync = false;
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onEditAutoSync') {
+      hasAutoSync = true;
+      report.push('  ✅ onEditAutoSync trigger installed');
+    }
+  });
+  if (!hasAutoSync) {
+    report.push('  ❌ onEditAutoSync trigger NOT installed');
+    report.push('     Run: installAutoSyncTrigger()');
+  }
+
+  report.push('');
+  report.push('============================');
+
+  ui.alert('Hidden Sheet Verification', report.join('\n'), ui.ButtonSet.OK);
+  Logger.log(report.join('\n'));
+}
+
+/**
+ * Manual sync all data
+ */
+function syncAllData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Syncing all data...', '🔄 Sync', 3);
+
+  syncGrievanceFormulasToLog();
+  syncGrievanceToMemberDirectory();
+  syncMemberToGrievanceLog();
+  syncStewardWorkload();
+
+  ss.toast('All data synced!', '✅ Success', 3);
+}
+
+/**
+ * Refresh all formulas (force recalculation)
+ */
+function refreshAllHiddenFormulas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Touch each hidden sheet to force recalc
+  var hiddenSheetNames = [
+    SHEETS.GRIEVANCE_CALC,
+    SHEETS.GRIEVANCE_FORMULAS,
+    SHEETS.MEMBER_LOOKUP,
+    SHEETS.STEWARD_WORKLOAD_CALC,
+    SHEETS.INTERACTIVE_CALC
+  ];
+
+  hiddenSheetNames.forEach(function(name) {
+    var sheet = ss.getSheetByName(name);
+    if (sheet) {
+      // Force recalc by getting values
+      sheet.getDataRange().getValues();
+    }
+  });
+
+  // Then sync
+  syncAllData();
+
+  ss.toast('Formulas refreshed and data synced!', '✅ Success', 3);
 }
 
 
@@ -1771,15 +2908,6 @@ function SEED_GRIEVANCES(count) {
     return;
   }
 
-  // Get config values
-  var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
-  var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
-  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
-
-  if (locations.length === 0) locations = ['Boston Main Office'];
-  if (units.length === 0) units = ['Child Welfare'];
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
   var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
   var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
@@ -1793,32 +2921,28 @@ function SEED_GRIEVANCES(count) {
   var today = new Date();
 
   for (var i = 0; i < count; i++) {
-    // Pick a random member
+    // Pick a random member - ensure we get a valid member with an ID
     var memberRow = memberData[1 + Math.floor(Math.random() * (memberData.length - 1))];
     var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
-    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1];
-    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1];
-    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1];
+
+    // Skip if no member ID
+    if (!memberId) continue;
 
     var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
-    var row = generateSingleGrievanceRow(
+    // Generate grievance row - First Name, Last Name, Email, Unit, Location, Steward
+    // will be auto-populated by formulas based on Member ID
+    var row = generateSingleGrievanceRowForSeed(
       grievanceId,
       memberId,
-      firstName,
-      lastName,
       status,
       step,
       incidentDate,
       randomChoice(articles),
-      randomChoice(categories),
-      memberEmail,
-      randomChoice(units),
-      randomChoice(locations),
-      randomChoice(stewards)
+      randomChoice(categories)
     );
 
     rows.push(row);
@@ -1832,57 +2956,247 @@ function SEED_GRIEVANCES(count) {
     }
   }
 
+  // Sync data from hidden formulas sheet (self-healing)
+  syncGrievanceFormulasToLog();
+
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }
 
 /**
+ * Generate a grievance row for seeding - leaves formula columns empty
+ * Formula columns (C, D, H, J, L, N, P, S, T, U, X, Y, Z, AA) will be auto-populated
+ */
+function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, incidentDate, articles, category) {
+  var today = new Date();
+
+  // Calculate dates for manual entry columns only
+  // Date Filed - always set if status is not brand new
+  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
+
+  // Initialize timeline variables for manual entry columns
+  var step1Rcvd = '';
+  var step2AppealFiled = '';
+  var step2Rcvd = '';
+  var step3AppealFiled = '';
+  var dateClosed = '';
+
+  // Determine if case is closed
+  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+
+  // Populate timeline based on current step
+  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
+
+  // Step I Due calculated by formula, but Step I Rcvd is manual
+  var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
+
+  // If Step I or beyond, Step I has been completed
+  if (stepIndex >= 1 || isClosed) {
+    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
+    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
+  }
+
+  // If Step II or beyond
+  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
+    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
+    var step2Due = addDays(step2AppealFiled, 30);
+    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
+    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
+  }
+
+  // If Step III or beyond
+  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
+    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
+  }
+
+  // Set date closed for resolved cases
+  if (isClosed) {
+    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
+    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
+  }
+
+  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
+  var resolution = dateClosed ? randomChoice(resolutions) : '';
+
+  // Return row with empty strings for formula columns
+  // Formula columns: C, D (names), H, J, L, N, P (deadlines), S, T, U (metrics), X, Y, Z, AA (member info)
+  return [
+    grievanceId,              // 1: Grievance ID (A)
+    memberId,                 // 2: Member ID (B)
+    '',                       // 3: First Name (C) - FORMULA
+    '',                       // 4: Last Name (D) - FORMULA
+    status,                   // 5: Status (E)
+    step,                     // 6: Current Step (F)
+    incidentDate,             // 7: Incident Date (G)
+    '',                       // 8: Filing Deadline (H) - FORMULA
+    dateFiled,                // 9: Date Filed (I)
+    '',                       // 10: Step I Due (J) - FORMULA
+    step1Rcvd,                // 11: Step I Rcvd (K)
+    '',                       // 12: Step II Appeal Due (L) - FORMULA
+    step2AppealFiled,         // 13: Step II Appeal Filed (M)
+    '',                       // 14: Step II Due (N) - FORMULA
+    step2Rcvd,                // 15: Step II Rcvd (O)
+    '',                       // 16: Step III Appeal Due (P) - FORMULA
+    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
+    dateClosed,               // 18: Date Closed (R)
+    '',                       // 19: Days Open (S) - FORMULA
+    '',                       // 20: Next Action Due (T) - FORMULA
+    '',                       // 21: Days to Deadline (U) - FORMULA
+    articles,                 // 22: Articles Violated (V)
+    category,                 // 23: Issue Category (W)
+    '',                       // 24: Member Email (X) - FORMULA
+    '',                       // 25: Unit (Y) - FORMULA
+    '',                       // 26: Location (Z) - FORMULA
+    '',                       // 27: Steward (AA) - FORMULA
+    resolution,               // 28: Resolution (AB)
+    false,                    // 29: Message Alert (AC) - checkbox
+    '',                       // 30: Coordinator Message (AD)
+    '',                       // 31: Acknowledged By (AE)
+    '',                       // 32: Acknowledged Date (AF)
+    '',                       // 33: Drive Folder ID (AG)
+    ''                        // 34: Drive Folder URL (AH)
+  ];
+}
+
+/**
  * Generate a single grievance row with all 34 columns
+ * Properly calculates all timeline fields based on grievance step progression
  */
 function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward) {
+  var today = new Date();
   var filingDeadline = addDays(incidentDate, 21);
-  var dateFiled = status !== 'Open' ? addDays(incidentDate, Math.floor(Math.random() * 14) + 1) : '';
+
+  // Date Filed - always set if status is not brand new
+  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
+
+  // Step I Due (30 days after filing)
   var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
-  var dateClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won') ?
-    addDays(incidentDate, Math.floor(Math.random() * 60) + 30) : '';
+
+  // Initialize timeline variables
+  var step1Rcvd = '';
+  var step2AppealDue = '';
+  var step2AppealFiled = '';
+  var step2Due = '';
+  var step2Rcvd = '';
+  var step3AppealDue = '';
+  var step3AppealFiled = '';
+  var dateClosed = '';
+
+  // Determine if case is closed
+  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+
+  // Populate timeline based on current step
+  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
+
+  // If Step I or beyond, Step I has been completed
+  if (stepIndex >= 1 || isClosed) {
+    // Step I Decision Received (sometime after Step I Due or earlier)
+    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
+    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
+
+    // Step II Appeal Due (10 days after Step I Decision Received)
+    step2AppealDue = addDays(step1Rcvd, 10);
+  }
+
+  // If Step II or beyond
+  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
+    // Step II Appeal Filed (within appeal window)
+    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
+
+    // Step II Decision Due (30 days after appeal filed)
+    step2Due = addDays(step2AppealFiled, 30);
+
+    // Step II Decision Received
+    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
+    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
+
+    // Step III Appeal Due (30 days after Step II Decision Received)
+    step3AppealDue = addDays(step2Rcvd, 30);
+  }
+
+  // If Step III or beyond
+  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
+    // Step III Appeal Filed
+    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
+  }
+
+  // Set date closed for resolved cases
+  if (isClosed) {
+    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
+    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
+  }
+
+  // Calculate Days Open
+  var daysOpen = '';
+  if (dateFiled) {
+    var endDate = dateClosed || today;
+    daysOpen = Math.floor((endDate - dateFiled) / (1000 * 60 * 60 * 24));
+  }
+
+  // Calculate Next Action Due based on current step
+  var nextActionDue = '';
+  if (!isClosed) {
+    switch (step) {
+      case 'Informal':
+        nextActionDue = filingDeadline;
+        break;
+      case 'Step I':
+        nextActionDue = step1Due || filingDeadline;
+        break;
+      case 'Step II':
+        nextActionDue = step2Due || step2AppealDue || step1Due;
+        break;
+      case 'Step III':
+      case 'Mediation':
+      case 'Arbitration':
+        nextActionDue = step3AppealDue || step2Due;
+        break;
+    }
+  }
+
+  // Calculate Days to Deadline
+  var daysToDeadline = '';
+  if (nextActionDue && !isClosed) {
+    daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+  }
 
   var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
   var resolution = dateClosed ? randomChoice(resolutions) : '';
 
   return [
-    grievanceId,              // 1: Grievance ID
-    memberId,                 // 2: Member ID
-    firstName,                // 3: First Name
-    lastName,                 // 4: Last Name
-    status,                   // 5: Status
-    step,                     // 6: Current Step
-    incidentDate,             // 7: Incident Date
-    filingDeadline,           // 8: Filing Deadline (calc)
-    dateFiled,                // 9: Date Filed
-    step1Due,                 // 10: Step I Due (calc)
-    '',                       // 11: Step I Rcvd
-    '',                       // 12: Step II Appeal Due (calc)
-    '',                       // 13: Step II Appeal Filed
-    '',                       // 14: Step II Due (calc)
-    '',                       // 15: Step II Rcvd
-    '',                       // 16: Step III Appeal Due (calc)
-    '',                       // 17: Step III Appeal Filed
-    dateClosed,               // 18: Date Closed
-    '',                       // 19: Days Open (calc)
-    '',                       // 20: Next Action Due (calc)
-    '',                       // 21: Days to Deadline (calc)
-    articles,                 // 22: Articles Violated
-    category,                 // 23: Issue Category
-    email,                    // 24: Member Email
-    unit,                     // 25: Unit
-    location,                 // 26: Location
-    steward,                  // 27: Steward
-    resolution,               // 28: Resolution
-    false,                    // 29: Message Alert
-    '',                       // 30: Coordinator Message
-    '',                       // 31: Acknowledged By
-    '',                       // 32: Acknowledged Date
-    '',                       // 33: Drive Folder ID
-    ''                        // 34: Drive Folder URL
+    grievanceId,              // 1: Grievance ID (A)
+    memberId,                 // 2: Member ID (B)
+    firstName,                // 3: First Name (C)
+    lastName,                 // 4: Last Name (D)
+    status,                   // 5: Status (E)
+    step,                     // 6: Current Step (F)
+    incidentDate,             // 7: Incident Date (G)
+    filingDeadline,           // 8: Filing Deadline (H)
+    dateFiled,                // 9: Date Filed (I)
+    step1Due,                 // 10: Step I Due (J)
+    step1Rcvd,                // 11: Step I Rcvd (K)
+    step2AppealDue,           // 12: Step II Appeal Due (L)
+    step2AppealFiled,         // 13: Step II Appeal Filed (M)
+    step2Due,                 // 14: Step II Due (N)
+    step2Rcvd,                // 15: Step II Rcvd (O)
+    step3AppealDue,           // 16: Step III Appeal Due (P)
+    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
+    dateClosed,               // 18: Date Closed (R)
+    daysOpen,                 // 19: Days Open (S)
+    nextActionDue,            // 20: Next Action Due (T)
+    daysToDeadline,           // 21: Days to Deadline (U)
+    articles,                 // 22: Articles Violated (V)
+    category,                 // 23: Issue Category (W)
+    email,                    // 24: Member Email (X)
+    unit,                     // 25: Unit (Y)
+    location,                 // 26: Location (Z)
+    steward,                  // 27: Steward (AA)
+    resolution,               // 28: Resolution (AB)
+    false,                    // 29: Message Alert (AC) - checkbox
+    '',                       // 30: Coordinator Message (AD)
+    '',                       // 31: Acknowledged By (AE)
+    '',                       // 32: Acknowledged Date (AF)
+    '',                       // 33: Drive Folder ID (AG)
+    ''                        // 34: Drive Folder URL (AH)
   ];
 }
 
