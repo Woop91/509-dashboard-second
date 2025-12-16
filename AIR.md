@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.0 (Dashboard Views Added)
+**Version:** 1.4.1 (Days to Deadline Fix)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -593,7 +593,49 @@ This recreates all formulas and reinstalls the auto-sync trigger.
 
 ---
 
+## Known Issues / Later TODO
+
+### BUG: Days to Deadline Shows Duplicate Values
+
+**Status:** FIXED (2025-12-16)
+**Discovered:** 2025-12-16
+**Severity:** Medium
+
+**Issue:**
+The "Days to Deadline" column (U) in the Grievance Log displayed identical values for multiple rows (e.g., `17.71857539` repeated for all grievances).
+
+**Root Cause:**
+The hidden sheet `_Grievance_Formulas` used ARRAYFORMULA with a FILTER-based row index. ARRAYFORMULA doesn't expand correctly when its source column is a FILTER result, causing all rows to receive the same calculated value.
+
+**Fix Applied:**
+Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Open, Next Action Due, and Days to Deadline directly in JavaScript from the grievance row data, bypassing the problematic hidden sheet formulas.
+
+**Calculations now performed directly:**
+- **Days Open**: `(Date Closed or Today) - Date Filed` (in whole days)
+- **Next Action Due**: Based on Current Step (Informal→Filing Deadline, Step I→Step I Due, etc.)
+- **Days to Deadline**: `Next Action Due - Today` (in whole days)
+- All deadline dates (Filing Deadline, Step I Due, etc.) also calculated directly
+
+---
+
 ## Changelog
+
+### Version 1.4.1 (2025-12-16) - Days to Deadline Fix
+
+**Bug Fix:**
+- Fixed "Days to Deadline" and "Days Open" showing duplicate/incorrect values for all grievances
+- Root cause: ARRAYFORMULA with FILTER-based row index in hidden sheet didn't expand correctly
+- Solution: Calculate Days Open, Next Action Due, Days to Deadline, and all deadline dates directly in JavaScript within `syncGrievanceFormulasToLog()` function
+
+**Code Changes:**
+- `HiddenSheets.gs`: Rewrote metrics calculation in `syncGrievanceFormulasToLog()` (~60 lines added)
+  - Now calculates Filing Deadline, Step I/II/III Due dates from source dates
+  - Days Open = (Date Closed or Today) - Date Filed
+  - Next Action Due = Based on Current Step status
+  - Days to Deadline = Next Action Due - Today
+  - All values now calculated per-row from actual grievance data
+
+---
 
 ### Version 1.4.0 (2025-12-16) - Dashboard Views Added
 
