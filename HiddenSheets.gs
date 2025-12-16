@@ -530,8 +530,20 @@ function syncGrievanceFormulasToLog() {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
       .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
 
+    // Format deadline columns as dates
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
+
+    // Format Days Open (S) and Days to Deadline (U) as whole numbers
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('yyyy-mm-dd');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
