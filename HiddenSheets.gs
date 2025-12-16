@@ -393,6 +393,12 @@ function syncGrievanceFormulasToLog() {
   var grievanceData = grievanceSheet.getDataRange().getValues();
   if (grievanceData.length < 2) return;
 
+  var today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+  // Closed statuses that should not have Next Action Due
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+
   // Prepare updates
   var nameUpdates = [];           // Columns C-D
   var deadlineUpdates = [];       // Columns H, J, L, N, P (Filing Deadline, Step I Due, Step II Appeal Due, Step II Due, Step III Appeal Due)
@@ -401,6 +407,7 @@ function syncGrievanceFormulasToLog() {
 
   for (var j = 1; j < grievanceData.length; j++) {
     var data = lookup[j] || {};
+    var row = grievanceData[j];
 
     // Names (C-D)
     nameUpdates.push([
@@ -408,20 +415,85 @@ function syncGrievanceFormulasToLog() {
       data.lastName || ''
     ]);
 
+    // Get date values from grievance row for deadline calculations
+    var incidentDate = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
+    var dateFiled = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    var step1Rcvd = row[GRIEVANCE_COLS.STEP1_RCVD - 1];
+    var step2AppealFiled = row[GRIEVANCE_COLS.STEP2_APPEAL_FILED - 1];
+    var step2Rcvd = row[GRIEVANCE_COLS.STEP2_RCVD - 1];
+    var dateClosed = row[GRIEVANCE_COLS.DATE_CLOSED - 1];
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var currentStep = row[GRIEVANCE_COLS.CURRENT_STEP - 1];
+
+    // Calculate deadline dates
+    var filingDeadline = '';
+    var step1Due = '';
+    var step2AppealDue = '';
+    var step2Due = '';
+    var step3AppealDue = '';
+
+    if (incidentDate instanceof Date) {
+      filingDeadline = new Date(incidentDate.getTime() + 21 * 24 * 60 * 60 * 1000);
+    }
+    if (dateFiled instanceof Date) {
+      step1Due = new Date(dateFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step1Rcvd instanceof Date) {
+      step2AppealDue = new Date(step1Rcvd.getTime() + 10 * 24 * 60 * 60 * 1000);
+    }
+    if (step2AppealFiled instanceof Date) {
+      step2Due = new Date(step2AppealFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step2Rcvd instanceof Date) {
+      step3AppealDue = new Date(step2Rcvd.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+
     // Deadlines (H, J, L, N, P)
     deadlineUpdates.push([
-      data.filingDeadline || '',
-      data.step1Due || '',
-      data.step2AppealDue || '',
-      data.step2Due || '',
-      data.step3AppealDue || ''
+      filingDeadline,
+      step1Due,
+      step2AppealDue,
+      step2Due,
+      step3AppealDue
     ]);
+
+    // Calculate Days Open directly
+    var daysOpen = '';
+    if (dateFiled instanceof Date) {
+      if (dateClosed instanceof Date) {
+        daysOpen = Math.floor((dateClosed - dateFiled) / (1000 * 60 * 60 * 24));
+      } else {
+        daysOpen = Math.floor((today - dateFiled) / (1000 * 60 * 60 * 24));
+      }
+    }
+
+    // Calculate Next Action Due based on current step and status
+    var nextActionDue = '';
+    var isClosed = closedStatuses.indexOf(status) !== -1;
+
+    if (!isClosed && currentStep) {
+      if (currentStep === 'Informal' && filingDeadline) {
+        nextActionDue = filingDeadline;
+      } else if (currentStep === 'Step I' && step1Due) {
+        nextActionDue = step1Due;
+      } else if (currentStep === 'Step II' && step2Due) {
+        nextActionDue = step2Due;
+      } else if (currentStep === 'Step III' && step3AppealDue) {
+        nextActionDue = step3AppealDue;
+      }
+    }
+
+    // Calculate Days to Deadline directly
+    var daysToDeadline = '';
+    if (nextActionDue instanceof Date) {
+      daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+    }
 
     // Metrics (S, T, U)
     metricsUpdates.push([
-      data.daysOpen || '',
-      data.nextActionDue || '',
-      data.daysToDeadline || ''
+      daysOpen,
+      nextActionDue,
+      daysToDeadline
     ]);
 
     // Contact info (X, Y, Z, AA)

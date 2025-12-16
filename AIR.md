@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.0 (Dashboard Views Added)
+**Version:** 1.4.1 (Days to Deadline Fix)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -597,37 +597,45 @@ This recreates all formulas and reinstalls the auto-sync trigger.
 
 ### BUG: Days to Deadline Shows Duplicate Values
 
-**Status:** Open
+**Status:** FIXED (2025-12-16)
 **Discovered:** 2025-12-16
 **Severity:** Medium
 
 **Issue:**
-The "Days to Deadline" column (U) in the Grievance Log displays identical values for multiple rows (e.g., `17.71857539` repeated for all grievances).
+The "Days to Deadline" column (U) in the Grievance Log displayed identical values for multiple rows (e.g., `17.71857539` repeated for all grievances).
 
-**Expected Behavior:**
-Each grievance should have a unique Days to Deadline value calculated as: `Next Action Due - TODAY()`
+**Root Cause:**
+The hidden sheet `_Grievance_Formulas` used ARRAYFORMULA with a FILTER-based row index. ARRAYFORMULA doesn't expand correctly when its source column is a FILTER result, causing all rows to receive the same calculated value.
 
-**Likely Root Cause:**
-The issue appears to be in the `syncGrievanceFormulasToLog()` function in `HiddenSheets.gs`. The hidden sheet `_Grievance_Formulas` calculates Days to Deadline using an ARRAYFORMULA, but the sync function may be:
-1. Reading the same value for all rows from the hidden sheet
-2. The FILTER formula in Column A may not be properly expanding dependent ARRAYFORMULA columns
-3. The lookup map keying by row index may have a mismatch
+**Fix Applied:**
+Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Open, Next Action Due, and Days to Deadline directly in JavaScript from the grievance row data, bypassing the problematic hidden sheet formulas.
 
-**Relevant Code:**
-- `HiddenSheets.gs:304-306` - Days to Deadline ARRAYFORMULA: `=ARRAYFORMULA(IF(S2:S="","",S2:S-TODAY()))`
-- `HiddenSheets.gs:382-383` - Reading `daysToDeadline: formulaData[i][19]`
-- `HiddenSheets.gs:420-425` - Building metricsUpdates array
-- `HiddenSheets.gs:461-462` - Writing to Grievance Log columns S, T, U
-
-**To Fix:**
-1. Investigate if the ARRAYFORMULA in the hidden sheet is expanding correctly
-2. Check if the FILTER formula output is properly aligning with ARRAYFORMULA calculations
-3. Consider using INDEX/MATCH instead of FILTER for row mapping
-4. Test with manual inspection of `_Grievance_Formulas` hidden sheet values
+**Calculations now performed directly:**
+- **Days Open**: `(Date Closed or Today) - Date Filed` (in whole days)
+- **Next Action Due**: Based on Current Step (Informal→Filing Deadline, Step I→Step I Due, etc.)
+- **Days to Deadline**: `Next Action Due - Today` (in whole days)
+- All deadline dates (Filing Deadline, Step I Due, etc.) also calculated directly
 
 ---
 
 ## Changelog
+
+### Version 1.4.1 (2025-12-16) - Days to Deadline Fix
+
+**Bug Fix:**
+- Fixed "Days to Deadline" and "Days Open" showing duplicate/incorrect values for all grievances
+- Root cause: ARRAYFORMULA with FILTER-based row index in hidden sheet didn't expand correctly
+- Solution: Calculate Days Open, Next Action Due, Days to Deadline, and all deadline dates directly in JavaScript within `syncGrievanceFormulasToLog()` function
+
+**Code Changes:**
+- `HiddenSheets.gs`: Rewrote metrics calculation in `syncGrievanceFormulasToLog()` (~60 lines added)
+  - Now calculates Filing Deadline, Step I/II/III Due dates from source dates
+  - Days Open = (Date Closed or Today) - Date Filed
+  - Next Action Due = Based on Current Step status
+  - Days to Deadline = Next Action Due - Today
+  - All values now calculated per-row from actual grievance data
+
+---
 
 ### Version 1.4.0 (2025-12-16) - Dashboard Views Added
 
