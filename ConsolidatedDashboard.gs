@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-18T03:05:27.224Z
+ * - Build Date: 2025-12-18T03:13:10.487Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -1125,7 +1125,7 @@ function createDashboard(ss) {
   for (var c = 0; c < 5; c++) {
     var cat = defaultCategories[c];
     categoryFormulas.push([
-      cat,
+      '="' + cat + '"',  // Wrap text as formula for setFormulas()
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '")',
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Open")-COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
@@ -1223,7 +1223,7 @@ function createDashboard(ss) {
   // Trend rows: Filed, Closed, Won
   var trendData = [
     [
-      'Grievances Filed',
+      '="Grievances Filed"',  // Wrap text as formula for setFormulas()
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
       '=B42-C42',
@@ -1231,7 +1231,7 @@ function createDashboard(ss) {
       '=IF(B42>C42,"📈",IF(B42<C42,"📉","➡️"))'
     ],
     [
-      'Grievances Closed',
+      '="Grievances Closed"',  // Wrap text as formula for setFormulas()
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
       '=B43-C43',
@@ -1239,7 +1239,7 @@ function createDashboard(ss) {
       '=IF(B43>C43,"📈",IF(B43<C43,"📉","➡️"))'
     ],
     [
-      'Cases Won',
+      '="Cases Won"',  // Wrap text as formula for setFormulas()
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
       '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
       '=B44-C44',
