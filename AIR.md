@@ -558,8 +558,8 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
-| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open, Status, Deadline) |
-| `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), X-AA (Email, Unit, Location, Steward) |
+| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open Grievance?, Status, Days to Deadline) |
+| `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), S-U (Days Open, Next Action, Days to Deadline), X-AA (Contact) |
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
 | `_Dashboard_Calc` | Both | 💼 Dashboard | 15 summary metrics (Win Rate, Overdue, Due This Week, etc.) |
