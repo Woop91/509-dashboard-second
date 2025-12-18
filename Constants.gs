@@ -468,6 +468,39 @@ var DEFAULT_CONFIG = {
 };
 
 // ============================================================================
+// MULTI-SELECT COLUMN CONFIGURATION
+// ============================================================================
+
+/**
+ * Columns that support multiple selections (comma-separated values)
+ * Maps column number to config source column for options
+ */
+var MULTI_SELECT_COLS = {
+  // Member Directory multi-select columns
+  MEMBER_DIR: [
+    { col: MEMBER_COLS.OFFICE_DAYS, configCol: CONFIG_COLS.OFFICE_DAYS, label: 'Office Days' },
+    { col: MEMBER_COLS.PREFERRED_COMM, configCol: CONFIG_COLS.COMM_METHODS, label: 'Preferred Communication' },
+    { col: MEMBER_COLS.BEST_TIME, configCol: CONFIG_COLS.BEST_TIMES, label: 'Best Time to Contact' },
+    { col: MEMBER_COLS.COMMITTEES, configCol: CONFIG_COLS.STEWARD_COMMITTEES, label: 'Committees' },
+    { col: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, label: 'Assigned Steward(s)' }
+  ]
+};
+
+/**
+ * Check if a column in Member Directory is a multi-select column
+ * @param {number} col - Column number (1-indexed)
+ * @returns {Object|null} Multi-select config if found, null otherwise
+ */
+function getMultiSelectConfig(col) {
+  for (var i = 0; i < MULTI_SELECT_COLS.MEMBER_DIR.length; i++) {
+    if (MULTI_SELECT_COLS.MEMBER_DIR[i].col === col) {
+      return MULTI_SELECT_COLS.MEMBER_DIR[i];
+    }
+  }
+  return null;
+}
+
+// ============================================================================
 // ID GENERATION
 // ============================================================================
 

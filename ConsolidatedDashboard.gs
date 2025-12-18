@@ -1288,22 +1288,26 @@ function setupDataValidations() {
     return;
   }
 
-  // Member Directory Validations (15 dropdowns)
+  // Member Directory Validations
+  // Single-select dropdowns (strict validation)
   setDropdownValidation(memberSheet, MEMBER_COLS.JOB_TITLE, configSheet, CONFIG_COLS.JOB_TITLES);
   setDropdownValidation(memberSheet, MEMBER_COLS.WORK_LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   setDropdownValidation(memberSheet, MEMBER_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
   setDropdownValidation(memberSheet, MEMBER_COLS.IS_STEWARD, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.SUPERVISOR, configSheet, CONFIG_COLS.SUPERVISORS);
   setDropdownValidation(memberSheet, MEMBER_COLS.MANAGER, configSheet, CONFIG_COLS.MANAGERS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_LOCAL, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_CHAPTER, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_ALLIED, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.HOME_TOWN, configSheet, CONFIG_COLS.HOME_TOWNS);
   setDropdownValidation(memberSheet, MEMBER_COLS.CONTACT_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
+
+  // Multi-select dropdowns (allow comma-separated values)
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.COMMITTEES, configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
   // Member ID dropdown - links to valid Member IDs from Member Directory
@@ -1352,6 +1356,26 @@ function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(sourceRange, true)
     .setAllowInvalid(false)
+    .build();
+
+  var targetRange = targetSheet.getRange(2, targetCol, 998, 1);
+  targetRange.setDataValidation(rule);
+}
+
+/**
+ * Set multi-select validation (allows comma-separated values)
+ * Shows dropdown for convenience but accepts any text
+ * @param {Sheet} targetSheet - Sheet to apply validation
+ * @param {number} targetCol - Column number in target sheet
+ * @param {Sheet} configSheet - Config sheet with source values
+ * @param {number} sourceCol - Column number in Config sheet
+ */
+function setMultiSelectValidation(targetSheet, targetCol, configSheet, sourceCol) {
+  // Config data starts at row 3
+  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(true)  // Allow comma-separated values
     .build();
 
   var targetRange = targetSheet.getRange(2, targetCol, 998, 1);

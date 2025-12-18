@@ -52,6 +52,8 @@
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
 - `CONFIG_COLS` - Config sheet column positions
 - `DEFAULT_CONFIG` - Default dropdown values
+- `MULTI_SELECT_COLS` - Configuration for multi-select columns
+- `getMultiSelectConfig()` - Get multi-select config for a column
 - `getColumnLetter()` - Convert column number to letter
 - `getColumnNumber()` - Convert column letter to number
 - `mapMemberRow()` - Map row array to member object
@@ -66,7 +68,10 @@
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
-- `setDropdownValidation()` - Helper: apply single dropdown
+- `setDropdownValidation()` - Helper: apply single-select dropdown
+- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
+- `showMultiSelectDialog()` - Opens multi-select checkbox dialog
+- `applyMultiSelectValue()` - Saves multi-select values to cell
 - `getOrCreateSheet()` - Helper: get or create sheet
 - `rebuildDashboard()` - Refresh data and validations
 - `refreshAllFormulas()` - Refresh all formulas and sync
@@ -427,6 +432,20 @@ var GRIEVANCE_COLS = {
 | V | Articles Violated | ARTICLES (L) |
 | W | Issue Category | ISSUE_CATEGORY (K) |
 
+### Multi-Select Functionality
+
+Columns marked as **Multi-Select** support comma-separated values for multiple selections.
+
+**How to use:**
+1. Select a cell in a multi-select column (G, J, K, O, or P)
+2. Go to **🔧 Tools > ☑️ Multi-Select Editor**
+3. Check multiple options in the dialog
+4. Click **Save** to apply
+
+**Storage format:** Values are stored as comma-separated text (e.g., "Monday, Wednesday, Friday")
+
+**Validation:** Multi-select columns show a dropdown for convenience but accept any text value to allow multiple selections.
+
 ---
 
 ## Menu System
@@ -444,7 +463,15 @@ var GRIEVANCE_COLS = {
 ├── Rebuild Dashboard
 └── Refresh All Formulas
 
-🔧 Setup
+🔧 Tools
+├── ADHD & Accessibility (submenu)
+├── Theming (submenu)
+├── ☑️ Multi-Select Editor    <-- NEW
+├── Undo/Redo (submenu)
+├── Cache & Performance (submenu)
+└── Validation (submenu)
+
+🏗️ Setup
 ├── CREATE 509 DASHBOARD
 ├── REPAIR DASHBOARD
 └── Setup Data Validations

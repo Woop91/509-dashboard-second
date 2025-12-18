@@ -61,6 +61,8 @@ function onOpen() {
       .addItem('🌙 Toggle Dark Mode', 'quickToggleDarkMode')
       .addItem('🔄 Reset Theme', 'resetToDefaultTheme'))
     .addSeparator()
+    .addItem('☑️ Multi-Select Editor', 'showMultiSelectDialog')
+    .addSeparator()
     .addSubMenu(ui.createMenu('↩️ Undo/Redo')
       .addItem('↩️ Undo Last Action', 'undoLastAction')
       .addItem('↪️ Redo Action', 'redoLastAction')
@@ -790,22 +792,26 @@ function setupDataValidations() {
     return;
   }
 
-  // Member Directory Validations (15 dropdowns)
+  // Member Directory Validations
+  // Single-select dropdowns (strict validation)
   setDropdownValidation(memberSheet, MEMBER_COLS.JOB_TITLE, configSheet, CONFIG_COLS.JOB_TITLES);
   setDropdownValidation(memberSheet, MEMBER_COLS.WORK_LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   setDropdownValidation(memberSheet, MEMBER_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
   setDropdownValidation(memberSheet, MEMBER_COLS.IS_STEWARD, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.SUPERVISOR, configSheet, CONFIG_COLS.SUPERVISORS);
   setDropdownValidation(memberSheet, MEMBER_COLS.MANAGER, configSheet, CONFIG_COLS.MANAGERS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_LOCAL, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_CHAPTER, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_ALLIED, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.HOME_TOWN, configSheet, CONFIG_COLS.HOME_TOWNS);
   setDropdownValidation(memberSheet, MEMBER_COLS.CONTACT_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
+
+  // Multi-select dropdowns (allow comma-separated values)
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.COMMITTEES, configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
   // Member ID dropdown - links to valid Member IDs from Member Directory
@@ -858,6 +864,174 @@ function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
 
   var targetRange = targetSheet.getRange(2, targetCol, 998, 1);
   targetRange.setDataValidation(rule);
+}
+
+/**
+ * Set multi-select validation (allows comma-separated values)
+ * Shows dropdown for convenience but accepts any text
+ * @param {Sheet} targetSheet - Sheet to apply validation
+ * @param {number} targetCol - Column number in target sheet
+ * @param {Sheet} configSheet - Config sheet with source values
+ * @param {number} sourceCol - Column number in Config sheet
+ */
+function setMultiSelectValidation(targetSheet, targetCol, configSheet, sourceCol) {
+  // Config data starts at row 3
+  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(true)  // Allow comma-separated values
+    .build();
+
+  var targetRange = targetSheet.getRange(2, targetCol, 998, 1);
+  targetRange.setDataValidation(rule);
+}
+
+// ============================================================================
+// MULTI-SELECT FUNCTIONALITY
+// ============================================================================
+
+// Store the target cell for multi-select dialog
+var multiSelectTarget_ = null;
+
+/**
+ * Show multi-select dialog for the current cell
+ * Called from menu or double-click on multi-select column
+ */
+function showMultiSelectDialog() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var cell = sheet.getActiveCell();
+  var sheetName = sheet.getName();
+
+  // Only works on Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) {
+    SpreadsheetApp.getUi().alert('Multi-select is only available in Member Directory.');
+    return;
+  }
+
+  var col = cell.getColumn();
+  var row = cell.getRow();
+
+  // Must be in data row (not header)
+  if (row < 2) {
+    SpreadsheetApp.getUi().alert('Please select a data cell (row 2 or below).');
+    return;
+  }
+
+  var config = getMultiSelectConfig(col);
+  if (!config) {
+    SpreadsheetApp.getUi().alert('This column does not support multi-select.\n\nMulti-select columns: Office Days, Preferred Communication, Best Time, Committees, Assigned Steward(s)');
+    return;
+  }
+
+  // Store target cell info in PropertiesService for the callback
+  var props = PropertiesService.getDocumentProperties();
+  props.setProperty('multiSelectRow', row.toString());
+  props.setProperty('multiSelectCol', col.toString());
+
+  // Get options from Config sheet
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+  var options = getConfigValues(configSheet, config.configCol);
+
+  // Get current value and parse into array
+  var currentValue = cell.getValue() || '';
+  var currentValues = currentValue ? currentValue.split(/,\s*/) : [];
+
+  // Create and show dialog
+  var html = HtmlService.createHtmlOutputFromFile('MultiSelectDialog')
+    .setWidth(350)
+    .setHeight(420);
+
+  // Pass data to dialog
+  var dialogData = {
+    label: config.label,
+    options: options,
+    currentValues: currentValues
+  };
+
+  html.append('<script>initDialog(' + JSON.stringify(dialogData) + ');</script>');
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'Multi-Select: ' + config.label);
+}
+
+/**
+ * Get values from a Config sheet column
+ * @param {Sheet} configSheet - The Config sheet
+ * @param {number} col - Column number
+ * @returns {Array} Array of non-empty values
+ */
+function getConfigValues(configSheet, col) {
+  var data = configSheet.getRange(3, col, 100, 1).getValues();
+  var values = [];
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() !== '') {
+      values.push(data[i][0].toString());
+    }
+  }
+  return values;
+}
+
+/**
+ * Apply the multi-select value to the stored cell
+ * Called from the dialog
+ * @param {string} value - Comma-separated selected values
+ */
+function applyMultiSelectValue(value) {
+  var props = PropertiesService.getDocumentProperties();
+  var row = parseInt(props.getProperty('multiSelectRow'), 10);
+  var col = parseInt(props.getProperty('multiSelectCol'), 10);
+
+  if (!row || !col) {
+    throw new Error('Target cell not found. Please try again.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  sheet.getRange(row, col).setValue(value);
+
+  // Clear stored properties
+  props.deleteProperty('multiSelectRow');
+  props.deleteProperty('multiSelectCol');
+}
+
+/**
+ * Handle edit events to trigger multi-select dialog
+ * This is installed as an onEdit trigger
+ */
+function onEditMultiSelect(e) {
+  // Only process single cell edits
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) return;
+
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
+
+  // Skip header row
+  if (row < 2) return;
+
+  // Check if this is a multi-select column
+  var config = getMultiSelectConfig(col);
+  if (!config) return;
+
+  // If user typed something, show the dialog to help them select properly
+  // Only trigger if the new value isn't already comma-separated (user might be pasting)
+  var newValue = e.value || '';
+  var oldValue = e.oldValue || '';
+
+  // If user cleared the cell or pasted valid data, don't interrupt
+  if (newValue === '' || newValue.indexOf(',') !== -1) return;
+
+  // Show helpful toast
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Tip: Use Dashboard menu > "Multi-Select Editor" for easier selection of multiple values.',
+    config.label,
+    5
+  );
 }
 
 // ============================================================================
