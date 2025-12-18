@@ -52,6 +52,8 @@
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
 - `CONFIG_COLS` - Config sheet column positions
 - `DEFAULT_CONFIG` - Default dropdown values
+- `MULTI_SELECT_COLS` - Configuration for multi-select columns
+- `getMultiSelectConfig()` - Get multi-select config for a column
 - `getColumnLetter()` - Convert column number to letter
 - `getColumnNumber()` - Convert column letter to number
 - `mapMemberRow()` - Map row array to member object
@@ -66,7 +68,13 @@
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
-- `setDropdownValidation()` - Helper: apply single dropdown
+- `setDropdownValidation()` - Helper: apply single-select dropdown
+- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
+- `showMultiSelectDialog()` - Opens multi-select checkbox dialog
+- `applyMultiSelectValue()` - Saves multi-select values to cell
+- `onSelectionChangeMultiSelect()` - Auto-opens dialog on cell selection
+- `installMultiSelectTrigger()` - Enables auto-open mode
+- `removeMultiSelectTrigger()` - Disables auto-open mode
 - `getOrCreateSheet()` - Helper: get or create sheet
 - `rebuildDashboard()` - Refresh data and validations
 - `refreshAllFormulas()` - Refresh all formulas and sync
@@ -238,20 +246,20 @@ var MEMBER_COLS = {
   // Section 2: Location & Work (E-G)
   WORK_LOCATION: 5,       // E
   UNIT: 6,                // F
-  OFFICE_DAYS: 7,         // G
+  OFFICE_DAYS: 7,         // G - Multi-select
 
   // Section 3: Contact Information (H-K)
   EMAIL: 8,               // H
   PHONE: 9,               // I
-  PREFERRED_COMM: 10,     // J
-  BEST_TIME: 11,          // K
+  PREFERRED_COMM: 10,     // J - Multi-select
+  BEST_TIME: 11,          // K - Multi-select
 
   // Section 4: Organizational Structure (L-P)
   SUPERVISOR: 12,         // L
   MANAGER: 13,            // M
   IS_STEWARD: 14,         // N
-  COMMITTEES: 15,         // O
-  ASSIGNED_STEWARD: 16,   // P
+  COMMITTEES: 15,         // O - Multi-select
+  ASSIGNED_STEWARD: 16,   // P - Multi-select
 
   // Section 5: Engagement Metrics (Q-T)
   LAST_VIRTUAL_MTG: 17,   // Q
@@ -396,24 +404,26 @@ var GRIEVANCE_COLS = {
 | O | Grievance Coordinators | Admin use |
 | AF | Home Towns | Member Directory (X) |
 
-### Member Directory Dropdowns (14 columns)
+### Member Directory Dropdowns (16 columns)
 
-| Column | Field | Config Source |
-|--------|-------|---------------|
-| D | Job Title | JOB_TITLES (A) |
-| E | Work Location | OFFICE_LOCATIONS (B) |
-| F | Unit | UNITS (C) |
-| G | Office Days | OFFICE_DAYS (D) |
-| J | Preferred Communication | COMM_METHODS (M) |
-| L | Supervisor | SUPERVISORS (F) |
-| M | Manager | MANAGERS (G) |
-| N | Is Steward | YES_NO (E) |
-| P | Assigned Steward | STEWARDS (H) |
-| U | Interest: Local | YES_NO (E) |
-| V | Interest: Chapter | YES_NO (E) |
-| W | Interest: Allied | YES_NO (E) |
-| X | Home Town | HOME_TOWNS (AF) |
-| Z | Contact Steward | STEWARDS (H) |
+| Column | Field | Config Source | Multi-Select |
+|--------|-------|---------------|--------------|
+| D | Job Title | JOB_TITLES (A) | No |
+| E | Work Location | OFFICE_LOCATIONS (B) | No |
+| F | Unit | UNITS (C) | No |
+| G | Office Days | OFFICE_DAYS (D) | **Yes** |
+| J | Preferred Communication | COMM_METHODS (N) | **Yes** |
+| K | Best Time to Contact | BEST_TIMES (AE) | **Yes** |
+| L | Supervisor | SUPERVISORS (F) | No |
+| M | Manager | MANAGERS (G) | No |
+| N | Is Steward | YES_NO (E) | No |
+| O | Committees | STEWARD_COMMITTEES (I) | **Yes** |
+| P | Assigned Steward | STEWARDS (H) | **Yes** |
+| U | Interest: Local | YES_NO (E) | No |
+| V | Interest: Chapter | YES_NO (E) | No |
+| W | Interest: Allied | YES_NO (E) | No |
+| X | Home Town | HOME_TOWNS (AF) | No |
+| Z | Contact Steward | STEWARDS (H) | No |
 
 ### Grievance Log Dropdowns (5 columns)
 
@@ -424,6 +434,25 @@ var GRIEVANCE_COLS = {
 | F | Current Step | GRIEVANCE_STEP (J) |
 | V | Articles Violated | ARTICLES (L) |
 | W | Issue Category | ISSUE_CATEGORY (K) |
+
+### Multi-Select Functionality
+
+Columns marked as **Multi-Select** support comma-separated values for multiple selections.
+
+**Auto-Open Mode (Recommended):**
+1. Go to **🔧 Tools > ☑️ Multi-Select > ⚡ Enable Auto-Open**
+2. Now clicking any multi-select cell automatically opens the dialog!
+3. To disable: **🔧 Tools > ☑️ Multi-Select > 🚫 Disable Auto-Open**
+
+**Manual Mode:**
+1. Select a cell in a multi-select column (G, J, K, O, or P)
+2. Go to **🔧 Tools > ☑️ Multi-Select > 📝 Open Editor**
+3. Check multiple options in the dialog
+4. Click **Save** to apply
+
+**Storage format:** Values are stored as comma-separated text (e.g., "Monday, Wednesday, Friday")
+
+**Validation:** Multi-select columns show a dropdown for convenience but accept any text value to allow multiple selections.
 
 ---
 
@@ -442,7 +471,18 @@ var GRIEVANCE_COLS = {
 ├── Rebuild Dashboard
 └── Refresh All Formulas
 
-🔧 Setup
+🔧 Tools
+├── ADHD & Accessibility (submenu)
+├── Theming (submenu)
+├── ☑️ Multi-Select (submenu)
+│   ├── 📝 Open Editor
+│   ├── ⚡ Enable Auto-Open
+│   └── 🚫 Disable Auto-Open
+├── Undo/Redo (submenu)
+├── Cache & Performance (submenu)
+└── Validation (submenu)
+
+🏗️ Setup
 ├── CREATE 509 DASHBOARD
 ├── REPAIR DASHBOARD
 └── Setup Data Validations
