@@ -204,6 +204,8 @@ function CREATE_509_DASHBOARD() {
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Interactive (views)\n\n' +
       'Plus 5 hidden calculation sheets with self-healing formulas.\n\n' +
+      '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
+      'update automatically when you edit the sheets.\n\n' +
       'Use the Demo menu to seed sample data.', ui.ButtonSet.OK);
 
   } catch (error) {
