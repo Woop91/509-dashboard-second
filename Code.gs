@@ -610,17 +610,166 @@ function createDashboard(ss) {
     .setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 5: STATUS LEGEND
+  // SECTION 5: TYPE ANALYSIS (by Issue Category)
   // ═══════════════════════════════════════════════════════════════════════════
-  sheet.getRange('A20').setValue('STATUS LEGEND')
+  sheet.getRange('A20').setValue('📊 TYPE ANALYSIS (by Issue Category)')
+    .setFontWeight('bold')
+    .setBackground('#6366F1')  // Indigo
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A20:F20').merge();
+
+  var typeLabels = [['Issue Category', 'Total Cases', 'Open', 'Resolved', 'Win Rate', 'Avg Days']];
+  sheet.getRange('A21:F21').setValues(typeLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  var gIssueCatCol = getColumnLetter(GRIEVANCE_COLS.ISSUE_CATEGORY);
+  var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
+
+  // Top 5 issue categories with metrics - using QUERY formulas
+  var categoryFormulas = [];
+  var defaultCategories = ['Contract Violation', 'Discipline', 'Workload', 'Safety', 'Discrimination'];
+  for (var c = 0; c < 5; c++) {
+    var cat = defaultCategories[c];
+    categoryFormulas.push([
+      '="' + cat + '"',  // Wrap text as formula for setFormulas()
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '")',
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Open")-COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
+      '=IFERROR(TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),"0%"),"-")',
+      '=IFERROR(ROUND(AVERAGEIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),1),"-")'
+    ]);
+  }
+  sheet.getRange('A22:F26').setFormulas(categoryFormulas)
+    .setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 6: LOCATION BREAKDOWN
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A28').setValue('🗺️ LOCATION BREAKDOWN')
+    .setFontWeight('bold')
+    .setBackground('#0891B2')  // Cyan
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A28:F28').merge();
+
+  var locationLabels = [['Location', 'Members', 'Grievances', 'Open Cases', 'Win Rate', 'Avg Satisfaction']];
+  sheet.getRange('A29:F29').setValues(locationLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
+  var gLocationCol = getColumnLetter(GRIEVANCE_COLS.LOCATION);  // GRIEVANCE_COLS uses LOCATION not WORK_LOCATION
+  var configLocCol = getColumnLetter(CONFIG_COLS.OFFICE_LOCATIONS);
+
+  // Location formulas - pulls top 5 locations from Config and calculates metrics
+  var locationFormulas = [];
+  for (var loc = 0; loc < 5; loc++) {
+    var configRow = 3 + loc;  // Config data starts at row 3
+    var locRef = '\'' + SHEETS.CONFIG + '\'!' + configLocCol + configRow;
+    locationFormulas.push([
+      '=IFERROR(' + locRef + ',"")',
+      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',' + locRef + '),"")',
+      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"")',
+      '=IF(' + locRef + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")',
+      '=IF(AND(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ')>0),TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"0%"),"-")',
+      '="-"'  // Satisfaction requires separate tracking
+    ]);
+  }
+  sheet.getRange('A30:F34').setFormulas(locationFormulas)
+    .setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 7: STEWARD PERFORMANCE
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A36').setValue('👨‍⚖️ STEWARD PERFORMANCE')
+    .setFontWeight('bold')
+    .setBackground('#7C3AED')  // Purple
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A36:F36').merge();
+
+  var stewardLabels = [['Total Stewards', 'Active (w/ Cases)', 'Avg Cases/Steward', 'Best Win Rate', 'Total Vol Hours', 'Contacts This Month']];
+  sheet.getRange('A37:F37').setValues(stewardLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
+  var gAssignedStewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);  // GRIEVANCE_COLS uses STEWARD not ASSIGNED_STEWARD
+  var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
+
+  var stewardFormulas = [
+    [
+      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")',
+      '=IFERROR(ROWS(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + '<>"",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '="Open"))),0)',
+      '=IFERROR(ROUND((COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)/COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes"),1),"-")',
+      '="-"',  // Best win rate requires complex calculation
+      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + mVolHoursCol + ':' + mVolHoursCol + ')',
+      '=COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',"<="&TODAY())'
+    ]
+  ];
+  sheet.getRange('A38:F38').setFormulas(stewardFormulas)
+    .setFontSize(16)
+    .setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 8: MONTH-OVER-MONTH TRENDS
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A40').setValue('📈 MONTH-OVER-MONTH TRENDS')
+    .setFontWeight('bold')
+    .setBackground('#DC2626')  // Red
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A40:F40').merge();
+
+  var trendLabels = [['Metric', 'This Month', 'Last Month', 'Change', '% Change', 'Trend']];
+  sheet.getRange('A41:F41').setValues(trendLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  // Trend rows: Filed, Closed, Won
+  var trendData = [
+    [
+      '="Grievances Filed"',  // Wrap text as formula for setFormulas()
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
+      '=B42-C42',
+      '=IFERROR(TEXT((B42-C42)/C42,"0%"),"-")',
+      '=IF(B42>C42,"📈",IF(B42<C42,"📉","➡️"))'
+    ],
+    [
+      '="Grievances Closed"',  // Wrap text as formula for setFormulas()
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
+      '=B43-C43',
+      '=IFERROR(TEXT((B43-C43)/C43,"0%"),"-")',
+      '=IF(B43>C43,"📈",IF(B43<C43,"📉","➡️"))'
+    ],
+    [
+      '="Cases Won"',  // Wrap text as formula for setFormulas()
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
+      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
+      '=B44-C44',
+      '=IFERROR(TEXT((B44-C44)/C44,"0%"),"-")',
+      '=IF(B44>C44,"📈",IF(B44<C44,"📉","➡️"))'
+    ]
+  ];
+  sheet.getRange('A42:F44').setFormulas(trendData)
+    .setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 9: STATUS LEGEND
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A46').setValue('STATUS LEGEND')
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
-  sheet.getRange('A20:F20').merge();
+  sheet.getRange('A46:F46').merge();
 
   var legend = [
     ['🟢 On Track', '🟡 Due in 7 days', '🟠 Due in 3 days', '🔴 Overdue', '✅ Won', '❌ Denied']
   ];
-  sheet.getRange('A21:F21').setValues(legend)
+  sheet.getRange('A47:F47').setValues(legend)
     .setHorizontalAlignment('center')
     .setFontSize(10);
 
@@ -1329,7 +1478,11 @@ function refreshMemberDirectoryFormulas() {
 
 function rebuildDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast('Refreshing data and validations...', '🔄 Refresh', 3);
+  ss.toast('Rebuilding dashboard sheets...', '🔄 Rebuild', 3);
+
+  // Recreate dashboard sheets with latest layout
+  createDashboard(ss);
+  createInteractiveDashboard(ss);
 
   // Refresh hidden sheet formulas and sync data
   refreshAllHiddenFormulas();
@@ -1337,7 +1490,7 @@ function rebuildDashboard() {
   // Reapply data validations
   setupDataValidations();
 
-  ss.toast('Dashboard refreshed!', '✅ Success', 3);
+  ss.toast('Dashboard rebuilt with all 9 sections!', '✅ Success', 3);
 }
 
 /**

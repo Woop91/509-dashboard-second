@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.5 (Auto-Sort & Seed Improvements)
+**Version:** 1.5.0 (Enhanced Analytics Dashboard)
 **Last Updated:** 2025-12-18
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -367,8 +367,24 @@ var GRIEVANCE_COLS = {
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 4 | 💼 Dashboard | View | Executive metrics dashboard (merged from old Dashboard + Executive) |
+| 4 | 💼 Dashboard | View | Executive metrics dashboard with 9 analytics sections |
 | 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
+
+#### 💼 Dashboard - 9 Live Analytics Sections
+
+| # | Section | Color | Metrics | Data Source |
+|---|---------|-------|---------|-------------|
+| 1 | QUICK STATS | 🟢 Green | Total Members, Active Stewards, Active Grievances, Win Rate, Overdue, Due This Week | `_Dashboard_Calc` |
+| 2 | MEMBER METRICS | 🔵 Blue | Total Members, Active Stewards, Avg Open Rate, YTD Vol Hours | Member Directory |
+| 3 | GRIEVANCE METRICS | 🟠 Orange | Open, Pending Info, Settled, Won, Denied, Withdrawn | Grievance Log |
+| 4 | TIMELINE & PERFORMANCE | 🟣 Purple | Avg Days Open, Filed This Month, Closed This Month, Avg Resolution | Grievance Log |
+| 5 | TYPE ANALYSIS | 🔷 Indigo | 5 issue categories × (Total, Open, Resolved, Win Rate, Avg Days) | Grievance Log |
+| 6 | LOCATION BREAKDOWN | 🔵 Cyan | 5 locations × (Members, Grievances, Open Cases, Win Rate) | Config + Member Dir + Grievance Log |
+| 7 | STEWARD PERFORMANCE | 🟣 Purple | Total Stewards, Active w/Cases, Avg Cases, Vol Hours, Contacts | Member Dir + Grievance Log |
+| 8 | MONTH-OVER-MONTH TRENDS | 🔴 Red | Filed/Closed/Won × (This Month, Last Month, Change, % Change, Trend) | Grievance Log |
+| 9 | STATUS LEGEND | ⬜ Gray | Color/icon reference guide | Static |
+
+**All sections use live COUNTIF/COUNTIFS/AVERAGEIFS formulas that auto-update when source data changes.**
 
 ### Hidden Calculation Sheets
 
@@ -661,6 +677,50 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.0 (2025-12-18) - Enhanced Analytics Dashboard
+
+**Major Updates:**
+
+- Enhanced 💼 Dashboard from 4 sections to 9 comprehensive analytics sections
+- Added Operations Analytics-style metrics inspired by 509-dashboard
+- All sections now use live auto-updating formulas (no manual refresh needed)
+
+**New Dashboard Sections (5 added):**
+
+| Section | Description |
+|---------|-------------|
+| TYPE ANALYSIS | Breakdown by issue category (Contract Violation, Discipline, Workload, Safety, Discrimination) with Total/Open/Resolved/Win Rate/Avg Days per category |
+| LOCATION BREAKDOWN | Metrics per work location from Config - Members, Grievances, Open Cases, Win Rate |
+| STEWARD PERFORMANCE | Total Stewards, Active w/Cases, Avg Cases/Steward, Vol Hours, Contacts This Month |
+| MONTH-OVER-MONTH TRENDS | Filed/Closed/Won comparisons with 📈📉➡️ trend indicators and % change |
+| STATUS LEGEND | Moved from section 5 to section 9 |
+
+**Formula Types Used:**
+
+- `COUNTIF` / `COUNTIFS` - Count by criteria
+- `AVERAGEIFS` - Average by criteria
+- `IFERROR` / `IF` - Error handling
+- `TEXT` - Percentage formatting
+- Date math with `DATE()`, `YEAR()`, `MONTH()`, `TODAY()`
+
+**Live Data Flow:**
+
+```
+Config (Office Locations) ──┐
+                            ├──► 💼 Dashboard (auto-updates)
+Member Directory ───────────┤
+                            │
+Grievance Log ──────────────┘
+```
+
+**Code Changes:**
+
+- Code.gs: Enhanced `createDashboard()` from ~170 lines to ~320 lines
+- Code.gs: Fixed `rebuildDashboard()` to actually recreate dashboard sheets
+- AIR.md: Updated documentation with 9-section dashboard architecture
+
+---
 
 ### Version 1.4.5 (2025-12-18) - Auto-Sort & Seed Improvements
 
