@@ -63,7 +63,7 @@ Quick, practical tutorials for common tasks in the 509 Dashboard.
 **Step 3: Enter Required Fields**
 | Column | Field | Example |
 |--------|-------|---------|
-| A | Member ID | M000001 |
+| A | Member ID | MJASM123 (M + first 2 chars of first/last name + 3 digits) |
 | B | First Name | Jane |
 | C | Last Name | Smith |
 | D | Job Title | Case Worker (use dropdown) |
@@ -92,8 +92,8 @@ Quick, practical tutorials for common tasks in the 509 Dashboard.
 **Step 2: Enter Grievance Details**
 | Column | Field | Example |
 |--------|-------|---------|
-| A | Grievance ID | G-000001 |
-| B | Member ID | M000001 (must match Member Directory) |
+| A | Grievance ID | GJASM456 (G + first 2 chars of first/last name + 3 digits) |
+| B | Member ID | MJASM123 (must match Member Directory) |
 | C | First Name | Jane |
 | D | Last Name | Smith |
 | E | Status | Open (use dropdown) |
@@ -431,14 +431,14 @@ If you want columns Q-T to auto-populate with engagement data:
 | Date | 12/01/2025 |
 | Type | Virtual / In-Person / Hybrid |
 | Meeting Name | Monthly Chapter Meeting |
-| Member ID | M000001 |
+| Member ID | MJASM123 |
 | Attended | Yes / No |
 
 **Volunteer Hours** (enter each activity):
 | Column | Example |
 |--------|---------|
 | Date | 12/01/2025 |
-| Member ID | M000001 |
+| Member ID | MJASM123 |
 | Activity | Phone Banking |
 | Hours | 3 |
 

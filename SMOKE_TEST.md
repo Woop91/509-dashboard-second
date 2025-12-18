@@ -37,7 +37,7 @@ Runtime validation tests for the 509 Dashboard. These tests verify functionality
 ## Step 3: Member Directory Tests
 
 1. **Add a member manually**
-   - [ ] Auto-ID generates (M000001 format)
+   - [ ] Auto-ID generates (MJASM123 format: M + 2 chars first name + 2 chars last name + 3 digits)
    - [ ] All dropdowns work (Job Title, Location, Unit, etc.)
    - [ ] No broken formula errors
 
@@ -53,7 +53,7 @@ Runtime validation tests for the 509 Dashboard. These tests verify functionality
    - [ ] Toggle "Start Grievance" checkbox for a member
    - [ ] Verify grievance row appears in Grievance Log
    - [ ] Member info synced correctly (Name, Email, Location)
-   - [ ] Auto-ID generates (G-000001 format)
+   - [ ] Auto-ID generates (GJASM456 format: G + 2 chars first name + 2 chars last name + 3 digits)
 
 2. **Verify Computed Deadlines**
    - [ ] Filing Deadline auto-calculates (21 days from incident)
