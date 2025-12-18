@@ -497,7 +497,39 @@ var DEFAULT_CONFIG = {
   COMM_METHODS: ['Email', 'Phone', 'Text', 'In Person']
 };
 
+// ============================================================================
+// ID GENERATION
+// ============================================================================
 
+/**
+ * Generate a name-based ID with prefix and 3 random digits
+ * Format: Prefix + First 2 chars of firstName + First 2 chars of lastName + 3 random digits
+ * Example: M + John Smith → MJOSM123, G + John Smith → GJOSM456
+ * @param {string} prefix - ID prefix ('M' for members, 'G' for grievances)
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {Object} existingIds - Object with existing IDs as keys (for collision detection)
+ * @returns {string} Generated ID (uppercase)
+ */
+function generateNameBasedId(prefix, firstName, lastName, existingIds) {
+  var firstPart = (firstName || 'XX').substring(0, 2).toUpperCase();
+  var lastPart = (lastName || 'XX').substring(0, 2).toUpperCase();
+  var namePrefix = (prefix || '') + firstPart + lastPart;
+
+  var maxAttempts = 100;
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    var randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    var newId = namePrefix + randomDigits;
+
+    if (!existingIds || !existingIds[newId]) {
+      return newId;
+    }
+  }
+
+  // Fallback: add timestamp component if too many collisions
+  var timestamp = String(Date.now()).slice(-3);
+  return namePrefix + timestamp;
+}
 
 // ================================================================================
 // MODULE: Code.gs
@@ -3418,17 +3450,28 @@ function SEED_MEMBERS(count) {
   var commMethods = DEFAULT_CONFIG.COMM_METHODS;
 
   var startRow = Math.max(sheet.getLastRow() + 1, 2);
-  var existingCount = startRow - 2;
+
+  // Build set of existing member IDs to prevent duplicates
+  var existingMemberIds = {};
+  if (startRow > 2) {
+    var existingData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingMemberIds[existingData[e][0]] = true;
+      }
+    }
+  }
 
   var rows = [];
   var batchSize = 50;
   var today = new Date();
 
   for (var i = 0; i < count; i++) {
-    var memberId = 'M' + String(existingCount + i + 1).padStart(6, '0');
     var firstName = randomChoice(firstNames);
     var lastName = randomChoice(lastNames);
-    var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + (existingCount + i + 1) + '@example.org';
+    var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
+    existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
+    var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
     var phone = '617-555-' + String(1000 + i).padStart(4, '0');
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
     var assignedSteward = randomChoice(stewards);
@@ -3575,7 +3618,17 @@ function SEED_GRIEVANCES(count) {
   if (stewards.length === 0) stewards = ['Mary Steward'];
 
   var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
-  var existingCount = startRow - 2;
+
+  // Build set of existing grievance IDs to prevent duplicates
+  var existingGrievanceIds = {};
+  if (startRow > 2) {
+    var existingData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingGrievanceIds[existingData[e][0]] = true;
+      }
+    }
+  }
 
   var rows = [];
   var batchSize = 25;
@@ -3597,7 +3650,9 @@ function SEED_GRIEVANCES(count) {
     var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
     var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
 
-    var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
+    // Generate grievance ID using member's name with G prefix
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
+    existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
