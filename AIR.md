@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.4 (Grievance Log Member Lookup Fix)
-**Last Updated:** 2025-12-16
+**Version:** 1.4.5 (Auto-Sort & Seed Improvements)
+**Last Updated:** 2025-12-18
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -116,6 +116,7 @@
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
+  - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
 - Trigger & Repair Functions:
   - `onEditAutoSync()` - Auto-sync trigger handler
   - `installAutoSyncTrigger()` - Install the onEdit trigger
@@ -607,7 +608,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 ### Auto-Sync Trigger
 
 The `onEditAutoSync` trigger automatically syncs data when:
-- Grievance Log is edited → Updates Member Directory columns AB-AD
+- Grievance Log is edited → Updates Member Directory columns AB-AD, then auto-sorts by status
 - Member Directory is edited → Updates Grievance Log columns C-D, X-AA
 
 ### Key Functions (HiddenSheets.gs)
@@ -621,6 +622,7 @@ The `onEditAutoSync` trigger automatically syncs data when:
 | `syncAllData()` | Manual sync of all cross-sheet data |
 | `syncGrievanceToMemberDirectory()` | Sync grievance data to members |
 | `syncMemberToGrievanceLog()` | Sync member data to grievances |
+| `sortGrievanceLogByStatus()` | Auto-sort by status priority and deadline |
 | `setupDashboardCalcSheet()` | Create dashboard metrics calculation sheet |
 
 ### Self-Healing
@@ -659,6 +661,40 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.4.5 (2025-12-18) - Auto-Sort & Seed Improvements
+
+**New Feature: Auto-Sort Grievance Log by Status**
+- Grievance Log now automatically sorts when edited
+- Primary sort: Status priority (active cases first, resolved cases last)
+- Secondary sort: Days to deadline (most urgent first within each status)
+
+**Status Priority Order:**
+| Priority | Status | Type |
+|----------|--------|------|
+| 1 | Open | Active |
+| 2 | Pending Info | Active |
+| 3 | In Arbitration | Active |
+| 4 | Appealed | Active |
+| 5 | Settled | Resolved |
+| 6 | Won | Resolved |
+| 7 | Denied | Resolved |
+| 8 | Withdrawn | Resolved |
+| 9 | Closed | Resolved |
+
+**Seed Data Improvements:**
+- Expanded name pools from 20 to 120 names each (14,400+ unique combinations)
+- Significantly reduced repetition of names in seeded member and grievance data
+
+**Code Changes:**
+- `Constants.gs`: Added `GRIEVANCE_STATUS_PRIORITY` constant
+- `HiddenSheets.gs`: Added `sortGrievanceLogByStatus()` function
+- `HiddenSheets.gs`: Hooked sort into `onEditAutoSync()` trigger
+- `ConsolidatedDashboard.gs`: Added duplicate `sortGrievanceLogByStatus()` function and trigger hook
+- `SeedNuke.gs`: Expanded `firstNames` and `lastNames` arrays (20 → 120 each)
+- `ConsolidatedDashboard.gs`: Expanded name arrays in `SEED_MEMBERS()` function
+
+---
 
 ### Version 1.4.4 (2025-12-18) - Grievance Log Member Lookup Fix
 
