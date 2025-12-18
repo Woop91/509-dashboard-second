@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-18T02:39:05.461Z
+ * - Build Date: 2025-12-18T02:41:25.276Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -1153,16 +1153,24 @@ function createDashboard(ss) {
 
   var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
   var gLocationCol = getColumnLetter(GRIEVANCE_COLS.WORK_LOCATION);
+  var configLocCol = getColumnLetter(CONFIG_COLS.OFFICE_LOCATIONS);
 
-  // Location summary - will show "See Config for locations" as placeholder
-  // Real data would use UNIQUE/QUERY but those need actual location data
-  sheet.getRange('A30:F34').setValues([
-    ['(Auto-populates from Config)', '-', '-', '-', '-', '-'],
-    ['Add locations to Config sheet', '-', '-', '-', '-', '-'],
-    ['Column B: Office Locations', '-', '-', '-', '-', '-'],
-    ['Then refresh dashboard', '-', '-', '-', '-', '-'],
-    ['', '', '', '', '', '']
-  ]).setFontStyle('italic').setFontColor('#6B7280').setHorizontalAlignment('center');
+  // Location formulas - pulls top 5 locations from Config and calculates metrics
+  var locationFormulas = [];
+  for (var loc = 0; loc < 5; loc++) {
+    var configRow = 3 + loc;  // Config data starts at row 3
+    var locRef = '\'' + SHEETS.CONFIG + '\'!' + configLocCol + configRow;
+    locationFormulas.push([
+      '=IFERROR(' + locRef + ',"")',
+      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',' + locRef + '),"")',
+      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"")',
+      '=IF(' + locRef + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")',
+      '=IF(AND(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ')>0),TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"0%"),"-")',
+      '="-"'  // Satisfaction requires separate tracking
+    ]);
+  }
+  sheet.getRange('A30:F34').setFormulas(locationFormulas)
+    .setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 7: STEWARD PERFORMANCE
