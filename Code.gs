@@ -204,6 +204,8 @@ function CREATE_509_DASHBOARD() {
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Interactive (views)\n\n' +
       'Plus 5 hidden calculation sheets with self-healing formulas.\n\n' +
+      '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
+      'update automatically when you edit the sheets.\n\n' +
       'Use the Demo menu to seed sample data.', ui.ButtonSet.OK);
 
   } catch (error) {
@@ -435,8 +437,12 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
   });
+
+  // Format Days Open (S) and Days to Deadline (U) as whole numbers
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, 998, 1).setNumberFormat('0');
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, 998, 1).setNumberFormat('0');
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);

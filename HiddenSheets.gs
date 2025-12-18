@@ -486,7 +486,8 @@ function syncGrievanceFormulasToLog() {
     // Calculate Days to Deadline directly
     var daysToDeadline = '';
     if (nextActionDue instanceof Date) {
-      daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+      var days = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+      daysToDeadline = days < 0 ? 'Overdue' : days;
     }
 
     // Metrics (S, T, U)
