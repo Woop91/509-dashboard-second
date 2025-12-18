@@ -467,6 +467,23 @@ var DEFAULT_CONFIG = {
   COMM_METHODS: ['Email', 'Phone', 'Text', 'In Person']
 };
 
+/**
+ * Grievance status priority order for auto-sorting
+ * Lower number = higher priority (appears first in sorted list)
+ * Active cases appear first, resolved cases last
+ */
+var GRIEVANCE_STATUS_PRIORITY = {
+  'Open': 1,
+  'Pending Info': 2,
+  'In Arbitration': 3,
+  'Appealed': 4,
+  'Settled': 5,
+  'Won': 6,
+  'Denied': 7,
+  'Withdrawn': 8,
+  'Closed': 9
+};
+
 // ============================================================================
 // MULTI-SELECT COLUMN CONFIGURATION
 // ============================================================================
