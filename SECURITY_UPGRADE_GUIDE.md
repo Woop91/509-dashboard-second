@@ -400,8 +400,8 @@ logAuditEvent('EMAIL_SENT', {
 ```javascript
 isValidEmail(email)           // Email format
 isValidPhone(phone)           // Phone format
-isValidMemberId(memberId)     // Member ID format (M000001)
-isValidGrievanceId(id)        // Grievance ID format (G-000001)
+isValidMemberId(memberId)     // Member ID format (MJASM123: M + 2 chars first + 2 chars last + 3 digits)
+isValidGrievanceId(id)        // Grievance ID format (GJASM456: G + 2 chars first + 2 chars last + 3 digits)
 isValidDate(date, allowFuture) // Date validation
 
 validateInput(input, type, maxLength) // Generic validator

@@ -347,7 +347,7 @@ Features include:
 
 | Column | Type | Purpose | Auto-Populated? |
 |--------|------|---------|----------------|
-| Member ID | Text | Unique identifier (e.g., M000001) | Manual |
+| Member ID | Text | Unique identifier (e.g., MJASM123 for Jane Smith) | Auto-generated |
 | First Name | Text | Member's first name | Manual |
 | Last Name | Text | Member's last name | Manual |
 | Job Title | Dropdown | Current position | Manual (from Config) |
@@ -392,7 +392,7 @@ Features include:
 
 | Column | Type | Purpose | Auto-Calculated? |
 |--------|------|---------|------------------|
-| Grievance ID | Text | Unique ID (e.g., G-000001) | Manual |
+| Grievance ID | Text | Unique ID (e.g., GJASM456 for Jane Smith) | Auto-generated |
 | Member ID | Text | Links to Member Directory | Manual |
 | First Name | Text | Member's first name | Manual |
 | Last Name | Text | Member's last name | Manual |
@@ -688,7 +688,7 @@ Generate realistic test data using the toggle-based approach:
 
 1. Go to **Member Directory** sheet
 2. Click on the first empty row
-3. Enter Member ID (e.g., M000123)
+3. Enter Member ID (format: M + first 2 chars of first/last name + 3 digits, e.g., MJASM123)
 4. Fill in name, contact info
 5. Use dropdowns for:
    - Job Title (from Config)
@@ -703,7 +703,7 @@ Generate realistic test data using the toggle-based approach:
 1. Go to **Grievance Log** sheet
 2. Click on the first empty row
 3. Enter:
-   - Grievance ID (e.g., G-000456)
+   - Grievance ID (format: G + first 2 chars of first/last name + 3 digits, e.g., GJASM456)
    - Member ID (must match Member Directory)
    - Member name
    - **Incident Date** (when it happened)
@@ -933,7 +933,7 @@ Generate realistic test data using the toggle-based approach:
 
 1. **Always use dropdowns** - Don't type values that should come from Config
 2. **Keep Config clean** - Remove unused values, fix typos in Config (not in data sheets)
-3. **Use consistent Member IDs** - Stick to a format (e.g., M000001, M000002)
+3. **Use consistent Member IDs** - Format: M + first 2 chars of first name + first 2 chars of last name + 3 random digits (e.g., MJASM123)
 4. **Enter dates promptly** - Grievance calculations depend on accurate dates
 5. **Review deadlines weekly** - Check Dashboard "Upcoming Deadlines" regularly
 6. **Archive old data** - Move closed grievances older than 2 years to archive sheet
