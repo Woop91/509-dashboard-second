@@ -2,10 +2,118 @@
  * 509 Dashboard - Seed and Nuke Functions
  *
  * Functions for seeding sample data and clearing data.
+ * Seeded data is tracked separately from manually entered data.
+ * NUKE only removes seeded data, preserving manual entries.
  *
  * @version 1.0.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
+
+// ============================================================================
+// DEMO MODE TRACKING
+// ============================================================================
+
+/**
+ * Check if demo mode has been disabled (after nuke)
+ * @returns {boolean} True if demo mode is disabled
+ */
+function isDemoModeDisabled() {
+  var props = PropertiesService.getScriptProperties();
+  return props.getProperty('DEMO_MODE_DISABLED') === 'true';
+}
+
+/**
+ * Disable demo mode permanently (called after nuke)
+ */
+function disableDemoMode() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('DEMO_MODE_DISABLED', 'true');
+  // Clear tracked IDs since they're no longer needed
+  props.deleteProperty('SEEDED_MEMBER_IDS');
+  props.deleteProperty('SEEDED_GRIEVANCE_IDS');
+}
+
+/**
+ * Track a seeded member ID
+ * @param {string} memberId - The member ID to track
+ */
+function trackSeededMemberId(memberId) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  if (ids.indexOf(memberId) === -1) {
+    ids.push(memberId);
+    props.setProperty('SEEDED_MEMBER_IDS', ids.join(','));
+  }
+}
+
+/**
+ * Track a seeded grievance ID
+ * @param {string} grievanceId - The grievance ID to track
+ */
+function trackSeededGrievanceId(grievanceId) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  if (ids.indexOf(grievanceId) === -1) {
+    ids.push(grievanceId);
+    props.setProperty('SEEDED_GRIEVANCE_IDS', ids.join(','));
+  }
+}
+
+/**
+ * Get all tracked seeded member IDs
+ * @returns {Object} Object with member IDs as keys for quick lookup
+ */
+function getSeededMemberIds() {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  var lookup = {};
+  ids.forEach(function(id) { if (id) lookup[id] = true; });
+  return lookup;
+}
+
+/**
+ * Get all tracked seeded grievance IDs
+ * @returns {Object} Object with grievance IDs as keys for quick lookup
+ */
+function getSeededGrievanceIds() {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  var lookup = {};
+  ids.forEach(function(id) { if (id) lookup[id] = true; });
+  return lookup;
+}
+
+/**
+ * Batch track multiple seeded member IDs (more efficient than individual calls)
+ * @param {Array<string>} memberIds - Array of member IDs to track
+ */
+function trackSeededMemberIdsBatch(memberIds) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  memberIds.forEach(function(id) {
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  });
+  props.setProperty('SEEDED_MEMBER_IDS', ids.join(','));
+}
+
+/**
+ * Batch track multiple seeded grievance IDs (more efficient than individual calls)
+ * @param {Array<string>} grievanceIds - Array of grievance IDs to track
+ */
+function trackSeededGrievanceIdsBatch(grievanceIds) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  grievanceIds.forEach(function(id) {
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  });
+  props.setProperty('SEEDED_GRIEVANCE_IDS', ids.join(','));
+}
 
 // ============================================================================
 // SEED FUNCTIONS
@@ -186,6 +294,7 @@ function SEED_MEMBERS(count) {
   }
 
   var rows = [];
+  var seededIds = []; // Track IDs for this seeding session
   var batchSize = 50;
   var today = new Date();
 
@@ -194,6 +303,7 @@ function SEED_MEMBERS(count) {
     var lastName = randomChoice(lastNames);
     var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
     existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
+    seededIds.push(memberId); // Track for persistence
     var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
     var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
@@ -242,6 +352,9 @@ function SEED_MEMBERS(count) {
 
   // Sync grievance data to Member Directory (populates AB-AD: Has Open Grievance, Status, Next Deadline)
   syncGrievanceToMemberDirectory();
+
+  // Track seeded IDs for later cleanup (nuke only removes seeded data)
+  trackSeededMemberIdsBatch(seededIds);
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
 }
@@ -354,6 +467,7 @@ function SEED_GRIEVANCES(count) {
   }
 
   var rows = [];
+  var seededIds = []; // Track IDs for this seeding session
   var batchSize = 25;
   var today = new Date();
 
@@ -376,6 +490,7 @@ function SEED_GRIEVANCES(count) {
     // Generate grievance ID using member's name with G prefix
     var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
     existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
+    seededIds.push(grievanceId); // Track for persistence
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
@@ -416,6 +531,9 @@ function SEED_GRIEVANCES(count) {
 
   // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
   syncGrievanceFormulasToLog();
+
+  // Track seeded IDs for later cleanup (nuke only removes seeded data)
+  trackSeededGrievanceIdsBatch(seededIds);
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }
@@ -723,20 +841,34 @@ function seed25Grievances() {
 // ============================================================================
 
 /**
- * Clear all member and grievance data
+ * Delete only seeded data (preserves manually entered data)
+ * After completion, disables demo mode permanently and removes Demo menu
  */
-function NUKE_ALL_DATA() {
+function NUKE_SEEDED_DATA() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // Check if already disabled
+  if (isDemoModeDisabled()) {
+    ui.alert('Demo Mode Disabled', 'Demo mode has already been disabled. The Demo menu will be removed on next refresh.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get counts of seeded data
+  var seededMemberIds = getSeededMemberIds();
+  var seededGrievanceIds = getSeededGrievanceIds();
+  var memberCount = Object.keys(seededMemberIds).length;
+  var grievanceCount = Object.keys(seededGrievanceIds).length;
+
   var response = ui.alert(
-    '☢️ NUKE ALL DATA',
-    '⚠️ WARNING: This will permanently delete:\n\n' +
-    '• All members in Member Directory\n' +
-    '• All grievances in Grievance Log\n' +
-    '• All Config dropdown values\n\n' +
-    'This cannot be undone!\n\n' +
-    'Are you absolutely sure?',
+    '☢️ NUKE SEEDED DATA',
+    '⚠️ This will permanently delete ONLY seeded/demo data:\n\n' +
+    '• ' + memberCount + ' seeded members\n' +
+    '• ' + grievanceCount + ' seeded grievances\n' +
+    '• Config dropdown values\n\n' +
+    '✅ Manually entered data will be PRESERVED.\n\n' +
+    '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
+    'Continue?',
     ui.ButtonSet.YES_NO
   );
 
@@ -747,7 +879,10 @@ function NUKE_ALL_DATA() {
   // Double confirm
   var response2 = ui.alert(
     '☢️ FINAL CONFIRMATION',
-    'Type "NUKE" to confirm deletion of all data.',
+    'This will:\n' +
+    '1. Delete all seeded data\n' +
+    '2. Permanently disable the Demo menu\n\n' +
+    'Are you sure?',
     ui.ButtonSet.YES_NO
   );
 
@@ -755,29 +890,57 @@ function NUKE_ALL_DATA() {
     return;
   }
 
-  ss.toast('Nuking all data...', '☢️ NUKE', 3);
+  ss.toast('Nuking seeded data...', '☢️ NUKE', 3);
 
   try {
-    // Clear Member Directory (keep headers)
-    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-    if (memberSheet && memberSheet.getLastRow() > 1) {
-      memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, memberSheet.getLastColumn()).clear();
-    }
+    var deletedMembers = 0;
+    var deletedGrievances = 0;
 
-    // Clear Grievance Log (keep headers)
+    // Delete seeded grievances first (they reference members)
     var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
     if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
-      grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, grievanceSheet.getLastColumn()).clear();
+      var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
+      // Delete from bottom up to preserve row indices
+      for (var g = grievanceData.length - 1; g >= 0; g--) {
+        var gId = grievanceData[g][0];
+        if (gId && seededGrievanceIds[gId]) {
+          grievanceSheet.deleteRow(g + 2);
+          deletedGrievances++;
+        }
+      }
+    }
+
+    // Delete seeded members
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (memberSheet && memberSheet.getLastRow() > 1) {
+      var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
+      // Delete from bottom up to preserve row indices
+      for (var m = memberData.length - 1; m >= 0; m--) {
+        var mId = memberData[m][0];
+        if (mId && seededMemberIds[mId]) {
+          memberSheet.deleteRow(m + 2);
+          deletedMembers++;
+        }
+      }
     }
 
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
 
-    ss.toast('All data has been nuked!', '☢️ Complete', 5);
-    ui.alert('☢️ Complete', 'All data has been deleted.', ui.ButtonSet.OK);
+    // Disable demo mode permanently
+    disableDemoMode();
+
+    ss.toast('Seeded data nuked! Demo mode disabled.', '☢️ Complete', 5);
+    ui.alert('☢️ Complete',
+      'Seeded data has been deleted:\n' +
+      '• ' + deletedMembers + ' members removed\n' +
+      '• ' + deletedGrievances + ' grievances removed\n\n' +
+      'Demo mode has been permanently disabled.\n' +
+      'Refresh the page to remove the Demo menu.',
+      ui.ButtonSet.OK);
 
   } catch (error) {
-    Logger.log('Error in NUKE_ALL_DATA: ' + error.message);
+    Logger.log('Error in NUKE_SEEDED_DATA: ' + error.message);
     ui.alert('❌ Error', 'Nuke failed: ' + error.message, ui.ButtonSet.OK);
   }
 }
