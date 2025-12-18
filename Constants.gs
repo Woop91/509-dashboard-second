@@ -76,7 +76,7 @@ var MEMBER_COLS = {
   // Section 2: Location & Work (E-G)
   WORK_LOCATION: 5,                // E
   UNIT: 6,                         // F
-  OFFICE_DAYS: 7,                  // G
+  OFFICE_DAYS: 7,                  // G - Multi-select: days member works in office
 
   // Section 3: Contact Information (H-K)
   EMAIL: 8,                        // H
@@ -89,7 +89,7 @@ var MEMBER_COLS = {
   MANAGER: 13,                     // M
   IS_STEWARD: 14,                  // N
   COMMITTEES: 15,                  // O - Multi-select: which committees steward is in
-  ASSIGNED_STEWARD: 16,            // P
+  ASSIGNED_STEWARD: 16,            // P - Multi-select: assigned steward(s)
 
   // Section 5: Engagement Metrics (Q-T) - Hidden by default
   LAST_VIRTUAL_MTG: 17,            // Q
