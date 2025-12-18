@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.2 (Date Formatting & Overdue Display)
+**Version:** 1.4.3 (Member Directory Auto-Sync)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -271,9 +271,9 @@ var MEMBER_COLS = {
   CONTACT_NOTES: 27,      // AA
 
   // Section 8: Grievance Management (AB-AE)
-  HAS_OPEN_GRIEVANCE: 28, // AB
-  GRIEVANCE_STATUS: 29,   // AC
-  NEXT_DEADLINE: 30,      // AD
+  HAS_OPEN_GRIEVANCE: 28, // AB - auto-sync: "Yes"/"No" from Grievance Log
+  GRIEVANCE_STATUS: 29,   // AC - auto-sync: Status from Grievance Log
+  NEXT_DEADLINE: 30,      // AD - auto-sync: Days to Deadline (number or "Overdue")
   START_GRIEVANCE: 31     // AE (checkbox)
 };
 ```
@@ -619,6 +619,23 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.4.3 (2025-12-18) - Member Directory Auto-Sync
+
+**Member Directory Columns AB-AD now auto-sync from Grievance Log:**
+
+| Column | Header | Auto-Synced Value |
+|--------|--------|-------------------|
+| AB | Has Open Grievance? | "Yes" or "No" based on active grievances |
+| AC | Grievance Status | Status from most recent grievance |
+| AD | Days to Deadline | Countdown number or "Overdue" |
+
+**Code Changes:**
+- `HiddenSheets.gs`: Changed `_Grievance_Calc` hidden sheet to pull `DAYS_TO_DEADLINE` instead of `NEXT_ACTION_DUE`
+- `Constants.gs`: Updated header from "Next Deadline" to "Days to Deadline"
+- Auto-sync trigger updates Member Directory when Grievance Log is edited
+
+---
 
 ### Version 1.4.2 (2025-12-18) - Date Formatting & Overdue Display
 
