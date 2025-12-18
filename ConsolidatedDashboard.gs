@@ -1437,22 +1437,26 @@ function setupDataValidations() {
     return;
   }
 
-  // Member Directory Validations (15 dropdowns)
+  // Member Directory Validations
+  // Single-select dropdowns (strict validation)
   setDropdownValidation(memberSheet, MEMBER_COLS.JOB_TITLE, configSheet, CONFIG_COLS.JOB_TITLES);
   setDropdownValidation(memberSheet, MEMBER_COLS.WORK_LOCATION, configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   setDropdownValidation(memberSheet, MEMBER_COLS.UNIT, configSheet, CONFIG_COLS.UNITS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
   setDropdownValidation(memberSheet, MEMBER_COLS.IS_STEWARD, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.SUPERVISOR, configSheet, CONFIG_COLS.SUPERVISORS);
   setDropdownValidation(memberSheet, MEMBER_COLS.MANAGER, configSheet, CONFIG_COLS.MANAGERS);
-  setDropdownValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_LOCAL, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_CHAPTER, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.INTEREST_ALLIED, configSheet, CONFIG_COLS.YES_NO);
   setDropdownValidation(memberSheet, MEMBER_COLS.HOME_TOWN, configSheet, CONFIG_COLS.HOME_TOWNS);
   setDropdownValidation(memberSheet, MEMBER_COLS.CONTACT_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
+
+  // Multi-select dropdowns (allow comma-separated values)
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.OFFICE_DAYS, configSheet, CONFIG_COLS.OFFICE_DAYS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.PREFERRED_COMM, configSheet, CONFIG_COLS.COMM_METHODS);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.BEST_TIME, configSheet, CONFIG_COLS.BEST_TIMES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.COMMITTEES, configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+  setMultiSelectValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
   // Member ID dropdown - links to valid Member IDs from Member Directory
@@ -1501,6 +1505,26 @@ function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(sourceRange, true)
     .setAllowInvalid(false)
+    .build();
+
+  var targetRange = targetSheet.getRange(2, targetCol, 998, 1);
+  targetRange.setDataValidation(rule);
+}
+
+/**
+ * Set multi-select validation (allows comma-separated values)
+ * Shows dropdown for convenience but accepts any text
+ * @param {Sheet} targetSheet - Sheet to apply validation
+ * @param {number} targetCol - Column number in target sheet
+ * @param {Sheet} configSheet - Config sheet with source values
+ * @param {number} sourceCol - Column number in Config sheet
+ */
+function setMultiSelectValidation(targetSheet, targetCol, configSheet, sourceCol) {
+  // Config data starts at row 3
+  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(sourceRange, true)
+    .setAllowInvalid(true)  // Allow comma-separated values
     .build();
 
   var targetRange = targetSheet.getRange(2, targetCol, 998, 1);
@@ -2355,6 +2379,60 @@ function syncMemberToGrievanceLog() {
   Logger.log('Synced member data to ' + nameUpdates.length + ' grievances');
 }
 
+/**
+ * Auto-sort the Grievance Log by status priority
+ * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
+ * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ */
+function sortGrievanceLogByStatus() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return; // Need at least 2 data rows to sort
+
+  // Get all data (excluding header row)
+  var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
+  var data = dataRange.getValues();
+
+  // Sort by status priority (column E = index 4)
+  data.sort(function(a, b) {
+    var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
+    var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
+
+    // Get priority (default to 99 for unknown statuses)
+    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
+    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
+
+    // Primary sort: by status priority (lower number = higher priority)
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
+    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+    // Handle empty/non-numeric values
+    if (daysA === '' || daysA === null) daysA = 9999;
+    if (daysB === '' || daysB === null) daysB = 9999;
+
+    return daysA - daysB;
+  });
+
+  // Write sorted data back
+  dataRange.setValues(data);
+
+  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  if (lastRow >= 2) {
+    sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
+  }
+
+  Logger.log('Grievance Log sorted by status priority');
+}
+
 // ============================================================================
 // HIDDEN SHEET 3: _Steward_Workload_Calc
 // Source: Grievance Log + Member Directory → Destination: Steward Workload
@@ -3052,6 +3130,8 @@ function onEditAutoSync(e) {
       // Grievance Log changed - sync formulas and update Member Directory
       syncGrievanceFormulasToLog();
       syncGrievanceToMemberDirectory();
+      // Auto-sort by status priority (active cases first, then by deadline urgency)
+      sortGrievanceLogByStatus();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
       // Member Directory changed - sync to Grievance Log
       syncGrievanceFormulasToLog();
@@ -3565,8 +3645,35 @@ function SEED_MEMBERS(count) {
   if (stewards.length === 0) stewards = ['Mary Steward'];
   if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
 
-  var firstNames = ['James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth', 'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen'];
-  var lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin'];
+  // Expanded name pools for better variety (100+ names each = 10,000+ unique combinations)
+  var firstNames = [
+    'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
+    'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen',
+    'Christopher', 'Nancy', 'Daniel', 'Lisa', 'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra',
+    'Donald', 'Ashley', 'Steven', 'Kimberly', 'Paul', 'Emily', 'Andrew', 'Donna', 'Joshua', 'Michelle',
+    'Kenneth', 'Dorothy', 'Kevin', 'Carol', 'Brian', 'Amanda', 'George', 'Melissa', 'Timothy', 'Deborah',
+    'Ronald', 'Stephanie', 'Edward', 'Rebecca', 'Jason', 'Sharon', 'Jeffrey', 'Laura', 'Ryan', 'Cynthia',
+    'Jacob', 'Kathleen', 'Gary', 'Amy', 'Nicholas', 'Angela', 'Eric', 'Shirley', 'Jonathan', 'Anna',
+    'Stephen', 'Brenda', 'Larry', 'Pamela', 'Justin', 'Emma', 'Scott', 'Nicole', 'Brandon', 'Helen',
+    'Benjamin', 'Samantha', 'Samuel', 'Katherine', 'Raymond', 'Christine', 'Gregory', 'Debra', 'Frank', 'Rachel',
+    'Alexander', 'Carolyn', 'Patrick', 'Janet', 'Jack', 'Catherine', 'Dennis', 'Maria', 'Jerry', 'Heather',
+    'Tyler', 'Diane', 'Aaron', 'Ruth', 'Jose', 'Julie', 'Adam', 'Olivia', 'Nathan', 'Joyce',
+    'Henry', 'Virginia', 'Douglas', 'Victoria', 'Zachary', 'Kelly', 'Peter', 'Lauren', 'Kyle', 'Christina'
+  ];
+  var lastNames = [
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+    'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+    'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+    'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+    'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts',
+    'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes',
+    'Stewart', 'Morris', 'Morales', 'Murphy', 'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper',
+    'Peterson', 'Bailey', 'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson',
+    'Watson', 'Brooks', 'Chavez', 'Wood', 'James', 'Bennett', 'Gray', 'Mendoza', 'Ruiz', 'Hughes',
+    'Price', 'Alvarez', 'Castillo', 'Sanders', 'Patel', 'Myers', 'Long', 'Ross', 'Foster', 'Jimenez',
+    'Powell', 'Jenkins', 'Perry', 'Russell', 'Sullivan', 'Bell', 'Coleman', 'Butler', 'Henderson', 'Barnes',
+    'Gonzales', 'Fisher', 'Vasquez', 'Simmons', 'Stokes', 'Burns', 'Fox', 'Alexander', 'Rice', 'Stone'
+  ];
   var officeDays = DEFAULT_CONFIG.OFFICE_DAYS;
   var commMethods = DEFAULT_CONFIG.COMM_METHODS;
 

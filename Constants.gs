@@ -76,7 +76,7 @@ var MEMBER_COLS = {
   // Section 2: Location & Work (E-G)
   WORK_LOCATION: 5,                // E
   UNIT: 6,                         // F
-  OFFICE_DAYS: 7,                  // G
+  OFFICE_DAYS: 7,                  // G - Multi-select: days member works in office
 
   // Section 3: Contact Information (H-K)
   EMAIL: 8,                        // H
@@ -89,7 +89,7 @@ var MEMBER_COLS = {
   MANAGER: 13,                     // M
   IS_STEWARD: 14,                  // N
   COMMITTEES: 15,                  // O - Multi-select: which committees steward is in
-  ASSIGNED_STEWARD: 16,            // P
+  ASSIGNED_STEWARD: 16,            // P - Multi-select: assigned steward(s)
 
   // Section 5: Engagement Metrics (Q-T) - Hidden by default
   LAST_VIRTUAL_MTG: 17,            // Q
@@ -398,7 +398,7 @@ function getMemberHeaders() {
     'Last Virtual Mtg', 'Last In-Person Mtg', 'Open Rate %', 'Volunteer Hours',
     'Interest: Local', 'Interest: Chapter', 'Interest: Allied', 'Home Town',
     'Recent Contact Date', 'Contact Steward', 'Contact Notes',
-    'Has Open Grievance?', 'Grievance Status', 'Next Deadline', 'Start Grievance'
+    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance'
   ];
 }
 
@@ -466,3 +466,87 @@ var DEFAULT_CONFIG = {
   ],
   COMM_METHODS: ['Email', 'Phone', 'Text', 'In Person']
 };
+
+/**
+ * Grievance status priority order for auto-sorting
+ * Lower number = higher priority (appears first in sorted list)
+ * Active cases appear first, resolved cases last
+ */
+var GRIEVANCE_STATUS_PRIORITY = {
+  'Open': 1,
+  'Pending Info': 2,
+  'In Arbitration': 3,
+  'Appealed': 4,
+  'Settled': 5,
+  'Won': 6,
+  'Denied': 7,
+  'Withdrawn': 8,
+  'Closed': 9
+};
+
+// ============================================================================
+// MULTI-SELECT COLUMN CONFIGURATION
+// ============================================================================
+
+/**
+ * Columns that support multiple selections (comma-separated values)
+ * Maps column number to config source column for options
+ */
+var MULTI_SELECT_COLS = {
+  // Member Directory multi-select columns
+  MEMBER_DIR: [
+    { col: MEMBER_COLS.OFFICE_DAYS, configCol: CONFIG_COLS.OFFICE_DAYS, label: 'Office Days' },
+    { col: MEMBER_COLS.PREFERRED_COMM, configCol: CONFIG_COLS.COMM_METHODS, label: 'Preferred Communication' },
+    { col: MEMBER_COLS.BEST_TIME, configCol: CONFIG_COLS.BEST_TIMES, label: 'Best Time to Contact' },
+    { col: MEMBER_COLS.COMMITTEES, configCol: CONFIG_COLS.STEWARD_COMMITTEES, label: 'Committees' },
+    { col: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, label: 'Assigned Steward(s)' }
+  ]
+};
+
+/**
+ * Check if a column in Member Directory is a multi-select column
+ * @param {number} col - Column number (1-indexed)
+ * @returns {Object|null} Multi-select config if found, null otherwise
+ */
+function getMultiSelectConfig(col) {
+  for (var i = 0; i < MULTI_SELECT_COLS.MEMBER_DIR.length; i++) {
+    if (MULTI_SELECT_COLS.MEMBER_DIR[i].col === col) {
+      return MULTI_SELECT_COLS.MEMBER_DIR[i];
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// ID GENERATION
+// ============================================================================
+
+/**
+ * Generate a name-based ID with prefix and 3 random digits
+ * Format: Prefix + First 2 chars of firstName + First 2 chars of lastName + 3 random digits
+ * Example: M + John Smith → MJOSM123, G + John Smith → GJOSM456
+ * @param {string} prefix - ID prefix ('M' for members, 'G' for grievances)
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {Object} existingIds - Object with existing IDs as keys (for collision detection)
+ * @returns {string} Generated ID (uppercase)
+ */
+function generateNameBasedId(prefix, firstName, lastName, existingIds) {
+  var firstPart = (firstName || 'XX').substring(0, 2).toUpperCase();
+  var lastPart = (lastName || 'XX').substring(0, 2).toUpperCase();
+  var namePrefix = (prefix || '') + firstPart + lastPart;
+
+  var maxAttempts = 100;
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    var randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    var newId = namePrefix + randomDigits;
+
+    if (!existingIds || !existingIds[newId]) {
+      return newId;
+    }
+  }
+
+  // Fallback: add timestamp component if too many collisions
+  var timestamp = String(Date.now()).slice(-3);
+  return namePrefix + timestamp;
+}

@@ -52,6 +52,8 @@
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
 - `CONFIG_COLS` - Config sheet column positions
 - `DEFAULT_CONFIG` - Default dropdown values
+- `MULTI_SELECT_COLS` - Configuration for multi-select columns
+- `getMultiSelectConfig()` - Get multi-select config for a column
 - `getColumnLetter()` - Convert column number to letter
 - `getColumnNumber()` - Convert column letter to number
 - `mapMemberRow()` - Map row array to member object
@@ -66,7 +68,13 @@
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
-- `setDropdownValidation()` - Helper: apply single dropdown
+- `setDropdownValidation()` - Helper: apply single-select dropdown
+- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
+- `showMultiSelectDialog()` - Opens multi-select checkbox dialog
+- `applyMultiSelectValue()` - Saves multi-select values to cell
+- `onSelectionChangeMultiSelect()` - Auto-opens dialog on cell selection
+- `installMultiSelectTrigger()` - Enables auto-open mode
+- `removeMultiSelectTrigger()` - Disables auto-open mode
 - `getOrCreateSheet()` - Helper: get or create sheet
 - `rebuildDashboard()` - Refresh data and validations
 - `refreshAllFormulas()` - Refresh all formulas and sync
@@ -108,6 +116,7 @@
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
+  - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
 - Trigger & Repair Functions:
   - `onEditAutoSync()` - Auto-sync trigger handler
   - `installAutoSyncTrigger()` - Install the onEdit trigger
@@ -238,20 +247,20 @@ var MEMBER_COLS = {
   // Section 2: Location & Work (E-G)
   WORK_LOCATION: 5,       // E
   UNIT: 6,                // F
-  OFFICE_DAYS: 7,         // G
+  OFFICE_DAYS: 7,         // G - Multi-select
 
   // Section 3: Contact Information (H-K)
   EMAIL: 8,               // H
   PHONE: 9,               // I
-  PREFERRED_COMM: 10,     // J
-  BEST_TIME: 11,          // K
+  PREFERRED_COMM: 10,     // J - Multi-select
+  BEST_TIME: 11,          // K - Multi-select
 
   // Section 4: Organizational Structure (L-P)
   SUPERVISOR: 12,         // L
   MANAGER: 13,            // M
   IS_STEWARD: 14,         // N
-  COMMITTEES: 15,         // O
-  ASSIGNED_STEWARD: 16,   // P
+  COMMITTEES: 15,         // O - Multi-select
+  ASSIGNED_STEWARD: 16,   // P - Multi-select
 
   // Section 5: Engagement Metrics (Q-T)
   LAST_VIRTUAL_MTG: 17,   // Q
@@ -271,9 +280,9 @@ var MEMBER_COLS = {
   CONTACT_NOTES: 27,      // AA
 
   // Section 8: Grievance Management (AB-AE)
-  HAS_OPEN_GRIEVANCE: 28, // AB
-  GRIEVANCE_STATUS: 29,   // AC
-  NEXT_DEADLINE: 30,      // AD
+  HAS_OPEN_GRIEVANCE: 28, // AB - auto-sync: "Yes"/"No" from Grievance Log
+  GRIEVANCE_STATUS: 29,   // AC - auto-sync: Status from Grievance Log
+  NEXT_DEADLINE: 30,      // AD - auto-sync: Days to Deadline (number or "Overdue")
   START_GRIEVANCE: 31     // AE (checkbox)
 };
 ```
@@ -412,24 +421,26 @@ var GRIEVANCE_COLS = {
 | O | Grievance Coordinators | Admin use |
 | AF | Home Towns | Member Directory (X) |
 
-### Member Directory Dropdowns (14 columns)
+### Member Directory Dropdowns (16 columns)
 
-| Column | Field | Config Source |
-|--------|-------|---------------|
-| D | Job Title | JOB_TITLES (A) |
-| E | Work Location | OFFICE_LOCATIONS (B) |
-| F | Unit | UNITS (C) |
-| G | Office Days | OFFICE_DAYS (D) |
-| J | Preferred Communication | COMM_METHODS (M) |
-| L | Supervisor | SUPERVISORS (F) |
-| M | Manager | MANAGERS (G) |
-| N | Is Steward | YES_NO (E) |
-| P | Assigned Steward | STEWARDS (H) |
-| U | Interest: Local | YES_NO (E) |
-| V | Interest: Chapter | YES_NO (E) |
-| W | Interest: Allied | YES_NO (E) |
-| X | Home Town | HOME_TOWNS (AF) |
-| Z | Contact Steward | STEWARDS (H) |
+| Column | Field | Config Source | Multi-Select |
+|--------|-------|---------------|--------------|
+| D | Job Title | JOB_TITLES (A) | No |
+| E | Work Location | OFFICE_LOCATIONS (B) | No |
+| F | Unit | UNITS (C) | No |
+| G | Office Days | OFFICE_DAYS (D) | **Yes** |
+| J | Preferred Communication | COMM_METHODS (N) | **Yes** |
+| K | Best Time to Contact | BEST_TIMES (AE) | **Yes** |
+| L | Supervisor | SUPERVISORS (F) | No |
+| M | Manager | MANAGERS (G) | No |
+| N | Is Steward | YES_NO (E) | No |
+| O | Committees | STEWARD_COMMITTEES (I) | **Yes** |
+| P | Assigned Steward | STEWARDS (H) | **Yes** |
+| U | Interest: Local | YES_NO (E) | No |
+| V | Interest: Chapter | YES_NO (E) | No |
+| W | Interest: Allied | YES_NO (E) | No |
+| X | Home Town | HOME_TOWNS (AF) | No |
+| Z | Contact Steward | STEWARDS (H) | No |
 
 ### Grievance Log Dropdowns (5 columns)
 
@@ -440,6 +451,25 @@ var GRIEVANCE_COLS = {
 | F | Current Step | GRIEVANCE_STEP (J) |
 | V | Articles Violated | ARTICLES (L) |
 | W | Issue Category | ISSUE_CATEGORY (K) |
+
+### Multi-Select Functionality
+
+Columns marked as **Multi-Select** support comma-separated values for multiple selections.
+
+**Auto-Open Mode (Recommended):**
+1. Go to **🔧 Tools > ☑️ Multi-Select > ⚡ Enable Auto-Open**
+2. Now clicking any multi-select cell automatically opens the dialog!
+3. To disable: **🔧 Tools > ☑️ Multi-Select > 🚫 Disable Auto-Open**
+
+**Manual Mode:**
+1. Select a cell in a multi-select column (G, J, K, O, or P)
+2. Go to **🔧 Tools > ☑️ Multi-Select > 📝 Open Editor**
+3. Check multiple options in the dialog
+4. Click **Save** to apply
+
+**Storage format:** Values are stored as comma-separated text (e.g., "Monday, Wednesday, Friday")
+
+**Validation:** Multi-select columns show a dropdown for convenience but accept any text value to allow multiple selections.
 
 ---
 
@@ -458,7 +488,18 @@ var GRIEVANCE_COLS = {
 ├── Rebuild Dashboard
 └── Refresh All Formulas
 
-🔧 Setup
+🔧 Tools
+├── ADHD & Accessibility (submenu)
+├── Theming (submenu)
+├── ☑️ Multi-Select (submenu)
+│   ├── 📝 Open Editor
+│   ├── ⚡ Enable Auto-Open
+│   └── 🚫 Disable Auto-Open
+├── Undo/Redo (submenu)
+├── Cache & Performance (submenu)
+└── Validation (submenu)
+
+🏗️ Setup
 ├── CREATE 509 DASHBOARD
 ├── REPAIR DASHBOARD
 └── Setup Data Validations
@@ -574,8 +615,8 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
-| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open, Status, Deadline) |
-| `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), X-AA (Email, Unit, Location, Steward) |
+| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open Grievance?, Status, Days to Deadline) |
+| `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), S-U (Days Open, Next Action, Days to Deadline), X-AA (Contact) |
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
 | `_Dashboard_Calc` | Both | 💼 Dashboard | 15 summary metrics (Win Rate, Overdue, Due This Week, etc.) |
@@ -583,7 +624,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 ### Auto-Sync Trigger
 
 The `onEditAutoSync` trigger automatically syncs data when:
-- Grievance Log is edited → Updates Member Directory columns AB-AD
+- Grievance Log is edited → Updates Member Directory columns AB-AD, then auto-sorts by status
 - Member Directory is edited → Updates Grievance Log columns C-D, X-AA
 
 ### Key Functions (HiddenSheets.gs)
@@ -597,6 +638,7 @@ The `onEditAutoSync` trigger automatically syncs data when:
 | `syncAllData()` | Manual sync of all cross-sheet data |
 | `syncGrievanceToMemberDirectory()` | Sync grievance data to members |
 | `syncMemberToGrievanceLog()` | Sync member data to grievances |
+| `sortGrievanceLogByStatus()` | Auto-sort by status priority and deadline |
 | `setupDashboardCalcSheet()` | Create dashboard metrics calculation sheet |
 
 ### Self-Healing
@@ -606,6 +648,31 @@ If hidden sheets get corrupted or deleted:
 2. Or run `repairAllHiddenSheets()` from Administrator menu
 
 This recreates all formulas and reinstalls the auto-sync trigger.
+
+---
+
+## Known Issues / Later TODO
+
+### BUG: Days to Deadline Shows Duplicate Values
+
+**Status:** FIXED (2025-12-16)
+**Discovered:** 2025-12-16
+**Severity:** Medium
+
+**Issue:**
+The "Days to Deadline" column (U) in the Grievance Log displayed identical values for multiple rows (e.g., `17.71857539` repeated for all grievances).
+
+**Root Cause:**
+The hidden sheet `_Grievance_Formulas` used ARRAYFORMULA with a FILTER-based row index. ARRAYFORMULA doesn't expand correctly when its source column is a FILTER result, causing all rows to receive the same calculated value.
+
+**Fix Applied:**
+Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Open, Next Action Due, and Days to Deadline directly in JavaScript from the grievance row data, bypassing the problematic hidden sheet formulas.
+
+**Calculations now performed directly:**
+- **Days Open**: `(Date Closed or Today) - Date Filed` (in whole days)
+- **Next Action Due**: Based on Current Step (Informal→Filing Deadline, Step I→Step I Due, etc.)
+- **Days to Deadline**: `Next Action Due - Today` (in whole days)
+- All deadline dates (Filing Deadline, Step I Due, etc.) also calculated directly
 
 ---
 
@@ -650,7 +717,125 @@ Grievance Log ──────────────┘
 **Code Changes:**
 
 - Code.gs: Enhanced `createDashboard()` from ~170 lines to ~320 lines
+- Code.gs: Fixed `rebuildDashboard()` to actually recreate dashboard sheets
 - AIR.md: Updated documentation with 9-section dashboard architecture
+
+---
+
+### Version 1.4.5 (2025-12-18) - Auto-Sort & Seed Improvements
+
+**New Feature: Auto-Sort Grievance Log by Status**
+- Grievance Log now automatically sorts when edited
+- Primary sort: Status priority (active cases first, resolved cases last)
+- Secondary sort: Days to deadline (most urgent first within each status)
+
+**Status Priority Order:**
+| Priority | Status | Type |
+|----------|--------|------|
+| 1 | Open | Active |
+| 2 | Pending Info | Active |
+| 3 | In Arbitration | Active |
+| 4 | Appealed | Active |
+| 5 | Settled | Resolved |
+| 6 | Won | Resolved |
+| 7 | Denied | Resolved |
+| 8 | Withdrawn | Resolved |
+| 9 | Closed | Resolved |
+
+**Seed Data Improvements:**
+- Expanded name pools from 20 to 120 names each (14,400+ unique combinations)
+- Significantly reduced repetition of names in seeded member and grievance data
+
+**Code Changes:**
+- `Constants.gs`: Added `GRIEVANCE_STATUS_PRIORITY` constant
+- `HiddenSheets.gs`: Added `sortGrievanceLogByStatus()` function
+- `HiddenSheets.gs`: Hooked sort into `onEditAutoSync()` trigger
+- `ConsolidatedDashboard.gs`: Added duplicate `sortGrievanceLogByStatus()` function and trigger hook
+- `SeedNuke.gs`: Expanded `firstNames` and `lastNames` arrays (20 → 120 each)
+- `ConsolidatedDashboard.gs`: Expanded name arrays in `SEED_MEMBERS()` function
+
+---
+
+### Version 1.4.4 (2025-12-18) - Grievance Log Member Lookup Fix
+
+**Grievance Log now auto-populates member data directly from Member Directory:**
+
+| Column | Header | Auto-Synced From |
+|--------|--------|------------------|
+| C | First Name | Member Directory (by Member ID) |
+| D | Last Name | Member Directory (by Member ID) |
+| X | Member Email | Member Directory (by Member ID) |
+| Y | Unit | Member Directory (by Member ID) |
+| Z | Work Location | Member Directory (by Member ID) |
+| AA | Steward | Member Directory (by Member ID) |
+
+**Member ID Validation:**
+- Column B (Member ID) uses dropdown validation
+- Only Member IDs that exist in Member Directory are allowed
+- Prevents orphan grievances with invalid member references
+
+**Code Changes:**
+- `HiddenSheets.gs`: Rewrote `syncGrievanceFormulasToLog()` to lookup member data directly from Member Directory instead of using hidden sheet formulas
+- Bypassed the ARRAYFORMULA/FILTER issue that caused empty lookups
+- Member lookup now uses `MEMBER_COLS` constants for reliable column access
+
+---
+
+### Version 1.4.3 (2025-12-18) - Member Directory Auto-Sync
+
+**Member Directory Columns AB-AD now auto-sync from Grievance Log:**
+
+| Column | Header | Auto-Synced Value |
+|--------|--------|-------------------|
+| AB | Has Open Grievance? | "Yes" or "No" based on active grievances |
+| AC | Grievance Status | Status from most recent grievance |
+| AD | Days to Deadline | Countdown number or "Overdue" |
+
+**Code Changes:**
+- `HiddenSheets.gs`: Changed `_Grievance_Calc` hidden sheet to pull `DAYS_TO_DEADLINE` instead of `NEXT_ACTION_DUE`
+- `Constants.gs`: Updated header from "Next Deadline" to "Days to Deadline"
+- Auto-sync trigger updates Member Directory when Grievance Log is edited
+
+---
+
+### Version 1.4.2 (2025-12-18) - Date Formatting & Overdue Display
+
+**Formatting Changes:**
+- Date format changed from `yyyy-mm-dd` to `dd-mm-yyyy` throughout
+- Days Open (S) and Days to Deadline (U) now display as whole numbers (no decimals)
+- Days to Deadline shows "Overdue" for past-due cases instead of negative numbers
+
+**Display Values for Days to Deadline:**
+| Value | Meaning |
+|-------|---------|
+| `18` | 18 days remaining |
+| `0` | Due today |
+| `Overdue` | Past deadline |
+| *(blank)* | Case is closed |
+
+**Code Changes:**
+- `Code.gs`: Added `setNumberFormat('0')` for Days Open and Days to Deadline in `createGrievanceLog()`
+- `Code.gs`: Changed date format to `dd-mm-yyyy` in `createGrievanceLog()`
+- `HiddenSheets.gs`: Changed date format to `dd-mm-yyyy` in all sync functions
+- `HiddenSheets.gs`: Days to Deadline now returns "Overdue" when `days < 0`
+- `Code.gs`: Updated setup success message to confirm auto-sync trigger installation
+
+---
+
+### Version 1.4.1 (2025-12-16) - Days to Deadline Fix
+
+**Bug Fix:**
+- Fixed "Days to Deadline" and "Days Open" showing duplicate/incorrect values for all grievances
+- Root cause: ARRAYFORMULA with FILTER-based row index in hidden sheet didn't expand correctly
+- Solution: Calculate Days Open, Next Action Due, Days to Deadline, and all deadline dates directly in JavaScript within `syncGrievanceFormulasToLog()` function
+
+**Code Changes:**
+- `HiddenSheets.gs`: Rewrote metrics calculation in `syncGrievanceFormulasToLog()` (~60 lines added)
+  - Now calculates Filing Deadline, Step I/II/III Due dates from source dates
+  - Days Open = (Date Closed or Today) - Date Filed
+  - Next Action Due = Based on Current Step status
+  - Days to Deadline = Next Action Due - Today
+  - All values now calculated per-row from actual grievance data
 
 ---
 

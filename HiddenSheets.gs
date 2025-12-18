@@ -28,7 +28,7 @@ function setupGrievanceCalcSheet() {
   sheet.clear();
 
   // Headers
-  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Next Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
+  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Days to Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
@@ -54,8 +54,9 @@ function setupGrievanceCalcSheet() {
   var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Next Deadline
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gNextActionCol + ':' + gNextActionCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  // Column D: Next Deadline (Days to Deadline countdown)
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
@@ -327,19 +328,19 @@ function setupGrievanceFormulasSheet() {
     '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
   );
 
-  // Format date columns
-  sheet.getRange('E:E').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('F:F').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('G:G').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('H:H').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('I:I').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('L:L').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('M:M').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('N:N').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('O:O').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('P:P').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('Q:Q').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('S:S').setNumberFormat('yyyy-mm-dd');
+  // Format date columns (dd-mm-yyyy)
+  sheet.getRange('E:E').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('F:F').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('G:G').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('H:H').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('I:I').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('L:L').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('M:M').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('N:N').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('O:O').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('P:P').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('Q:Q').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('S:S').setNumberFormat('dd-mm-yyyy');
 
   // Hide the sheet
   sheet.hideSheet();
@@ -350,41 +351,31 @@ function setupGrievanceFormulasSheet() {
 /**
  * Sync calculated formulas from hidden sheet to Grievance Log
  * This is the self-healing function - it copies calculated values to the Grievance Log
+ * Member data (Name, Email, Unit, Location, Steward) is looked up directly from Member Directory
  */
 function syncGrievanceFormulasToLog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var formulaSheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
   var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
 
-  if (!formulaSheet || !grievanceSheet) {
+  if (!grievanceSheet || !memberSheet) {
     Logger.log('Required sheets not found for grievance formula sync');
     return;
   }
 
-  // Get formula sheet data
-  var formulaData = formulaSheet.getDataRange().getValues();
-  if (formulaData.length < 2) return;
-
-  // Create lookup map by row index
-  var lookup = {};
-  for (var i = 1; i < formulaData.length; i++) {
-    var rowIndex = formulaData[i][0]; // Column A: Row Index
-    if (rowIndex) {
-      lookup[rowIndex] = {
-        firstName: formulaData[i][2],        // C: First Name
-        lastName: formulaData[i][3],         // D: Last Name
-        filingDeadline: formulaData[i][12],  // M: Filing Deadline
-        step1Due: formulaData[i][13],        // N: Step I Due
-        step2AppealDue: formulaData[i][14],  // O: Step II Appeal Due
-        step2Due: formulaData[i][15],        // P: Step II Due
-        step3AppealDue: formulaData[i][16],  // Q: Step III Appeal Due
-        daysOpen: formulaData[i][17],        // R: Days Open
-        nextActionDue: formulaData[i][18],   // S: Next Action Due
-        daysToDeadline: formulaData[i][19],  // T: Days to Deadline
-        email: formulaData[i][20],           // U: Email
-        unit: formulaData[i][21],            // V: Unit
-        location: formulaData[i][22],        // W: Location
-        steward: formulaData[i][23]          // X: Steward
+  // Get Member Directory data and create lookup by Member ID
+  var memberData = memberSheet.getDataRange().getValues();
+  var memberLookup = {};
+  for (var i = 1; i < memberData.length; i++) {
+    var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+    if (memberId) {
+      memberLookup[memberId] = {
+        firstName: memberData[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: memberData[i][MEMBER_COLS.LAST_NAME - 1] || '',
+        email: memberData[i][MEMBER_COLS.EMAIL - 1] || '',
+        unit: memberData[i][MEMBER_COLS.UNIT - 1] || '',
+        location: memberData[i][MEMBER_COLS.WORK_LOCATION - 1] || '',
+        steward: memberData[i][MEMBER_COLS.ASSIGNED_STEWARD - 1] || ''
       };
     }
   }
@@ -393,6 +384,12 @@ function syncGrievanceFormulasToLog() {
   var grievanceData = grievanceSheet.getDataRange().getValues();
   if (grievanceData.length < 2) return;
 
+  var today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+  // Closed statuses that should not have Next Action Due
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+
   // Prepare updates
   var nameUpdates = [];           // Columns C-D
   var deadlineUpdates = [];       // Columns H, J, L, N, P (Filing Deadline, Step I Due, Step II Appeal Due, Step II Due, Step III Appeal Due)
@@ -400,36 +397,104 @@ function syncGrievanceFormulasToLog() {
   var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
 
   for (var j = 1; j < grievanceData.length; j++) {
-    var data = lookup[j] || {};
+    var row = grievanceData[j];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var memberInfo = memberLookup[memberId] || {};
 
-    // Names (C-D)
+    // Names (C-D) - from Member Directory
     nameUpdates.push([
-      data.firstName || '',
-      data.lastName || ''
+      memberInfo.firstName || '',
+      memberInfo.lastName || ''
     ]);
+
+    // Get date values from grievance row for deadline calculations
+    var incidentDate = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
+    var dateFiled = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    var step1Rcvd = row[GRIEVANCE_COLS.STEP1_RCVD - 1];
+    var step2AppealFiled = row[GRIEVANCE_COLS.STEP2_APPEAL_FILED - 1];
+    var step2Rcvd = row[GRIEVANCE_COLS.STEP2_RCVD - 1];
+    var dateClosed = row[GRIEVANCE_COLS.DATE_CLOSED - 1];
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var currentStep = row[GRIEVANCE_COLS.CURRENT_STEP - 1];
+
+    // Calculate deadline dates
+    var filingDeadline = '';
+    var step1Due = '';
+    var step2AppealDue = '';
+    var step2Due = '';
+    var step3AppealDue = '';
+
+    if (incidentDate instanceof Date) {
+      filingDeadline = new Date(incidentDate.getTime() + 21 * 24 * 60 * 60 * 1000);
+    }
+    if (dateFiled instanceof Date) {
+      step1Due = new Date(dateFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step1Rcvd instanceof Date) {
+      step2AppealDue = new Date(step1Rcvd.getTime() + 10 * 24 * 60 * 60 * 1000);
+    }
+    if (step2AppealFiled instanceof Date) {
+      step2Due = new Date(step2AppealFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step2Rcvd instanceof Date) {
+      step3AppealDue = new Date(step2Rcvd.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
 
     // Deadlines (H, J, L, N, P)
     deadlineUpdates.push([
-      data.filingDeadline || '',
-      data.step1Due || '',
-      data.step2AppealDue || '',
-      data.step2Due || '',
-      data.step3AppealDue || ''
+      filingDeadline,
+      step1Due,
+      step2AppealDue,
+      step2Due,
+      step3AppealDue
     ]);
+
+    // Calculate Days Open directly
+    var daysOpen = '';
+    if (dateFiled instanceof Date) {
+      if (dateClosed instanceof Date) {
+        daysOpen = Math.floor((dateClosed - dateFiled) / (1000 * 60 * 60 * 24));
+      } else {
+        daysOpen = Math.floor((today - dateFiled) / (1000 * 60 * 60 * 24));
+      }
+    }
+
+    // Calculate Next Action Due based on current step and status
+    var nextActionDue = '';
+    var isClosed = closedStatuses.indexOf(status) !== -1;
+
+    if (!isClosed && currentStep) {
+      if (currentStep === 'Informal' && filingDeadline) {
+        nextActionDue = filingDeadline;
+      } else if (currentStep === 'Step I' && step1Due) {
+        nextActionDue = step1Due;
+      } else if (currentStep === 'Step II' && step2Due) {
+        nextActionDue = step2Due;
+      } else if (currentStep === 'Step III' && step3AppealDue) {
+        nextActionDue = step3AppealDue;
+      }
+    }
+
+    // Calculate Days to Deadline directly
+    var daysToDeadline = '';
+    if (nextActionDue instanceof Date) {
+      var days = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+      daysToDeadline = days < 0 ? 'Overdue' : days;
+    }
 
     // Metrics (S, T, U)
     metricsUpdates.push([
-      data.daysOpen || '',
-      data.nextActionDue || '',
-      data.daysToDeadline || ''
+      daysOpen,
+      nextActionDue,
+      daysToDeadline
     ]);
 
     // Contact info (X, Y, Z, AA)
     contactUpdates.push([
-      data.email || '',
-      data.unit || '',
-      data.location || '',
-      data.steward || ''
+      memberInfo.email || '',
+      memberInfo.unit || '',
+      memberInfo.location || '',
+      memberInfo.steward || ''
     ]);
   }
 
@@ -458,14 +523,80 @@ function syncGrievanceFormulasToLog() {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
       .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
 
+    // Format deadline columns as dates (dd-mm-yyyy)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
+
+    // Format Days Open (S) and Days to Deadline (U) as whole numbers
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
   }
 
   Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+}
+
+/**
+ * Auto-sort the Grievance Log by status priority
+ * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
+ * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ */
+function sortGrievanceLogByStatus() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return; // Need at least 2 data rows to sort
+
+  // Get all data (excluding header row)
+  var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
+  var data = dataRange.getValues();
+
+  // Sort by status priority (column E = index 4)
+  data.sort(function(a, b) {
+    var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
+    var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
+
+    // Get priority (default to 99 for unknown statuses)
+    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
+    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
+
+    // Primary sort: by status priority (lower number = higher priority)
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
+    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+    // Handle empty/non-numeric values
+    if (daysA === '' || daysA === null) daysA = 9999;
+    if (daysB === '' || daysB === null) daysB = 9999;
+
+    return daysA - daysB;
+  });
+
+  // Write sorted data back
+  dataRange.setValues(data);
+
+  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  if (lastRow >= 2) {
+    sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
+  }
+
+  Logger.log('Grievance Log sorted by status priority');
 }
 
 // ============================================================================
@@ -1278,6 +1409,8 @@ function onEditAutoSync(e) {
       // Grievance Log changed - sync formulas and update Member Directory
       syncGrievanceFormulasToLog();
       syncGrievanceToMemberDirectory();
+      // Auto-sort by status priority (active cases first, then by deadline urgency)
+      sortGrievanceLogByStatus();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
       // Member Directory changed - sync to Grievance Log
       syncGrievanceFormulasToLog();
