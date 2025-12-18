@@ -435,8 +435,12 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
   });
+
+  // Format Days Open (S) and Days to Deadline (U) as whole numbers
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, 998, 1).setNumberFormat('0');
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, 998, 1).setNumberFormat('0');
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
