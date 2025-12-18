@@ -87,23 +87,25 @@ function onOpen() {
     .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
     .addToUi();
 
-  // Demo Menu
-  ui.createMenu('🎭 Demo')
-    .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🌱 Seed Data')
-      .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
+  // Demo Menu - only show if demo mode is not disabled
+  if (!isDemoModeDisabled()) {
+    ui.createMenu('🎭 Demo')
+      .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
       .addSeparator()
-      .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-      .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+      .addSubMenu(ui.createMenu('🌱 Seed Data')
+        .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
+        .addSeparator()
+        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
+        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addSeparator()
+        .addItem('👥 Seed 50 Members', 'seed50Members')
+        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
       .addSeparator()
-      .addItem('👥 Seed 50 Members', 'seed50Members')
-      .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🗑️ Nuke Data')
-      .addItem('☢️ NUKE ALL DATA', 'NUKE_ALL_DATA')
-      .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
-    .addToUi();
+      .addSubMenu(ui.createMenu('🗑️ Nuke Data')
+        .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+      .addToUi();
+  }
 
   // Testing Menu (NEW)
   ui.createMenu('🧪 Testing')
