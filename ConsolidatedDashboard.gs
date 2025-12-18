@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-18T02:41:25.276Z
+ * - Build Date: 2025-12-18T03:05:27.224Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -1152,7 +1152,7 @@ function createDashboard(ss) {
     .setHorizontalAlignment('center');
 
   var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
-  var gLocationCol = getColumnLetter(GRIEVANCE_COLS.WORK_LOCATION);
+  var gLocationCol = getColumnLetter(GRIEVANCE_COLS.LOCATION);  // GRIEVANCE_COLS uses LOCATION not WORK_LOCATION
   var configLocCol = getColumnLetter(CONFIG_COLS.OFFICE_LOCATIONS);
 
   // Location formulas - pulls top 5 locations from Config and calculates metrics
@@ -1188,7 +1188,7 @@ function createDashboard(ss) {
     .setHorizontalAlignment('center');
 
   var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
-  var gAssignedStewardCol = getColumnLetter(GRIEVANCE_COLS.ASSIGNED_STEWARD);
+  var gAssignedStewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);  // GRIEVANCE_COLS uses STEWARD not ASSIGNED_STEWARD
   var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
 
   var stewardFormulas = [
