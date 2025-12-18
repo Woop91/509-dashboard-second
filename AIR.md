@@ -72,6 +72,9 @@
 - `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
 - `showMultiSelectDialog()` - Opens multi-select checkbox dialog
 - `applyMultiSelectValue()` - Saves multi-select values to cell
+- `onSelectionChangeMultiSelect()` - Auto-opens dialog on cell selection
+- `installMultiSelectTrigger()` - Enables auto-open mode
+- `removeMultiSelectTrigger()` - Disables auto-open mode
 - `getOrCreateSheet()` - Helper: get or create sheet
 - `rebuildDashboard()` - Refresh data and validations
 - `refreshAllFormulas()` - Refresh all formulas and sync
@@ -436,9 +439,14 @@ var GRIEVANCE_COLS = {
 
 Columns marked as **Multi-Select** support comma-separated values for multiple selections.
 
-**How to use:**
+**Auto-Open Mode (Recommended):**
+1. Go to **🔧 Tools > ☑️ Multi-Select > ⚡ Enable Auto-Open**
+2. Now clicking any multi-select cell automatically opens the dialog!
+3. To disable: **🔧 Tools > ☑️ Multi-Select > 🚫 Disable Auto-Open**
+
+**Manual Mode:**
 1. Select a cell in a multi-select column (G, J, K, O, or P)
-2. Go to **🔧 Tools > ☑️ Multi-Select Editor**
+2. Go to **🔧 Tools > ☑️ Multi-Select > 📝 Open Editor**
 3. Check multiple options in the dialog
 4. Click **Save** to apply
 
@@ -466,7 +474,10 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 🔧 Tools
 ├── ADHD & Accessibility (submenu)
 ├── Theming (submenu)
-├── ☑️ Multi-Select Editor    <-- NEW
+├── ☑️ Multi-Select (submenu)
+│   ├── 📝 Open Editor
+│   ├── ⚡ Enable Auto-Open
+│   └── 🚫 Disable Auto-Open
 ├── Undo/Redo (submenu)
 ├── Cache & Performance (submenu)
 └── Validation (submenu)

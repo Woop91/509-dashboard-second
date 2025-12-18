@@ -61,7 +61,11 @@ function onOpen() {
       .addItem('🌙 Toggle Dark Mode', 'quickToggleDarkMode')
       .addItem('🔄 Reset Theme', 'resetToDefaultTheme'))
     .addSeparator()
-    .addItem('☑️ Multi-Select Editor', 'showMultiSelectDialog')
+    .addSubMenu(ui.createMenu('☑️ Multi-Select')
+      .addItem('📝 Open Editor', 'showMultiSelectDialog')
+      .addSeparator()
+      .addItem('⚡ Enable Auto-Open', 'installMultiSelectTrigger')
+      .addItem('🚫 Disable Auto-Open', 'removeMultiSelectTrigger'))
     .addSeparator()
     .addSubMenu(ui.createMenu('↩️ Undo/Redo')
       .addItem('↩️ Undo Last Action', 'undoLastAction')
@@ -1032,6 +1036,95 @@ function onEditMultiSelect(e) {
     config.label,
     5
   );
+}
+
+/**
+ * Handle selection change to auto-open multi-select dialog
+ * This is installed as an onSelectionChange trigger
+ */
+function onSelectionChangeMultiSelect(e) {
+  // Only process if we have a valid range
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) return;
+
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
+
+  // Skip header row and multi-cell selections
+  if (row < 2) return;
+  if (e.range.getNumRows() > 1 || e.range.getNumColumns() > 1) return;
+
+  // Check if this is a multi-select column
+  var config = getMultiSelectConfig(col);
+  if (!config) return;
+
+  // Check if we already showed dialog for this cell (avoid repeated opens)
+  var props = PropertiesService.getDocumentProperties();
+  var lastCell = props.getProperty('lastMultiSelectCell');
+  var currentCell = row + ',' + col;
+
+  if (lastCell === currentCell) return;
+
+  // Store current cell
+  props.setProperty('lastMultiSelectCell', currentCell);
+
+  // Auto-open the multi-select dialog
+  showMultiSelectDialog();
+}
+
+/**
+ * Install the multi-select auto-open trigger
+ * Run this once to enable auto-open on cell selection
+ */
+function installMultiSelectTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Remove existing triggers to avoid duplicates
+  var triggers = ScriptApp.getUserTriggers(ss);
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onSelectionChangeMultiSelect') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Create new trigger
+  ScriptApp.newTrigger('onSelectionChangeMultiSelect')
+    .forSpreadsheet(ss)
+    .onSelectionChange()
+    .create();
+
+  SpreadsheetApp.getUi().alert(
+    '✅ Multi-Select Auto-Open Enabled!\n\n' +
+    'Now when you click on a multi-select cell (Office Days, Preferred Comm, etc.), ' +
+    'the selection dialog will automatically appear.'
+  );
+}
+
+/**
+ * Remove the multi-select auto-open trigger
+ */
+function removeMultiSelectTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var triggers = ScriptApp.getUserTriggers(ss);
+  var removed = false;
+
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onSelectionChangeMultiSelect') {
+      ScriptApp.deleteTrigger(trigger);
+      removed = true;
+    }
+  });
+
+  if (removed) {
+    SpreadsheetApp.getUi().alert('Multi-Select auto-open has been disabled.');
+  } else {
+    SpreadsheetApp.getUi().alert('No multi-select trigger was found.');
+  }
 }
 
 // ============================================================================
