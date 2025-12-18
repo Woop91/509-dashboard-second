@@ -28,7 +28,7 @@ function setupGrievanceCalcSheet() {
   sheet.clear();
 
   // Headers
-  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Next Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
+  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Days to Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
@@ -54,8 +54,9 @@ function setupGrievanceCalcSheet() {
   var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Next Deadline
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gNextActionCol + ':' + gNextActionCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  // Column D: Next Deadline (Days to Deadline countdown)
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
@@ -350,41 +351,31 @@ function setupGrievanceFormulasSheet() {
 /**
  * Sync calculated formulas from hidden sheet to Grievance Log
  * This is the self-healing function - it copies calculated values to the Grievance Log
+ * Member data (Name, Email, Unit, Location, Steward) is looked up directly from Member Directory
  */
 function syncGrievanceFormulasToLog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var formulaSheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
   var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
 
-  if (!formulaSheet || !grievanceSheet) {
+  if (!grievanceSheet || !memberSheet) {
     Logger.log('Required sheets not found for grievance formula sync');
     return;
   }
 
-  // Get formula sheet data
-  var formulaData = formulaSheet.getDataRange().getValues();
-  if (formulaData.length < 2) return;
-
-  // Create lookup map by row index
-  var lookup = {};
-  for (var i = 1; i < formulaData.length; i++) {
-    var rowIndex = formulaData[i][0]; // Column A: Row Index
-    if (rowIndex) {
-      lookup[rowIndex] = {
-        firstName: formulaData[i][2],        // C: First Name
-        lastName: formulaData[i][3],         // D: Last Name
-        filingDeadline: formulaData[i][12],  // M: Filing Deadline
-        step1Due: formulaData[i][13],        // N: Step I Due
-        step2AppealDue: formulaData[i][14],  // O: Step II Appeal Due
-        step2Due: formulaData[i][15],        // P: Step II Due
-        step3AppealDue: formulaData[i][16],  // Q: Step III Appeal Due
-        daysOpen: formulaData[i][17],        // R: Days Open
-        nextActionDue: formulaData[i][18],   // S: Next Action Due
-        daysToDeadline: formulaData[i][19],  // T: Days to Deadline
-        email: formulaData[i][20],           // U: Email
-        unit: formulaData[i][21],            // V: Unit
-        location: formulaData[i][22],        // W: Location
-        steward: formulaData[i][23]          // X: Steward
+  // Get Member Directory data and create lookup by Member ID
+  var memberData = memberSheet.getDataRange().getValues();
+  var memberLookup = {};
+  for (var i = 1; i < memberData.length; i++) {
+    var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+    if (memberId) {
+      memberLookup[memberId] = {
+        firstName: memberData[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: memberData[i][MEMBER_COLS.LAST_NAME - 1] || '',
+        email: memberData[i][MEMBER_COLS.EMAIL - 1] || '',
+        unit: memberData[i][MEMBER_COLS.UNIT - 1] || '',
+        location: memberData[i][MEMBER_COLS.WORK_LOCATION - 1] || '',
+        steward: memberData[i][MEMBER_COLS.ASSIGNED_STEWARD - 1] || ''
       };
     }
   }
@@ -406,13 +397,14 @@ function syncGrievanceFormulasToLog() {
   var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
 
   for (var j = 1; j < grievanceData.length; j++) {
-    var data = lookup[j] || {};
     var row = grievanceData[j];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var memberInfo = memberLookup[memberId] || {};
 
-    // Names (C-D)
+    // Names (C-D) - from Member Directory
     nameUpdates.push([
-      data.firstName || '',
-      data.lastName || ''
+      memberInfo.firstName || '',
+      memberInfo.lastName || ''
     ]);
 
     // Get date values from grievance row for deadline calculations
@@ -499,10 +491,10 @@ function syncGrievanceFormulasToLog() {
 
     // Contact info (X, Y, Z, AA)
     contactUpdates.push([
-      data.email || '',
-      data.unit || '',
-      data.location || '',
-      data.steward || ''
+      memberInfo.email || '',
+      memberInfo.unit || '',
+      memberInfo.location || '',
+      memberInfo.steward || ''
     ]);
   }
 

@@ -398,7 +398,7 @@ function getMemberHeaders() {
     'Last Virtual Mtg', 'Last In-Person Mtg', 'Open Rate %', 'Volunteer Hours',
     'Interest: Local', 'Interest: Chapter', 'Interest: Allied', 'Home Town',
     'Recent Contact Date', 'Contact Steward', 'Contact Notes',
-    'Has Open Grievance?', 'Grievance Status', 'Next Deadline', 'Start Grievance'
+    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance'
   ];
 }
 
