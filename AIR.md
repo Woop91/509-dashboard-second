@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.3 (Member Directory Auto-Sync)
+**Version:** 1.4.4 (Grievance Log Member Lookup Fix)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -619,6 +619,31 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.4.4 (2025-12-18) - Grievance Log Member Lookup Fix
+
+**Grievance Log now auto-populates member data directly from Member Directory:**
+
+| Column | Header | Auto-Synced From |
+|--------|--------|------------------|
+| C | First Name | Member Directory (by Member ID) |
+| D | Last Name | Member Directory (by Member ID) |
+| X | Member Email | Member Directory (by Member ID) |
+| Y | Unit | Member Directory (by Member ID) |
+| Z | Work Location | Member Directory (by Member ID) |
+| AA | Steward | Member Directory (by Member ID) |
+
+**Member ID Validation:**
+- Column B (Member ID) uses dropdown validation
+- Only Member IDs that exist in Member Directory are allowed
+- Prevents orphan grievances with invalid member references
+
+**Code Changes:**
+- `HiddenSheets.gs`: Rewrote `syncGrievanceFormulasToLog()` to lookup member data directly from Member Directory instead of using hidden sheet formulas
+- Bypassed the ARRAYFORMULA/FILTER issue that caused empty lookups
+- Member lookup now uses `MEMBER_COLS` constants for reliable column access
+
+---
 
 ### Version 1.4.3 (2025-12-18) - Member Directory Auto-Sync
 
