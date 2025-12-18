@@ -1203,7 +1203,11 @@ function refreshMemberDirectoryFormulas() {
 
 function rebuildDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  ss.toast('Refreshing data and validations...', '🔄 Refresh', 3);
+  ss.toast('Rebuilding dashboard sheets...', '🔄 Rebuild', 3);
+
+  // Recreate dashboard sheets with latest layout
+  createDashboard(ss);
+  createInteractiveDashboard(ss);
 
   // Refresh hidden sheet formulas and sync data
   refreshAllHiddenFormulas();
@@ -1211,7 +1215,7 @@ function rebuildDashboard() {
   // Reapply data validations
   setupDataValidations();
 
-  ss.toast('Dashboard refreshed!', '✅ Success', 3);
+  ss.toast('Dashboard rebuilt with all 9 sections!', '✅ Success', 3);
 }
 
 /**
