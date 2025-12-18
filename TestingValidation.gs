@@ -138,21 +138,23 @@ function testValidatePhoneNumber() {
 }
 
 function testValidateMemberId() {
-  // New format: 4 uppercase letters (2 from first name + 2 from last name) + 3 digits
-  Assert.assertTrue(VALIDATION_PATTERNS.MEMBER_ID.test('JOSM123'), 'JOSM123 should be valid (John Smith)');
-  Assert.assertTrue(VALIDATION_PATTERNS.MEMBER_ID.test('MAJO456'), 'MAJO456 should be valid (Mary Johnson)');
-  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('JOS123'), 'JOS123 should be invalid (only 3 letters)');
-  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('JOSM12'), 'JOSM12 should be invalid (only 2 digits)');
-  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('josm123'), 'josm123 should be invalid (lowercase)');
+  // Format: M prefix + 4 uppercase letters (2 from first name + 2 from last name) + 3 digits
+  Assert.assertTrue(VALIDATION_PATTERNS.MEMBER_ID.test('MJOSM123'), 'MJOSM123 should be valid (M + John Smith + 123)');
+  Assert.assertTrue(VALIDATION_PATTERNS.MEMBER_ID.test('MMAJO456'), 'MMAJO456 should be valid (M + Mary Johnson + 456)');
+  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('JOSM123'), 'JOSM123 should be invalid (missing M prefix)');
+  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('MJOS123'), 'MJOS123 should be invalid (only 3 name letters)');
+  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('MJOSM12'), 'MJOSM12 should be invalid (only 2 digits)');
+  Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('mjosm123'), 'mjosm123 should be invalid (lowercase)');
   Assert.assertFalse(VALIDATION_PATTERNS.MEMBER_ID.test('M123456'), 'M123456 should be invalid (old format)');
 }
 
 function testValidateGrievanceId() {
-  // New format: 4 uppercase letters (2 from first name + 2 from last name) + 3 digits
-  Assert.assertTrue(VALIDATION_PATTERNS.GRIEVANCE_ID.test('JOSM789'), 'JOSM789 should be valid');
-  Assert.assertTrue(VALIDATION_PATTERNS.GRIEVANCE_ID.test('ROWI001'), 'ROWI001 should be valid (Robert Williams)');
+  // Format: G prefix + 4 uppercase letters (2 from first name + 2 from last name) + 3 digits
+  Assert.assertTrue(VALIDATION_PATTERNS.GRIEVANCE_ID.test('GJOSM789'), 'GJOSM789 should be valid (G + John Smith + 789)');
+  Assert.assertTrue(VALIDATION_PATTERNS.GRIEVANCE_ID.test('GROWI001'), 'GROWI001 should be valid (G + Robert Williams + 001)');
+  Assert.assertFalse(VALIDATION_PATTERNS.GRIEVANCE_ID.test('JOSM789'), 'JOSM789 should be invalid (missing G prefix)');
   Assert.assertFalse(VALIDATION_PATTERNS.GRIEVANCE_ID.test('G-123456'), 'G-123456 should be invalid (old format)');
-  Assert.assertFalse(VALIDATION_PATTERNS.GRIEVANCE_ID.test('JOSM1234'), 'JOSM1234 should be invalid (4 digits)');
+  Assert.assertFalse(VALIDATION_PATTERNS.GRIEVANCE_ID.test('GJOSM1234'), 'GJOSM1234 should be invalid (4 digits)');
 }
 
 function testOpenRateRange() {
@@ -257,18 +259,18 @@ function generateTestReport(duration) {
 var VALIDATION_PATTERNS = {
   EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
   PHONE_US: /^[\+]?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/,
-  // ID format: 2 chars from first name + 2 chars from last name + 3 random digits (e.g., JOSM123)
-  MEMBER_ID: /^[A-Z]{4}\d{3}$/,
-  GRIEVANCE_ID: /^[A-Z]{4}\d{3}$/
+  // ID format: M/G prefix + 2 chars from first name + 2 chars from last name + 3 random digits
+  MEMBER_ID: /^M[A-Z]{4}\d{3}$/,      // e.g., MJOSM123 (M + John Smith + 123)
+  GRIEVANCE_ID: /^G[A-Z]{4}\d{3}$/    // e.g., GJOSM456 (G + John Smith + 456)
 };
 
 var VALIDATION_MESSAGES = {
   EMAIL_INVALID: 'Invalid email format. Use: name@domain.com',
   EMAIL_EMPTY: 'Email address is required',
   PHONE_INVALID: 'Invalid phone format. Use: (555) 555-1234',
-  MEMBER_ID_INVALID: 'Invalid Member ID. Format: 2 letters from first name + 2 letters from last name + 3 digits (e.g., JOSM123)',
+  MEMBER_ID_INVALID: 'Invalid Member ID. Format: M + 2 letters from first name + 2 letters from last name + 3 digits (e.g., MJOSM123)',
   MEMBER_ID_DUPLICATE: 'This Member ID already exists',
-  GRIEVANCE_ID_INVALID: 'Invalid Grievance ID. Format: 2 letters from first name + 2 letters from last name + 3 digits (e.g., JOSM456)',
+  GRIEVANCE_ID_INVALID: 'Invalid Grievance ID. Format: G + 2 letters from first name + 2 letters from last name + 3 digits (e.g., GJOSM456)',
   GRIEVANCE_ID_DUPLICATE: 'This Grievance ID already exists'
 };
 

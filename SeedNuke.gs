@@ -192,7 +192,7 @@ function SEED_MEMBERS(count) {
   for (var i = 0; i < count; i++) {
     var firstName = randomChoice(firstNames);
     var lastName = randomChoice(lastNames);
-    var memberId = generateNameBasedId(firstName, lastName, existingMemberIds);
+    var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
     existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
     var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
     var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
@@ -373,8 +373,8 @@ function SEED_GRIEVANCES(count) {
     var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
     var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
 
-    // Generate grievance ID using member's name (same format as member ID)
-    var grievanceId = generateNameBasedId(firstName, lastName, existingGrievanceIds);
+    // Generate grievance ID using member's name with G prefix
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
     existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
     var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
     var status = randomChoice(statuses);
@@ -837,35 +837,6 @@ function getConfigValues(configSheet, column) {
  */
 function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
-}
-
-/**
- * Generate a name-based ID with 3 random digits
- * Format: First 2 chars of firstName + First 2 chars of lastName + 3 random digits
- * Example: John Smith → JOSM123
- * @param {string} firstName - First name
- * @param {string} lastName - Last name
- * @param {Object} existingIds - Object with existing IDs as keys (for collision detection)
- * @returns {string} Generated ID (uppercase)
- */
-function generateNameBasedId(firstName, lastName, existingIds) {
-  var firstPart = (firstName || 'XX').substring(0, 2).toUpperCase();
-  var lastPart = (lastName || 'XX').substring(0, 2).toUpperCase();
-  var prefix = firstPart + lastPart;
-
-  var maxAttempts = 100;
-  for (var attempt = 0; attempt < maxAttempts; attempt++) {
-    var randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
-    var newId = prefix + randomDigits;
-
-    if (!existingIds || !existingIds[newId]) {
-      return newId;
-    }
-  }
-
-  // Fallback: add timestamp component if too many collisions
-  var timestamp = String(Date.now()).slice(-3);
-  return prefix + timestamp;
 }
 
 /**

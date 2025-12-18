@@ -466,3 +466,37 @@ var DEFAULT_CONFIG = {
   ],
   COMM_METHODS: ['Email', 'Phone', 'Text', 'In Person']
 };
+
+// ============================================================================
+// ID GENERATION
+// ============================================================================
+
+/**
+ * Generate a name-based ID with prefix and 3 random digits
+ * Format: Prefix + First 2 chars of firstName + First 2 chars of lastName + 3 random digits
+ * Example: M + John Smith → MJOSM123, G + John Smith → GJOSM456
+ * @param {string} prefix - ID prefix ('M' for members, 'G' for grievances)
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {Object} existingIds - Object with existing IDs as keys (for collision detection)
+ * @returns {string} Generated ID (uppercase)
+ */
+function generateNameBasedId(prefix, firstName, lastName, existingIds) {
+  var firstPart = (firstName || 'XX').substring(0, 2).toUpperCase();
+  var lastPart = (lastName || 'XX').substring(0, 2).toUpperCase();
+  var namePrefix = (prefix || '') + firstPart + lastPart;
+
+  var maxAttempts = 100;
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    var randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    var newId = namePrefix + randomDigits;
+
+    if (!existingIds || !existingIds[newId]) {
+      return newId;
+    }
+  }
+
+  // Fallback: add timestamp component if too many collisions
+  var timestamp = String(Date.now()).slice(-3);
+  return namePrefix + timestamp;
+}
