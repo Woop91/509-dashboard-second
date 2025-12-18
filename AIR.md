@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.4.1 (Days to Deadline Fix)
+**Version:** 1.4.2 (Date Formatting & Overdue Display)
 **Last Updated:** 2025-12-16
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -619,6 +619,30 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.4.2 (2025-12-18) - Date Formatting & Overdue Display
+
+**Formatting Changes:**
+- Date format changed from `yyyy-mm-dd` to `dd-mm-yyyy` throughout
+- Days Open (S) and Days to Deadline (U) now display as whole numbers (no decimals)
+- Days to Deadline shows "Overdue" for past-due cases instead of negative numbers
+
+**Display Values for Days to Deadline:**
+| Value | Meaning |
+|-------|---------|
+| `18` | 18 days remaining |
+| `0` | Due today |
+| `Overdue` | Past deadline |
+| *(blank)* | Case is closed |
+
+**Code Changes:**
+- `Code.gs`: Added `setNumberFormat('0')` for Days Open and Days to Deadline in `createGrievanceLog()`
+- `Code.gs`: Changed date format to `dd-mm-yyyy` in `createGrievanceLog()`
+- `HiddenSheets.gs`: Changed date format to `dd-mm-yyyy` in all sync functions
+- `HiddenSheets.gs`: Days to Deadline now returns "Overdue" when `days < 0`
+- `Code.gs`: Updated setup success message to confirm auto-sync trigger installation
+
+---
 
 ### Version 1.4.1 (2025-12-16) - Days to Deadline Fix
 
