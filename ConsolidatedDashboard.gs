@@ -3841,12 +3841,33 @@ function SEED_GRIEVANCES(count) {
   var batchSize = 25;
   var today = new Date();
 
+  // Create shuffled list of member indices (excluding header row)
+  // This ensures each member is used before repeating
+  var memberIndices = [];
+  for (var m = 1; m < memberData.length; m++) {
+    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) { // Only include rows with valid member ID
+      memberIndices.push(m);
+    }
+  }
+  var shuffledMembers = shuffleArray(memberIndices);
+  var memberIndex = 0;
+
+  // Distribute incident dates across the 90-day range to avoid clustering
+  var dateRangeStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+  var dateSpread = 90 / count; // Days between each grievance's base date
+
   for (var i = 0; i < count; i++) {
-    // Pick a random member - ensure we get a valid member with an ID
-    var memberRow = memberData[1 + Math.floor(Math.random() * (memberData.length - 1))];
+    // Use shuffled members - cycle through if more grievances than members
+    if (memberIndex >= shuffledMembers.length) {
+      shuffledMembers = shuffleArray(memberIndices); // Reshuffle for next cycle
+      memberIndex = 0;
+    }
+    var memberRow = memberData[shuffledMembers[memberIndex]];
+    memberIndex++;
+
     var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
 
-    // Skip if no member ID
+    // Skip if no member ID (shouldn't happen due to filtering above, but just in case)
     if (!memberId) continue;
 
     // Get member data directly from member row
@@ -3858,7 +3879,13 @@ function SEED_GRIEVANCES(count) {
     var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
 
     var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
-    var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
+
+    // Distribute incident dates across the 90-day range with some randomness
+    // Each grievance gets a "slot" in the timeline, with +/- 2 days variation
+    var baseDate = new Date(dateRangeStart.getTime() + (i * dateSpread * 24 * 60 * 60 * 1000));
+    var variation = (Math.random() - 0.5) * 4 * 24 * 60 * 60 * 1000; // +/- 2 days
+    var incidentDate = new Date(Math.min(baseDate.getTime() + variation, today.getTime()));
+
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
@@ -4319,6 +4346,21 @@ function getConfigValues(configSheet, column) {
  */
 function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+/**
+ * Shuffle array using Fisher-Yates algorithm
+ * Returns a new shuffled array (does not modify original)
+ */
+function shuffleArray(arr) {
+  var shuffled = arr.slice(); // Create a copy
+  for (var i = shuffled.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var temp = shuffled[i];
+    shuffled[i] = shuffled[j];
+    shuffled[j] = temp;
+  }
+  return shuffled;
 }
 
 /**
