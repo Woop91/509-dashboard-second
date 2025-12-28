@@ -96,7 +96,7 @@ function testGrievanceColsConstants() {
   Assert.assertEquals(1, GRIEVANCE_COLS.GRIEVANCE_ID, 'GRIEVANCE_ID should be column 1');
   Assert.assertEquals(2, GRIEVANCE_COLS.MEMBER_ID, 'MEMBER_ID should be column 2');
   Assert.assertEquals(5, GRIEVANCE_COLS.STATUS, 'STATUS should be column 5');
-  Assert.assertEquals(34, GRIEVANCE_COLS.RESOLUTION, 'RESOLUTION should be column 34');
+  Assert.assertEquals(28, GRIEVANCE_COLS.RESOLUTION, 'RESOLUTION should be column 28');
 }
 
 function testColumnLetterConversion() {
