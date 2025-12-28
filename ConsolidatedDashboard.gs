@@ -609,6 +609,8 @@ function onOpen() {
 
   // Main Dashboard Menu
   ui.createMenu('👤 Dashboard')
+    .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
+    .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')

@@ -3,6 +3,7 @@
  * MOBILE INTERFACE & QUICK ACTIONS
  * ============================================================================
  * Mobile-optimized views and context-aware quick actions
+ * Includes automatic device detection for responsive experience
  */
 
 // ==================== MOBILE CONFIGURATION ====================
@@ -10,8 +11,200 @@
 var MOBILE_CONFIG = {
   MAX_COLUMNS_MOBILE: 8,
   CARD_LAYOUT_ENABLED: true,
-  TOUCH_TARGET_SIZE: '44px'
+  TOUCH_TARGET_SIZE: '44px',
+  MOBILE_BREAKPOINT: 768,  // Width in pixels below which is considered mobile
+  TABLET_BREAKPOINT: 1024  // Width in pixels below which is considered tablet
 };
+
+// ==================== DEVICE DETECTION ====================
+
+/**
+ * Shows a smart dashboard that automatically detects the device type
+ * and displays the appropriate interface (mobile or desktop)
+ */
+function showSmartDashboard() {
+  var html = HtmlService.createHtmlOutput(getSmartDashboardHtml())
+    .setWidth(800)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 509 Dashboard');
+}
+
+/**
+ * Returns the HTML for the smart dashboard with device detection
+ */
+function getSmartDashboardHtml() {
+  var stats = getMobileDashboardStats();
+
+  return '<!DOCTYPE html>' +
+    '<html><head>' +
+    '<base target="_top">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">' +
+    '<style>' +
+    // CSS Reset and base styles
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5;min-height:100vh}' +
+
+    // Responsive container
+    '.container{padding:15px;max-width:1200px;margin:0 auto}' +
+
+    // Header - responsive
+    '.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:20px;text-align:center}' +
+    '.header h1{font-size:clamp(18px,5vw,28px);margin-bottom:5px}' +
+    '.header .subtitle{font-size:clamp(12px,3vw,14px);opacity:0.9}' +
+    '.device-badge{display:inline-block;padding:4px 12px;background:rgba(255,255,255,0.2);border-radius:20px;font-size:11px;margin-top:8px}' +
+
+    // Stats grid - responsive
+    '.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}' +
+    '.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;transition:transform 0.2s}' +
+    '.stat-card:hover{transform:translateY(-2px)}' +
+    '.stat-value{font-size:clamp(24px,6vw,36px);font-weight:bold;color:#1a73e8}' +
+    '.stat-label{font-size:clamp(11px,2.5vw,13px);color:#666;text-transform:uppercase;margin-top:5px}' +
+
+    // Section titles
+    '.section-title{font-size:clamp(14px,3.5vw,18px);font-weight:600;color:#333;margin:20px 0 12px;padding-left:5px}' +
+
+    // Action buttons - responsive grid
+    '.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px}' +
+    '.action-btn{background:white;border:none;padding:16px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);' +
+    'width:100%;text-align:left;display:flex;align-items:center;gap:15px;font-size:15px;cursor:pointer;' +
+    'min-height:' + MOBILE_CONFIG.TOUCH_TARGET_SIZE + ';transition:all 0.2s}' +
+    '.action-btn:hover{background:#e8f0fe;transform:translateX(4px)}' +
+    '.action-btn:active{transform:scale(0.98)}' +
+    '.action-icon{font-size:24px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:#e8f0fe;border-radius:10px;flex-shrink:0}' +
+    '.action-label{font-weight:500}' +
+    '.action-desc{font-size:12px;color:#666;margin-top:2px}' +
+
+    // FAB (Floating Action Button)
+    '.fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;background:#1a73e8;color:white;' +
+    'border:none;border-radius:50%;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;z-index:1000}' +
+    '.fab:hover{background:#1557b0}' +
+
+    // Desktop-only elements
+    '.desktop-only{display:none}' +
+
+    // Mobile-specific adjustments
+    '@media (max-width:' + MOBILE_CONFIG.MOBILE_BREAKPOINT + 'px){' +
+    '  .stats{grid-template-columns:repeat(2,1fr)}' +
+    '  .actions{grid-template-columns:1fr}' +
+    '  .container{padding:10px}' +
+    '  .header{padding:15px}' +
+    '}' +
+
+    // Tablet adjustments
+    '@media (min-width:' + MOBILE_CONFIG.MOBILE_BREAKPOINT + 'px) and (max-width:' + MOBILE_CONFIG.TABLET_BREAKPOINT + 'px){' +
+    '  .stats{grid-template-columns:repeat(2,1fr)}' +
+    '  .actions{grid-template-columns:repeat(2,1fr)}' +
+    '}' +
+
+    // Desktop view
+    '@media (min-width:' + MOBILE_CONFIG.TABLET_BREAKPOINT + 'px){' +
+    '  .stats{grid-template-columns:repeat(4,1fr)}' +
+    '  .actions{grid-template-columns:repeat(2,1fr)}' +
+    '  .desktop-only{display:block}' +
+    '}' +
+
+    '</style>' +
+    '</head><body>' +
+
+    // Header with dynamic device badge
+    '<div class="header">' +
+    '<h1>📱 509 Dashboard</h1>' +
+    '<div class="subtitle">Union Grievance Management</div>' +
+    '<div class="device-badge" id="deviceBadge">Detecting device...</div>' +
+    '</div>' +
+
+    '<div class="container">' +
+
+    // Stats section
+    '<div class="stats">' +
+    '<div class="stat-card"><div class="stat-value">' + stats.totalGrievances + '</div><div class="stat-label">Total</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + stats.activeGrievances + '</div><div class="stat-label">Active</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + stats.pendingGrievances + '</div><div class="stat-label">Pending</div></div>' +
+    '<div class="stat-card"><div class="stat-value">' + stats.overdueGrievances + '</div><div class="stat-label">Overdue</div></div>' +
+    '</div>' +
+
+    // Quick Actions
+    '<div class="section-title">⚡ Quick Actions</div>' +
+    '<div class="actions">' +
+
+    '<button class="action-btn" onclick="google.script.run.showMobileGrievanceList()">' +
+    '<div class="action-icon">📋</div>' +
+    '<div><div class="action-label">View Grievances</div><div class="action-desc">Browse and filter all grievances</div></div>' +
+    '</button>' +
+
+    '<button class="action-btn" onclick="google.script.run.showMobileUnifiedSearch()">' +
+    '<div class="action-icon">🔍</div>' +
+    '<div><div class="action-label">Search</div><div class="action-desc">Find grievances or members</div></div>' +
+    '</button>' +
+
+    '<button class="action-btn" onclick="google.script.run.showMyAssignedGrievances()">' +
+    '<div class="action-icon">👤</div>' +
+    '<div><div class="action-label">My Cases</div><div class="action-desc">View your assigned grievances</div></div>' +
+    '</button>' +
+
+    '<button class="action-btn" onclick="google.script.run.showQuickActionsMenu()">' +
+    '<div class="action-icon">⚡</div>' +
+    '<div><div class="action-label">Row Actions</div><div class="action-desc">Quick actions for selected row</div></div>' +
+    '</button>' +
+
+    '</div>' +
+
+    // Desktop-only additional info
+    '<div class="desktop-only">' +
+    '<div class="section-title">ℹ️ Dashboard Info</div>' +
+    '<p style="color:#666;font-size:14px;padding:15px;background:white;border-radius:8px;">' +
+    'This responsive dashboard automatically adjusts to your screen size. ' +
+    'On mobile devices, you\'ll see a touch-optimized interface with larger buttons. ' +
+    'Use the menu items above to manage grievances and member information.' +
+    '</p>' +
+    '</div>' +
+
+    '</div>' +
+
+    // FAB for refresh
+    '<button class="fab" onclick="location.reload()" title="Refresh">🔄</button>' +
+
+    // Device detection script
+    '<script>' +
+    'function detectDevice(){' +
+    '  var w=window.innerWidth;' +
+    '  var badge=document.getElementById("deviceBadge");' +
+    '  var isTouchDevice="ontouchstart" in window||navigator.maxTouchPoints>0;' +
+    '  var userAgent=navigator.userAgent.toLowerCase();' +
+    '  var isMobileUA=/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);' +
+    '  ' +
+    '  if(w<' + MOBILE_CONFIG.MOBILE_BREAKPOINT + '||isMobileUA){' +
+    '    badge.textContent="📱 Mobile View";' +
+    '    badge.style.background="rgba(76,175,80,0.3)";' +
+    '  }else if(w<' + MOBILE_CONFIG.TABLET_BREAKPOINT + '){' +
+    '    badge.textContent="📱 Tablet View";' +
+    '    badge.style.background="rgba(255,152,0,0.3)";' +
+    '  }else{' +
+    '    badge.textContent="🖥️ Desktop View";' +
+    '    badge.style.background="rgba(33,150,243,0.3)";' +
+    '  }' +
+    '  ' +
+    '  if(isTouchDevice){' +
+    '    document.body.classList.add("touch-device");' +
+    '  }' +
+    '}' +
+    'detectDevice();' +
+    'window.addEventListener("resize",detectDevice);' +
+    '</script>' +
+
+    '</body></html>';
+}
+
+/**
+ * Check if the current context appears to be mobile
+ * Note: This is a server-side heuristic based on available info
+ * Real detection happens client-side in the HTML
+ */
+function isMobileContext() {
+  // Server-side we can't reliably detect mobile
+  // This function exists for potential future use with session properties
+  return false;
+}
 
 // ==================== MOBILE DASHBOARD ====================
 
@@ -67,15 +260,62 @@ function getRecentGrievancesForMobile(limit) {
 
 function showMobileGrievanceList() {
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;margin:0;padding:0;background:#f5f5f5}.header{background:#1a73e8;color:white;padding:15px;position:sticky;top:0}.search{width:100%;padding:12px;border:none;border-radius:8px;font-size:15px;margin-top:10px}.filters{display:flex;overflow-x:auto;padding:10px;background:white;gap:10px}.filter{padding:8px 16px;border-radius:20px;background:#f0f0f0;white-space:nowrap;cursor:pointer;font-size:14px;border:none}.filter.active{background:#1a73e8;color:white}.list{padding:10px}.card{background:white;margin-bottom:12px;padding:15px;border-radius:12px;box-shadow:0 2px 4px rgba(0,0,0,0.08)}.card-header{display:flex;justify-content:space-between;margin-bottom:10px}.card-id{font-weight:bold;color:#1a73e8}.card-status{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:bold}.card-row{font-size:14px;margin:5px 0;color:#666}</style></head><body><div class="header"><h2 style="margin:0">Grievances</h2><input type="text" class="search" placeholder="Search..." oninput="filter(this.value)"></div><div class="filters"><button class="filter active" onclick="filterStatus(\'all\',this)">All</button><button class="filter" onclick="filterStatus(\'Open\',this)">Open</button><button class="filter" onclick="filterStatus(\'Pending Info\',this)">Pending</button><button class="filter" onclick="filterStatus(\'Resolved\',this)">Resolved</button></div><div class="list" id="list"><div style="text-align:center;padding:40px;color:#666">Loading...</div></div><script>var all=[];google.script.run.withSuccessHandler(function(data){all=data;render(data)}).getRecentGrievancesForMobile(100);function render(data){var c=document.getElementById("list");if(!data||data.length===0){c.innerHTML="<div style=\'text-align:center;padding:40px;color:#999\'>No grievances</div>";return}c.innerHTML=data.map(function(g){return"<div class=\'card\'><div class=\'card-header\'><div class=\'card-id\'>#"+g.id+"</div><div class=\'card-status\'>"+(g.status||"Filed")+"</div></div><div class=\'card-row\'><strong>Member:</strong> "+g.memberName+"</div><div class=\'card-row\'><strong>Issue:</strong> "+(g.issueType||"N/A")+"</div><div class=\'card-row\'><strong>Filed:</strong> "+g.filedDate+"</div></div>"}).join("")}function filterStatus(s,btn){document.querySelectorAll(".filter").forEach(function(f){f.classList.remove("active")});btn.classList.add("active");render(s==="all"?all:all.filter(function(g){return g.status===s}))}function filter(q){render(all.filter(function(g){q=q.toLowerCase();return g.id.toLowerCase().indexOf(q)>=0||g.memberName.toLowerCase().indexOf(q)>=0||(g.issueType||"").toLowerCase().indexOf(q)>=0}))}</script></body></html>'
-  ).setWidth(400).setHeight(700);
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">' +
+    '<style>' +
+    '*{box-sizing:border-box}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;margin:0;padding:0;background:#f5f5f5}' +
+    '.header{background:#1a73e8;color:white;padding:15px;position:sticky;top:0;z-index:100}' +
+    '.header h2{margin:0;font-size:clamp(18px,4vw,24px)}' +
+    '.search{width:100%;padding:clamp(10px,2.5vw,14px);border:none;border-radius:8px;font-size:clamp(14px,3vw,16px);margin-top:10px}' +
+    '.filters{display:flex;overflow-x:auto;padding:10px;background:white;gap:8px;-webkit-overflow-scrolling:touch}' +
+    '.filter{padding:clamp(6px,1.5vw,10px) clamp(12px,3vw,18px);border-radius:20px;background:#f0f0f0;white-space:nowrap;cursor:pointer;font-size:clamp(12px,2.5vw,14px);border:none;min-height:' + MOBILE_CONFIG.TOUCH_TARGET_SIZE + ';display:flex;align-items:center}' +
+    '.filter.active{background:#1a73e8;color:white}' +
+    '.list{padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}' +
+    '.card{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 4px rgba(0,0,0,0.08)}' +
+    '.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px}' +
+    '.card-id{font-weight:bold;color:#1a73e8;font-size:clamp(14px,3vw,16px)}' +
+    '.card-status{padding:4px 10px;border-radius:12px;font-size:clamp(10px,2vw,12px);font-weight:bold;background:#e8f0fe}' +
+    '.card-row{font-size:clamp(12px,2.5vw,14px);margin:5px 0;color:#666}' +
+    '@media (min-width:768px){.list{grid-template-columns:repeat(2,1fr)}}' +
+    '@media (min-width:1024px){.list{grid-template-columns:repeat(3,1fr)}}' +
+    '</style></head><body>' +
+    '<div class="header"><h2>📋 Grievances</h2><input type="text" class="search" placeholder="Search..." oninput="filter(this.value)"></div>' +
+    '<div class="filters"><button class="filter active" onclick="filterStatus(\'all\',this)">All</button><button class="filter" onclick="filterStatus(\'Open\',this)">Open</button><button class="filter" onclick="filterStatus(\'Pending Info\',this)">Pending</button><button class="filter" onclick="filterStatus(\'Resolved\',this)">Resolved</button></div>' +
+    '<div class="list" id="list"><div style="text-align:center;padding:40px;color:#666;grid-column:1/-1">Loading...</div></div>' +
+    '<script>var all=[];google.script.run.withSuccessHandler(function(data){all=data;render(data)}).getRecentGrievancesForMobile(100);function render(data){var c=document.getElementById("list");if(!data||data.length===0){c.innerHTML="<div style=\'text-align:center;padding:40px;color:#999;grid-column:1/-1\'>No grievances</div>";return}c.innerHTML=data.map(function(g){return"<div class=\'card\'><div class=\'card-header\'><div class=\'card-id\'>#"+g.id+"</div><div class=\'card-status\'>"+(g.status||"Filed")+"</div></div><div class=\'card-row\'><strong>Member:</strong> "+g.memberName+"</div><div class=\'card-row\'><strong>Issue:</strong> "+(g.issueType||"N/A")+"</div><div class=\'card-row\'><strong>Filed:</strong> "+g.filedDate+"</div></div>"}).join("")}function filterStatus(s,btn){document.querySelectorAll(".filter").forEach(function(f){f.classList.remove("active")});btn.classList.add("active");render(s==="all"?all:all.filter(function(g){return g.status===s}))}function filter(q){render(all.filter(function(g){q=q.toLowerCase();return g.id.toLowerCase().indexOf(q)>=0||g.memberName.toLowerCase().indexOf(q)>=0||(g.issueType||"").toLowerCase().indexOf(q)>=0}))}</script></body></html>'
+  ).setWidth(800).setHeight(700);
   SpreadsheetApp.getUi().showModalDialog(html, '📋 Grievance List');
 }
 
 function showMobileUnifiedSearch() {
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1.0"><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;margin:0;padding:0;background:#f5f5f5}.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:15px}.search-container{position:relative}.search-input{width:100%;padding:14px 14px 14px 45px;border:none;border-radius:10px;font-size:16px;background:white}.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px}.tabs{display:flex;background:white;border-bottom:1px solid #e0e0e0}.tab{flex:1;padding:14px;text-align:center;font-size:14px;font-weight:500;color:#666;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent}.tab.active{color:#1a73e8;border-bottom-color:#1a73e8}.results{padding:10px}.result-card{background:white;margin-bottom:10px;padding:15px;border-radius:12px;box-shadow:0 2px 4px rgba(0,0,0,0.08)}.result-title{font-weight:bold;color:#1a73e8;margin-bottom:5px}.result-detail{font-size:13px;color:#666;margin:3px 0}</style></head><body><div class="header"><h2 style="margin:0 0 12px 0;font-size:20px">🔍 Search</h2><div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="q" placeholder="Search members or grievances..." oninput="search(this.value)"></div></div><div class="tabs"><button class="tab active" onclick="setTab(\'all\',this)">All</button><button class="tab" onclick="setTab(\'members\',this)">Members</button><button class="tab" onclick="setTab(\'grievances\',this)">Grievances</button></div><div class="results" id="results"><div style="text-align:center;padding:60px;color:#999">Type to search...</div></div><script>var tab="all";function setTab(t,btn){tab=t;document.querySelectorAll(".tab").forEach(function(tb){tb.classList.remove("active")});btn.classList.add("active");search(document.getElementById("q").value)}function search(q){if(!q||q.length<2){document.getElementById("results").innerHTML="<div style=\'text-align:center;padding:60px;color:#999\'>Type to search...</div>";return}google.script.run.withSuccessHandler(function(data){render(data)}).getMobileSearchData(q,tab)}function render(data){var c=document.getElementById("results");if(!data||data.length===0){c.innerHTML="<div style=\'text-align:center;padding:60px;color:#999\'>No results</div>";return}c.innerHTML=data.map(function(r){return"<div class=\'result-card\'><div class=\'result-title\'>"+(r.type==="member"?"👤 ":"📋 ")+r.title+"</div><div class=\'result-detail\'>"+r.subtitle+"</div>"+(r.detail?"<div class=\'result-detail\'>"+r.detail+"</div>":"")+"</div>"}).join("")}</script></body></html>'
-  ).setWidth(420).setHeight(700);
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">' +
+    '<style>' +
+    '*{box-sizing:border-box}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;margin:0;padding:0;background:#f5f5f5}' +
+    '.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:15px}' +
+    '.header h2{margin:0 0 12px 0;font-size:clamp(18px,4vw,22px)}' +
+    '.search-container{position:relative}' +
+    '.search-input{width:100%;padding:clamp(12px,3vw,16px) clamp(12px,3vw,16px) clamp(12px,3vw,16px) 45px;border:none;border-radius:10px;font-size:clamp(14px,3vw,16px);background:white}' +
+    '.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:18px}' +
+    '.tabs{display:flex;background:white;border-bottom:1px solid #e0e0e0}' +
+    '.tab{flex:1;padding:clamp(10px,2.5vw,14px);text-align:center;font-size:clamp(12px,2.5vw,14px);font-weight:500;color:#666;border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;min-height:' + MOBILE_CONFIG.TOUCH_TARGET_SIZE + '}' +
+    '.tab.active{color:#1a73e8;border-bottom-color:#1a73e8}' +
+    '.results{padding:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}' +
+    '.result-card{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 4px rgba(0,0,0,0.08)}' +
+    '.result-title{font-weight:bold;color:#1a73e8;margin-bottom:5px;font-size:clamp(14px,3vw,16px)}' +
+    '.result-detail{font-size:clamp(11px,2.5vw,13px);color:#666;margin:3px 0}' +
+    '.empty-state{text-align:center;padding:60px;color:#999;grid-column:1/-1}' +
+    '@media (min-width:768px){.results{grid-template-columns:repeat(2,1fr)}}' +
+    '@media (min-width:1024px){.results{grid-template-columns:repeat(3,1fr)}}' +
+    '</style></head><body>' +
+    '<div class="header"><h2>🔍 Search</h2><div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="q" placeholder="Search members or grievances..." oninput="search(this.value)"></div></div>' +
+    '<div class="tabs"><button class="tab active" onclick="setTab(\'all\',this)">All</button><button class="tab" onclick="setTab(\'members\',this)">Members</button><button class="tab" onclick="setTab(\'grievances\',this)">Grievances</button></div>' +
+    '<div class="results" id="results"><div class="empty-state">Type to search...</div></div>' +
+    '<script>var tab="all";function setTab(t,btn){tab=t;document.querySelectorAll(".tab").forEach(function(tb){tb.classList.remove("active")});btn.classList.add("active");search(document.getElementById("q").value)}function search(q){if(!q||q.length<2){document.getElementById("results").innerHTML="<div class=\'empty-state\'>Type to search...</div>";return}google.script.run.withSuccessHandler(function(data){render(data)}).getMobileSearchData(q,tab)}function render(data){var c=document.getElementById("results");if(!data||data.length===0){c.innerHTML="<div class=\'empty-state\'>No results</div>";return}c.innerHTML=data.map(function(r){return"<div class=\'result-card\'><div class=\'result-title\'>"+(r.type==="member"?"👤 ":"📋 ")+r.title+"</div><div class=\'result-detail\'>"+r.subtitle+"</div>"+(r.detail?"<div class=\'result-detail\'>"+r.detail+"</div>":"")+"</div>"}).join("")}</script></body></html>'
+  ).setWidth(800).setHeight(700);
   SpreadsheetApp.getUi().showModalDialog(html, '🔍 Search');
 }
 
