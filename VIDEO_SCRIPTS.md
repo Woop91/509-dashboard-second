@@ -173,7 +173,7 @@ Complete recording scripts for creating video tutorials. Each script includes na
 
 > "Let me walk through the required fields:
 >
-> **Column A - Member ID**: Enter a unique ID like M000001
+> **Column A - Member ID**: Format is M + first 2 letters of first name + first 2 letters of last name + 3 random digits. For Jane Smith, that's MJASM123
 > **Column B - First Name**: Enter their first name
 > **Column C - Last Name**: Their last name
 > **Column D - Job Title**: Use the dropdown - these come from your Config sheet
@@ -272,7 +272,7 @@ Complete recording scripts for creating video tutorials. Each script includes na
 
 > "Enter the grievance details:
 >
-> **Column A - Grievance ID**: Use format G-000001
+> **Column A - Grievance ID**: Format is G + first 2 letters of member's first name + first 2 letters of last name + 3 random digits. For Jane Smith, that's GJASM456
 > **Column B - Member ID**: This must match a Member ID in the Member Directory
 > **Columns C-D**: First and Last name
 > **Column E - Status**: Start with 'Open'

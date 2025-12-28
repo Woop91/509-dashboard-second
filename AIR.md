@@ -45,7 +45,7 @@
 
 ### File Descriptions
 
-**Constants.gs** (~400 lines)
+**Constants.gs** (~500 lines)
 - `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
@@ -54,6 +54,11 @@
 - `DEFAULT_CONFIG` - Default dropdown values
 - `MULTI_SELECT_COLS` - Configuration for multi-select columns
 - `getMultiSelectConfig()` - Get multi-select config for a column
+- `generateNameBasedId(prefix, firstName, lastName, existingIds)` - Generate unique ID
+  - **Format:** `PREFIX + first 2 chars of firstName + first 2 chars of lastName + 3 random digits`
+  - **Member ID:** `MJOSM123` (M + "John Smith" → JO + SM + 123)
+  - **Grievance ID:** `GJOSM456` (G + "John Smith" → JO + SM + 456)
+  - Includes collision detection to ensure uniqueness
 - `getColumnLetter()` - Convert column number to letter
 - `getColumnNumber()` - Convert column letter to number
 - `mapMemberRow()` - Map row array to member object
@@ -174,7 +179,10 @@
   - `getTestFunctionRegistry()` - Test function registry
   - Unit tests: `testMemberColsConstants()`, `testGrievanceColsConstants()`, `testColumnLetterConversion()`, etc.
 - Validation Framework:
-  - `VALIDATION_PATTERNS` - Regex patterns for email, phone, IDs
+  - `VALIDATION_PATTERNS` - Regex patterns:
+    - `MEMBER_ID`: `/^M[A-Z]{4}\d{3}$/` (e.g., MJOSM123)
+    - `GRIEVANCE_ID`: `/^G[A-Z]{4}\d{3}$/` (e.g., GJOSM456)
+    - `EMAIL`, `PHONE_US` patterns
   - `validateEmailAddress()` - Email format validation with typo detection
   - `validatePhoneNumber()` - Phone validation with auto-formatting
   - `formatUSPhone()` - Format phone to (XXX) XXX-XXXX
