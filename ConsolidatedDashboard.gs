@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2025-12-18T03:17:02.263Z
+ * - Build Date: 2025-12-28T20:48:52.086Z
  * - Build Type: DEVELOPMENT
  * - Modules: 80 files
  * - Tests Included: Yes
@@ -106,7 +106,7 @@ var MEMBER_COLS = {
   // Section 2: Location & Work (E-G)
   WORK_LOCATION: 5,                // E
   UNIT: 6,                         // F
-  OFFICE_DAYS: 7,                  // G
+  OFFICE_DAYS: 7,                  // G - Multi-select: days member works in office
 
   // Section 3: Contact Information (H-K)
   EMAIL: 8,                        // H
@@ -119,7 +119,7 @@ var MEMBER_COLS = {
   MANAGER: 13,                     // M
   IS_STEWARD: 14,                  // N
   COMMITTEES: 15,                  // O - Multi-select: which committees steward is in
-  ASSIGNED_STEWARD: 16,            // P
+  ASSIGNED_STEWARD: 16,            // P - Multi-select: assigned steward(s)
 
   // Section 5: Engagement Metrics (Q-T) - Hidden by default
   LAST_VIRTUAL_MTG: 17,            // Q
@@ -428,7 +428,7 @@ function getMemberHeaders() {
     'Last Virtual Mtg', 'Last In-Person Mtg', 'Open Rate %', 'Volunteer Hours',
     'Interest: Local', 'Interest: Chapter', 'Interest: Allied', 'Home Town',
     'Recent Contact Date', 'Contact Steward', 'Contact Notes',
-    'Has Open Grievance?', 'Grievance Status', 'Next Deadline', 'Start Grievance'
+    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance'
   ];
 }
 
@@ -496,6 +496,90 @@ var DEFAULT_CONFIG = {
   ],
   COMM_METHODS: ['Email', 'Phone', 'Text', 'In Person']
 };
+
+/**
+ * Grievance status priority order for auto-sorting
+ * Lower number = higher priority (appears first in sorted list)
+ * Active cases appear first, resolved cases last
+ */
+var GRIEVANCE_STATUS_PRIORITY = {
+  'Open': 1,
+  'Pending Info': 2,
+  'In Arbitration': 3,
+  'Appealed': 4,
+  'Settled': 5,
+  'Won': 6,
+  'Denied': 7,
+  'Withdrawn': 8,
+  'Closed': 9
+};
+
+// ============================================================================
+// MULTI-SELECT COLUMN CONFIGURATION
+// ============================================================================
+
+/**
+ * Columns that support multiple selections (comma-separated values)
+ * Maps column number to config source column for options
+ */
+var MULTI_SELECT_COLS = {
+  // Member Directory multi-select columns
+  MEMBER_DIR: [
+    { col: MEMBER_COLS.OFFICE_DAYS, configCol: CONFIG_COLS.OFFICE_DAYS, label: 'Office Days' },
+    { col: MEMBER_COLS.PREFERRED_COMM, configCol: CONFIG_COLS.COMM_METHODS, label: 'Preferred Communication' },
+    { col: MEMBER_COLS.BEST_TIME, configCol: CONFIG_COLS.BEST_TIMES, label: 'Best Time to Contact' },
+    { col: MEMBER_COLS.COMMITTEES, configCol: CONFIG_COLS.STEWARD_COMMITTEES, label: 'Committees' },
+    { col: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, label: 'Assigned Steward(s)' }
+  ]
+};
+
+/**
+ * Check if a column in Member Directory is a multi-select column
+ * @param {number} col - Column number (1-indexed)
+ * @returns {Object|null} Multi-select config if found, null otherwise
+ */
+function getMultiSelectConfig(col) {
+  for (var i = 0; i < MULTI_SELECT_COLS.MEMBER_DIR.length; i++) {
+    if (MULTI_SELECT_COLS.MEMBER_DIR[i].col === col) {
+      return MULTI_SELECT_COLS.MEMBER_DIR[i];
+    }
+  }
+  return null;
+}
+
+// ============================================================================
+// ID GENERATION
+// ============================================================================
+
+/**
+ * Generate a name-based ID with prefix and 3 random digits
+ * Format: Prefix + First 2 chars of firstName + First 2 chars of lastName + 3 random digits
+ * Example: M + John Smith → MJOSM123, G + John Smith → GJOSM456
+ * @param {string} prefix - ID prefix ('M' for members, 'G' for grievances)
+ * @param {string} firstName - First name
+ * @param {string} lastName - Last name
+ * @param {Object} existingIds - Object with existing IDs as keys (for collision detection)
+ * @returns {string} Generated ID (uppercase)
+ */
+function generateNameBasedId(prefix, firstName, lastName, existingIds) {
+  var firstPart = (firstName || 'XX').substring(0, 2).toUpperCase();
+  var lastPart = (lastName || 'XX').substring(0, 2).toUpperCase();
+  var namePrefix = (prefix || '') + firstPart + lastPart;
+
+  var maxAttempts = 100;
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    var randomDigits = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+    var newId = namePrefix + randomDigits;
+
+    if (!existingIds || !existingIds[newId]) {
+      return newId;
+    }
+  }
+
+  // Fallback: add timestamp component if too many collisions
+  var timestamp = String(Date.now()).slice(-3);
+  return namePrefix + timestamp;
+}
 
 
 
@@ -567,6 +651,12 @@ function onOpen() {
       .addItem('🌙 Toggle Dark Mode', 'quickToggleDarkMode')
       .addItem('🔄 Reset Theme', 'resetToDefaultTheme'))
     .addSeparator()
+    .addSubMenu(ui.createMenu('☑️ Multi-Select')
+      .addItem('📝 Open Editor', 'showMultiSelectDialog')
+      .addSeparator()
+      .addItem('⚡ Enable Auto-Open', 'installMultiSelectTrigger')
+      .addItem('🚫 Disable Auto-Open', 'removeMultiSelectTrigger'))
+    .addSeparator()
     .addSubMenu(ui.createMenu('↩️ Undo/Redo')
       .addItem('↩️ Undo Last Action', 'undoLastAction')
       .addItem('↪️ Redo Action', 'redoLastAction')
@@ -593,23 +683,25 @@ function onOpen() {
     .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
     .addToUi();
 
-  // Demo Menu
-  ui.createMenu('🎭 Demo')
-    .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🌱 Seed Data')
-      .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
+  // Demo Menu - only show if demo mode is not disabled
+  if (!isDemoModeDisabled()) {
+    ui.createMenu('🎭 Demo')
+      .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
       .addSeparator()
-      .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-      .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+      .addSubMenu(ui.createMenu('🌱 Seed Data')
+        .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
+        .addSeparator()
+        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
+        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addSeparator()
+        .addItem('👥 Seed 50 Members', 'seed50Members')
+        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
       .addSeparator()
-      .addItem('👥 Seed 50 Members', 'seed50Members')
-      .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🗑️ Nuke Data')
-      .addItem('☢️ NUKE ALL DATA', 'NUKE_ALL_DATA')
-      .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
-    .addToUi();
+      .addSubMenu(ui.createMenu('🗑️ Nuke Data')
+        .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+      .addToUi();
+  }
 
   // Testing Menu (NEW)
   ui.createMenu('🧪 Testing')
@@ -710,6 +802,8 @@ function CREATE_509_DASHBOARD() {
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Interactive (views)\n\n' +
       'Plus 5 hidden calculation sheets with self-healing formulas.\n\n' +
+      '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
+      'update automatically when you edit the sheets.\n\n' +
       'Use the Demo menu to seed sample data.', ui.ButtonSet.OK);
 
   } catch (error) {
@@ -941,8 +1035,12 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('yyyy-mm-dd');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
   });
+
+  // Format Days Open (S) and Days to Deadline (U) as whole numbers
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, 998, 1).setNumberFormat('0');
+  sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, 998, 1).setNumberFormat('0');
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -1532,6 +1630,243 @@ function setMultiSelectValidation(targetSheet, targetCol, configSheet, sourceCol
 }
 
 // ============================================================================
+// MULTI-SELECT FUNCTIONALITY
+// ============================================================================
+
+// Store the target cell for multi-select dialog
+var multiSelectTarget_ = null;
+
+/**
+ * Show multi-select dialog for the current cell
+ * Called from menu or double-click on multi-select column
+ */
+function showMultiSelectDialog() {
+  var sheet = SpreadsheetApp.getActiveSheet();
+  var cell = sheet.getActiveCell();
+  var sheetName = sheet.getName();
+
+  // Only works on Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) {
+    SpreadsheetApp.getUi().alert('Multi-select is only available in Member Directory.');
+    return;
+  }
+
+  var col = cell.getColumn();
+  var row = cell.getRow();
+
+  // Must be in data row (not header)
+  if (row < 2) {
+    SpreadsheetApp.getUi().alert('Please select a data cell (row 2 or below).');
+    return;
+  }
+
+  var config = getMultiSelectConfig(col);
+  if (!config) {
+    SpreadsheetApp.getUi().alert('This column does not support multi-select.\n\nMulti-select columns: Office Days, Preferred Communication, Best Time, Committees, Assigned Steward(s)');
+    return;
+  }
+
+  // Store target cell info in PropertiesService for the callback
+  var props = PropertiesService.getDocumentProperties();
+  props.setProperty('multiSelectRow', row.toString());
+  props.setProperty('multiSelectCol', col.toString());
+
+  // Get options from Config sheet
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+  var options = getConfigValues(configSheet, config.configCol);
+
+  // Get current value and parse into array
+  var currentValue = cell.getValue() || '';
+  var currentValues = currentValue ? currentValue.split(/,\s*/) : [];
+
+  // Create and show dialog
+  var html = HtmlService.createHtmlOutputFromFile('MultiSelectDialog')
+    .setWidth(350)
+    .setHeight(420);
+
+  // Pass data to dialog
+  var dialogData = {
+    label: config.label,
+    options: options,
+    currentValues: currentValues
+  };
+
+  html.append('<script>initDialog(' + JSON.stringify(dialogData) + ');</script>');
+
+  SpreadsheetApp.getUi().showModalDialog(html, 'Multi-Select: ' + config.label);
+}
+
+/**
+ * Get values from a Config sheet column
+ * @param {Sheet} configSheet - The Config sheet
+ * @param {number} col - Column number
+ * @returns {Array} Array of non-empty values
+ */
+function getConfigValues(configSheet, col) {
+  var data = configSheet.getRange(3, col, 100, 1).getValues();
+  var values = [];
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] && data[i][0].toString().trim() !== '') {
+      values.push(data[i][0].toString());
+    }
+  }
+  return values;
+}
+
+/**
+ * Apply the multi-select value to the stored cell
+ * Called from the dialog
+ * @param {string} value - Comma-separated selected values
+ */
+function applyMultiSelectValue(value) {
+  var props = PropertiesService.getDocumentProperties();
+  var row = parseInt(props.getProperty('multiSelectRow'), 10);
+  var col = parseInt(props.getProperty('multiSelectCol'), 10);
+
+  if (!row || !col) {
+    throw new Error('Target cell not found. Please try again.');
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  sheet.getRange(row, col).setValue(value);
+
+  // Clear stored properties
+  props.deleteProperty('multiSelectRow');
+  props.deleteProperty('multiSelectCol');
+}
+
+/**
+ * Handle edit events to trigger multi-select dialog
+ * This is installed as an onEdit trigger
+ */
+function onEditMultiSelect(e) {
+  // Only process single cell edits
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) return;
+
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
+
+  // Skip header row
+  if (row < 2) return;
+
+  // Check if this is a multi-select column
+  var config = getMultiSelectConfig(col);
+  if (!config) return;
+
+  // If user typed something, show the dialog to help them select properly
+  // Only trigger if the new value isn't already comma-separated (user might be pasting)
+  var newValue = e.value || '';
+  var oldValue = e.oldValue || '';
+
+  // If user cleared the cell or pasted valid data, don't interrupt
+  if (newValue === '' || newValue.indexOf(',') !== -1) return;
+
+  // Show helpful toast
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    'Tip: Use Dashboard menu > "Multi-Select Editor" for easier selection of multiple values.',
+    config.label,
+    5
+  );
+}
+
+/**
+ * Handle selection change to auto-open multi-select dialog
+ * This is installed as an onSelectionChange trigger
+ */
+function onSelectionChangeMultiSelect(e) {
+  // Only process if we have a valid range
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only Member Directory
+  if (sheetName !== SHEETS.MEMBER_DIR) return;
+
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
+
+  // Skip header row and multi-cell selections
+  if (row < 2) return;
+  if (e.range.getNumRows() > 1 || e.range.getNumColumns() > 1) return;
+
+  // Check if this is a multi-select column
+  var config = getMultiSelectConfig(col);
+  if (!config) return;
+
+  // Check if we already showed dialog for this cell (avoid repeated opens)
+  var props = PropertiesService.getDocumentProperties();
+  var lastCell = props.getProperty('lastMultiSelectCell');
+  var currentCell = row + ',' + col;
+
+  if (lastCell === currentCell) return;
+
+  // Store current cell
+  props.setProperty('lastMultiSelectCell', currentCell);
+
+  // Auto-open the multi-select dialog
+  showMultiSelectDialog();
+}
+
+/**
+ * Install the multi-select auto-open trigger
+ * Run this once to enable auto-open on cell selection
+ */
+function installMultiSelectTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Remove existing triggers to avoid duplicates
+  var triggers = ScriptApp.getUserTriggers(ss);
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onSelectionChangeMultiSelect') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Create new trigger
+  ScriptApp.newTrigger('onSelectionChangeMultiSelect')
+    .forSpreadsheet(ss)
+    .onSelectionChange()
+    .create();
+
+  SpreadsheetApp.getUi().alert(
+    '✅ Multi-Select Auto-Open Enabled!\n\n' +
+    'Now when you click on a multi-select cell (Office Days, Preferred Comm, etc.), ' +
+    'the selection dialog will automatically appear.'
+  );
+}
+
+/**
+ * Remove the multi-select auto-open trigger
+ */
+function removeMultiSelectTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var triggers = ScriptApp.getUserTriggers(ss);
+  var removed = false;
+
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onSelectionChangeMultiSelect') {
+      ScriptApp.deleteTrigger(trigger);
+      removed = true;
+    }
+  });
+
+  if (removed) {
+    SpreadsheetApp.getUi().alert('Multi-Select auto-open has been disabled.');
+  } else {
+    SpreadsheetApp.getUi().alert('No multi-select trigger was found.');
+  }
+}
+
+// ============================================================================
 // DIAGNOSE FUNCTION
 // ============================================================================
 
@@ -1826,7 +2161,7 @@ function setupGrievanceCalcSheet() {
   sheet.clear();
 
   // Headers
-  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Next Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
+  var headers = ['Member ID', 'Has Open Grievance', 'Grievance Status', 'Days to Deadline', 'Total Count', 'Win Rate %', 'Last Grievance Date'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
@@ -1852,8 +2187,9 @@ function setupGrievanceCalcSheet() {
   var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Next Deadline
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gNextActionCol + ':' + gNextActionCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  // Column D: Next Deadline (Days to Deadline countdown)
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
@@ -2125,19 +2461,19 @@ function setupGrievanceFormulasSheet() {
     '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
   );
 
-  // Format date columns
-  sheet.getRange('E:E').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('F:F').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('G:G').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('H:H').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('I:I').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('L:L').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('M:M').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('N:N').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('O:O').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('P:P').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('Q:Q').setNumberFormat('yyyy-mm-dd');
-  sheet.getRange('S:S').setNumberFormat('yyyy-mm-dd');
+  // Format date columns (dd-mm-yyyy)
+  sheet.getRange('E:E').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('F:F').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('G:G').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('H:H').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('I:I').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('L:L').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('M:M').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('N:N').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('O:O').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('P:P').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('Q:Q').setNumberFormat('dd-mm-yyyy');
+  sheet.getRange('S:S').setNumberFormat('dd-mm-yyyy');
 
   // Hide the sheet
   sheet.hideSheet();
@@ -2148,41 +2484,31 @@ function setupGrievanceFormulasSheet() {
 /**
  * Sync calculated formulas from hidden sheet to Grievance Log
  * This is the self-healing function - it copies calculated values to the Grievance Log
+ * Member data (Name, Email, Unit, Location, Steward) is looked up directly from Member Directory
  */
 function syncGrievanceFormulasToLog() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var formulaSheet = ss.getSheetByName(SHEETS.GRIEVANCE_FORMULAS);
   var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
 
-  if (!formulaSheet || !grievanceSheet) {
+  if (!grievanceSheet || !memberSheet) {
     Logger.log('Required sheets not found for grievance formula sync');
     return;
   }
 
-  // Get formula sheet data
-  var formulaData = formulaSheet.getDataRange().getValues();
-  if (formulaData.length < 2) return;
-
-  // Create lookup map by row index
-  var lookup = {};
-  for (var i = 1; i < formulaData.length; i++) {
-    var rowIndex = formulaData[i][0]; // Column A: Row Index
-    if (rowIndex) {
-      lookup[rowIndex] = {
-        firstName: formulaData[i][2],        // C: First Name
-        lastName: formulaData[i][3],         // D: Last Name
-        filingDeadline: formulaData[i][12],  // M: Filing Deadline
-        step1Due: formulaData[i][13],        // N: Step I Due
-        step2AppealDue: formulaData[i][14],  // O: Step II Appeal Due
-        step2Due: formulaData[i][15],        // P: Step II Due
-        step3AppealDue: formulaData[i][16],  // Q: Step III Appeal Due
-        daysOpen: formulaData[i][17],        // R: Days Open
-        nextActionDue: formulaData[i][18],   // S: Next Action Due
-        daysToDeadline: formulaData[i][19],  // T: Days to Deadline
-        email: formulaData[i][20],           // U: Email
-        unit: formulaData[i][21],            // V: Unit
-        location: formulaData[i][22],        // W: Location
-        steward: formulaData[i][23]          // X: Steward
+  // Get Member Directory data and create lookup by Member ID
+  var memberData = memberSheet.getDataRange().getValues();
+  var memberLookup = {};
+  for (var i = 1; i < memberData.length; i++) {
+    var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+    if (memberId) {
+      memberLookup[memberId] = {
+        firstName: memberData[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: memberData[i][MEMBER_COLS.LAST_NAME - 1] || '',
+        email: memberData[i][MEMBER_COLS.EMAIL - 1] || '',
+        unit: memberData[i][MEMBER_COLS.UNIT - 1] || '',
+        location: memberData[i][MEMBER_COLS.WORK_LOCATION - 1] || '',
+        steward: memberData[i][MEMBER_COLS.ASSIGNED_STEWARD - 1] || ''
       };
     }
   }
@@ -2191,6 +2517,12 @@ function syncGrievanceFormulasToLog() {
   var grievanceData = grievanceSheet.getDataRange().getValues();
   if (grievanceData.length < 2) return;
 
+  var today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+  // Closed statuses that should not have Next Action Due
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+
   // Prepare updates
   var nameUpdates = [];           // Columns C-D
   var deadlineUpdates = [];       // Columns H, J, L, N, P (Filing Deadline, Step I Due, Step II Appeal Due, Step II Due, Step III Appeal Due)
@@ -2198,36 +2530,104 @@ function syncGrievanceFormulasToLog() {
   var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
 
   for (var j = 1; j < grievanceData.length; j++) {
-    var data = lookup[j] || {};
+    var row = grievanceData[j];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var memberInfo = memberLookup[memberId] || {};
 
-    // Names (C-D)
+    // Names (C-D) - from Member Directory
     nameUpdates.push([
-      data.firstName || '',
-      data.lastName || ''
+      memberInfo.firstName || '',
+      memberInfo.lastName || ''
     ]);
+
+    // Get date values from grievance row for deadline calculations
+    var incidentDate = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
+    var dateFiled = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    var step1Rcvd = row[GRIEVANCE_COLS.STEP1_RCVD - 1];
+    var step2AppealFiled = row[GRIEVANCE_COLS.STEP2_APPEAL_FILED - 1];
+    var step2Rcvd = row[GRIEVANCE_COLS.STEP2_RCVD - 1];
+    var dateClosed = row[GRIEVANCE_COLS.DATE_CLOSED - 1];
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var currentStep = row[GRIEVANCE_COLS.CURRENT_STEP - 1];
+
+    // Calculate deadline dates
+    var filingDeadline = '';
+    var step1Due = '';
+    var step2AppealDue = '';
+    var step2Due = '';
+    var step3AppealDue = '';
+
+    if (incidentDate instanceof Date) {
+      filingDeadline = new Date(incidentDate.getTime() + 21 * 24 * 60 * 60 * 1000);
+    }
+    if (dateFiled instanceof Date) {
+      step1Due = new Date(dateFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step1Rcvd instanceof Date) {
+      step2AppealDue = new Date(step1Rcvd.getTime() + 10 * 24 * 60 * 60 * 1000);
+    }
+    if (step2AppealFiled instanceof Date) {
+      step2Due = new Date(step2AppealFiled.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
+    if (step2Rcvd instanceof Date) {
+      step3AppealDue = new Date(step2Rcvd.getTime() + 30 * 24 * 60 * 60 * 1000);
+    }
 
     // Deadlines (H, J, L, N, P)
     deadlineUpdates.push([
-      data.filingDeadline || '',
-      data.step1Due || '',
-      data.step2AppealDue || '',
-      data.step2Due || '',
-      data.step3AppealDue || ''
+      filingDeadline,
+      step1Due,
+      step2AppealDue,
+      step2Due,
+      step3AppealDue
     ]);
+
+    // Calculate Days Open directly
+    var daysOpen = '';
+    if (dateFiled instanceof Date) {
+      if (dateClosed instanceof Date) {
+        daysOpen = Math.floor((dateClosed - dateFiled) / (1000 * 60 * 60 * 24));
+      } else {
+        daysOpen = Math.floor((today - dateFiled) / (1000 * 60 * 60 * 24));
+      }
+    }
+
+    // Calculate Next Action Due based on current step and status
+    var nextActionDue = '';
+    var isClosed = closedStatuses.indexOf(status) !== -1;
+
+    if (!isClosed && currentStep) {
+      if (currentStep === 'Informal' && filingDeadline) {
+        nextActionDue = filingDeadline;
+      } else if (currentStep === 'Step I' && step1Due) {
+        nextActionDue = step1Due;
+      } else if (currentStep === 'Step II' && step2Due) {
+        nextActionDue = step2Due;
+      } else if (currentStep === 'Step III' && step3AppealDue) {
+        nextActionDue = step3AppealDue;
+      }
+    }
+
+    // Calculate Days to Deadline directly
+    var daysToDeadline = '';
+    if (nextActionDue instanceof Date) {
+      var days = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
+      daysToDeadline = days < 0 ? 'Overdue' : days;
+    }
 
     // Metrics (S, T, U)
     metricsUpdates.push([
-      data.daysOpen || '',
-      data.nextActionDue || '',
-      data.daysToDeadline || ''
+      daysOpen,
+      nextActionDue,
+      daysToDeadline
     ]);
 
     // Contact info (X, Y, Z, AA)
     contactUpdates.push([
-      data.email || '',
-      data.unit || '',
-      data.location || '',
-      data.steward || ''
+      memberInfo.email || '',
+      memberInfo.unit || '',
+      memberInfo.location || '',
+      memberInfo.steward || ''
     ]);
   }
 
@@ -2256,14 +2656,80 @@ function syncGrievanceFormulasToLog() {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
       .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
 
+    // Format deadline columns as dates (dd-mm-yyyy)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
+
+    // Format Days Open (S) and Days to Deadline (U) as whole numbers
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
   }
 
   Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+}
+
+/**
+ * Auto-sort the Grievance Log by status priority
+ * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
+ * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ */
+function sortGrievanceLogByStatus() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 3) return; // Need at least 2 data rows to sort
+
+  // Get all data (excluding header row)
+  var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
+  var data = dataRange.getValues();
+
+  // Sort by status priority (column E = index 4)
+  data.sort(function(a, b) {
+    var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
+    var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
+
+    // Get priority (default to 99 for unknown statuses)
+    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
+    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
+
+    // Primary sort: by status priority (lower number = higher priority)
+    if (priorityA !== priorityB) {
+      return priorityA - priorityB;
+    }
+
+    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
+    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+    // Handle empty/non-numeric values
+    if (daysA === '' || daysA === null) daysA = 9999;
+    if (daysB === '' || daysB === null) daysB = 9999;
+
+    return daysA - daysB;
+  });
+
+  // Write sorted data back
+  dataRange.setValues(data);
+
+  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  if (lastRow >= 2) {
+    sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
+  }
+
+  Logger.log('Grievance Log sorted by status priority');
 }
 
 // ============================================================================
@@ -2377,60 +2843,6 @@ function syncMemberToGrievanceLog() {
   }
 
   Logger.log('Synced member data to ' + nameUpdates.length + ' grievances');
-}
-
-/**
- * Auto-sort the Grievance Log by status priority
- * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
- * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
- */
-function sortGrievanceLogByStatus() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-
-  if (!sheet) return;
-
-  var lastRow = sheet.getLastRow();
-  if (lastRow < 3) return; // Need at least 2 data rows to sort
-
-  // Get all data (excluding header row)
-  var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
-  var data = dataRange.getValues();
-
-  // Sort by status priority (column E = index 4)
-  data.sort(function(a, b) {
-    var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
-    var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
-
-    // Get priority (default to 99 for unknown statuses)
-    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
-    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
-
-    // Primary sort: by status priority (lower number = higher priority)
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
-    }
-
-    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
-    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-
-    // Handle empty/non-numeric values
-    if (daysA === '' || daysA === null) daysA = 9999;
-    if (daysB === '' || daysB === null) daysB = 9999;
-
-    return daysA - daysB;
-  });
-
-  // Write sorted data back
-  dataRange.setValues(data);
-
-  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
-  if (lastRow >= 2) {
-    sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
-  }
-
-  Logger.log('Grievance Log sorted by status priority');
 }
 
 // ============================================================================
@@ -3480,10 +3892,118 @@ function repairAllCheckboxes() {
  * 509 Dashboard - Seed and Nuke Functions
  *
  * Functions for seeding sample data and clearing data.
+ * Seeded data is tracked separately from manually entered data.
+ * NUKE only removes seeded data, preserving manual entries.
  *
  * @version 1.0.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
+
+// ============================================================================
+// DEMO MODE TRACKING
+// ============================================================================
+
+/**
+ * Check if demo mode has been disabled (after nuke)
+ * @returns {boolean} True if demo mode is disabled
+ */
+function isDemoModeDisabled() {
+  var props = PropertiesService.getScriptProperties();
+  return props.getProperty('DEMO_MODE_DISABLED') === 'true';
+}
+
+/**
+ * Disable demo mode permanently (called after nuke)
+ */
+function disableDemoMode() {
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('DEMO_MODE_DISABLED', 'true');
+  // Clear tracked IDs since they're no longer needed
+  props.deleteProperty('SEEDED_MEMBER_IDS');
+  props.deleteProperty('SEEDED_GRIEVANCE_IDS');
+}
+
+/**
+ * Track a seeded member ID
+ * @param {string} memberId - The member ID to track
+ */
+function trackSeededMemberId(memberId) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  if (ids.indexOf(memberId) === -1) {
+    ids.push(memberId);
+    props.setProperty('SEEDED_MEMBER_IDS', ids.join(','));
+  }
+}
+
+/**
+ * Track a seeded grievance ID
+ * @param {string} grievanceId - The grievance ID to track
+ */
+function trackSeededGrievanceId(grievanceId) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  if (ids.indexOf(grievanceId) === -1) {
+    ids.push(grievanceId);
+    props.setProperty('SEEDED_GRIEVANCE_IDS', ids.join(','));
+  }
+}
+
+/**
+ * Get all tracked seeded member IDs
+ * @returns {Object} Object with member IDs as keys for quick lookup
+ */
+function getSeededMemberIds() {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  var lookup = {};
+  ids.forEach(function(id) { if (id) lookup[id] = true; });
+  return lookup;
+}
+
+/**
+ * Get all tracked seeded grievance IDs
+ * @returns {Object} Object with grievance IDs as keys for quick lookup
+ */
+function getSeededGrievanceIds() {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  var lookup = {};
+  ids.forEach(function(id) { if (id) lookup[id] = true; });
+  return lookup;
+}
+
+/**
+ * Batch track multiple seeded member IDs (more efficient than individual calls)
+ * @param {Array<string>} memberIds - Array of member IDs to track
+ */
+function trackSeededMemberIdsBatch(memberIds) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_MEMBER_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  memberIds.forEach(function(id) {
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  });
+  props.setProperty('SEEDED_MEMBER_IDS', ids.join(','));
+}
+
+/**
+ * Batch track multiple seeded grievance IDs (more efficient than individual calls)
+ * @param {Array<string>} grievanceIds - Array of grievance IDs to track
+ */
+function trackSeededGrievanceIdsBatch(grievanceIds) {
+  var props = PropertiesService.getScriptProperties();
+  var existing = props.getProperty('SEEDED_GRIEVANCE_IDS') || '';
+  var ids = existing ? existing.split(',') : [];
+  grievanceIds.forEach(function(id) {
+    if (id && ids.indexOf(id) === -1) ids.push(id);
+  });
+  props.setProperty('SEEDED_GRIEVANCE_IDS', ids.join(','));
+}
 
 // ============================================================================
 // SEED FUNCTIONS
@@ -3678,18 +4198,31 @@ function SEED_MEMBERS(count) {
   var commMethods = DEFAULT_CONFIG.COMM_METHODS;
 
   var startRow = Math.max(sheet.getLastRow() + 1, 2);
-  var existingCount = startRow - 2;
+
+  // Build set of existing member IDs to prevent duplicates
+  var existingMemberIds = {};
+  if (startRow > 2) {
+    var existingData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingMemberIds[existingData[e][0]] = true;
+      }
+    }
+  }
 
   var rows = [];
+  var seededIds = []; // Track IDs for this seeding session
   var batchSize = 50;
   var today = new Date();
 
   for (var i = 0; i < count; i++) {
-    var memberId = 'M' + String(existingCount + i + 1).padStart(6, '0');
     var firstName = randomChoice(firstNames);
     var lastName = randomChoice(lastNames);
-    var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + (existingCount + i + 1) + '@example.org';
-    var phone = '617-555-' + String(1000 + i).padStart(4, '0');
+    var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
+    existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
+    seededIds.push(memberId); // Track for persistence
+    var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
+    var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
     var assignedSteward = randomChoice(stewards);
 
@@ -3736,6 +4269,9 @@ function SEED_MEMBERS(count) {
 
   // Sync grievance data to Member Directory (populates AB-AD: Has Open Grievance, Status, Next Deadline)
   syncGrievanceToMemberDirectory();
+
+  // Track seeded IDs for later cleanup (nuke only removes seeded data)
+  trackSeededMemberIdsBatch(seededIds);
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
 }
@@ -3835,9 +4371,20 @@ function SEED_GRIEVANCES(count) {
   if (stewards.length === 0) stewards = ['Mary Steward'];
 
   var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
-  var existingCount = startRow - 2;
+
+  // Build set of existing grievance IDs to prevent duplicates
+  var existingGrievanceIds = {};
+  if (startRow > 2) {
+    var existingData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingGrievanceIds[existingData[e][0]] = true;
+      }
+    }
+  }
 
   var rows = [];
+  var seededIds = []; // Track IDs for this seeding session
   var batchSize = 25;
   var today = new Date();
 
@@ -3878,7 +4425,10 @@ function SEED_GRIEVANCES(count) {
     var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
     var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
 
-    var grievanceId = 'G-' + String(existingCount + i + 1).padStart(5, '0');
+    // Generate grievance ID using member's name with G prefix
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
+    existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
+    seededIds.push(grievanceId); // Track for persistence
 
     // Distribute incident dates across the 90-day range with some randomness
     // Each grievance gets a "slot" in the timeline, with +/- 2 days variation
@@ -3925,6 +4475,9 @@ function SEED_GRIEVANCES(count) {
 
   // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
   syncGrievanceFormulasToLog();
+
+  // Track seeded IDs for later cleanup (nuke only removes seeded data)
+  trackSeededGrievanceIdsBatch(seededIds);
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }
@@ -4232,20 +4785,34 @@ function seed25Grievances() {
 // ============================================================================
 
 /**
- * Clear all member and grievance data
+ * Delete only seeded data (preserves manually entered data)
+ * After completion, disables demo mode permanently and removes Demo menu
  */
-function NUKE_ALL_DATA() {
+function NUKE_SEEDED_DATA() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // Check if already disabled
+  if (isDemoModeDisabled()) {
+    ui.alert('Demo Mode Disabled', 'Demo mode has already been disabled. The Demo menu will be removed on next refresh.', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get counts of seeded data
+  var seededMemberIds = getSeededMemberIds();
+  var seededGrievanceIds = getSeededGrievanceIds();
+  var memberCount = Object.keys(seededMemberIds).length;
+  var grievanceCount = Object.keys(seededGrievanceIds).length;
+
   var response = ui.alert(
-    '☢️ NUKE ALL DATA',
-    '⚠️ WARNING: This will permanently delete:\n\n' +
-    '• All members in Member Directory\n' +
-    '• All grievances in Grievance Log\n' +
-    '• All Config dropdown values\n\n' +
-    'This cannot be undone!\n\n' +
-    'Are you absolutely sure?',
+    '☢️ NUKE SEEDED DATA',
+    '⚠️ This will permanently delete ONLY seeded/demo data:\n\n' +
+    '• ' + memberCount + ' seeded members\n' +
+    '• ' + grievanceCount + ' seeded grievances\n' +
+    '• Config dropdown values\n\n' +
+    '✅ Manually entered data will be PRESERVED.\n\n' +
+    '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
+    'Continue?',
     ui.ButtonSet.YES_NO
   );
 
@@ -4256,7 +4823,10 @@ function NUKE_ALL_DATA() {
   // Double confirm
   var response2 = ui.alert(
     '☢️ FINAL CONFIRMATION',
-    'Type "NUKE" to confirm deletion of all data.',
+    'This will:\n' +
+    '1. Delete all seeded data\n' +
+    '2. Permanently disable the Demo menu\n\n' +
+    'Are you sure?',
     ui.ButtonSet.YES_NO
   );
 
@@ -4264,29 +4834,57 @@ function NUKE_ALL_DATA() {
     return;
   }
 
-  ss.toast('Nuking all data...', '☢️ NUKE', 3);
+  ss.toast('Nuking seeded data...', '☢️ NUKE', 3);
 
   try {
-    // Clear Member Directory (keep headers)
-    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-    if (memberSheet && memberSheet.getLastRow() > 1) {
-      memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, memberSheet.getLastColumn()).clear();
-    }
+    var deletedMembers = 0;
+    var deletedGrievances = 0;
 
-    // Clear Grievance Log (keep headers)
+    // Delete seeded grievances first (they reference members)
     var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
     if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
-      grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, grievanceSheet.getLastColumn()).clear();
+      var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
+      // Delete from bottom up to preserve row indices
+      for (var g = grievanceData.length - 1; g >= 0; g--) {
+        var gId = grievanceData[g][0];
+        if (gId && seededGrievanceIds[gId]) {
+          grievanceSheet.deleteRow(g + 2);
+          deletedGrievances++;
+        }
+      }
+    }
+
+    // Delete seeded members
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (memberSheet && memberSheet.getLastRow() > 1) {
+      var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
+      // Delete from bottom up to preserve row indices
+      for (var m = memberData.length - 1; m >= 0; m--) {
+        var mId = memberData[m][0];
+        if (mId && seededMemberIds[mId]) {
+          memberSheet.deleteRow(m + 2);
+          deletedMembers++;
+        }
+      }
     }
 
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
 
-    ss.toast('All data has been nuked!', '☢️ Complete', 5);
-    ui.alert('☢️ Complete', 'All data has been deleted.', ui.ButtonSet.OK);
+    // Disable demo mode permanently
+    disableDemoMode();
+
+    ss.toast('Seeded data nuked! Demo mode disabled.', '☢️ Complete', 5);
+    ui.alert('☢️ Complete',
+      'Seeded data has been deleted:\n' +
+      '• ' + deletedMembers + ' members removed\n' +
+      '• ' + deletedGrievances + ' grievances removed\n\n' +
+      'Demo mode has been permanently disabled.\n' +
+      'Refresh the page to remove the Demo menu.',
+      ui.ButtonSet.OK);
 
   } catch (error) {
-    Logger.log('Error in NUKE_ALL_DATA: ' + error.message);
+    Logger.log('Error in NUKE_SEEDED_DATA: ' + error.message);
     ui.alert('❌ Error', 'Nuke failed: ' + error.message, ui.ButtonSet.OK);
   }
 }
