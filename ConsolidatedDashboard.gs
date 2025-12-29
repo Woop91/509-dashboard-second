@@ -622,7 +622,8 @@ function onOpen() {
       .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
       .addSeparator()
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
-      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown'))
+      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+      .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
     .addToUi();
 
   // Sheet Manager Menu
@@ -2522,6 +2523,57 @@ function setupGrievanceMemberDropdown() {
   ss.toast('Member ID dropdown set up!', '✅ Success', 3);
 }
 
+/**
+ * Fix existing "Overdue" text in Days to Deadline column
+ * Converts text back to negative numbers for proper counting
+ */
+function fixOverdueTextToNumbers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log not found.');
+    return;
+  }
+
+  ss.toast('Fixing overdue data...', '🔧 Fix', 3);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  var daysCol = GRIEVANCE_COLS.DAYS_TO_DEADLINE;
+  var nextActionCol = GRIEVANCE_COLS.NEXT_ACTION_DUE;
+
+  var daysData = sheet.getRange(2, daysCol, lastRow - 1, 1).getValues();
+  var nextActionData = sheet.getRange(2, nextActionCol, lastRow - 1, 1).getValues();
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var updates = [];
+  var fixCount = 0;
+
+  for (var i = 0; i < daysData.length; i++) {
+    var currentValue = daysData[i][0];
+    var nextAction = nextActionData[i][0];
+
+    if (currentValue === 'Overdue' && nextAction instanceof Date) {
+      var days = Math.floor((nextAction - today) / (1000 * 60 * 60 * 24));
+      updates.push([days]);
+      fixCount++;
+    } else {
+      updates.push([currentValue]);
+    }
+  }
+
+  if (fixCount > 0) {
+    sheet.getRange(2, daysCol, updates.length, 1).setValues(updates);
+    ss.toast('Fixed ' + fixCount + ' overdue entries!', '✅ Success', 3);
+  } else {
+    ss.toast('No "Overdue" text found to fix.', '✅ All Good', 3);
+  }
+}
+
 function rebuildDashboard() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   ss.toast('Rebuilding dashboard sheets...', '🔄 Rebuild', 3);
@@ -3064,11 +3116,11 @@ function syncGrievanceFormulasToLog() {
       }
     }
 
-    // Calculate Days to Deadline directly
+    // Calculate Days to Deadline directly (keep negative numbers for overdue)
     var daysToDeadline = '';
     if (nextActionDue instanceof Date) {
       var days = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
-      daysToDeadline = days < 0 ? 'Overdue' : days;
+      daysToDeadline = days;  // Keep as number (negative = overdue)
     }
 
     // Metrics (S, T, U)
@@ -3533,7 +3585,7 @@ function setupDashboardSummaryCalcSheet() {
     ['Withdrawn', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")', 'Cases withdrawn'],
     ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*"))*100,1),0)', 'Wins / (Wins + Settled + Denied)'],
     ['Avg Days to Resolution', '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)', 'Average days for closed cases'],
-    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")', 'Cases past deadline'],
+    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"Overdue")', 'Cases past deadline'],
     ['Due This Week', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")', 'Cases due in next 7 days'],
     ['Filed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())', 'Grievances filed this month'],
     ['Closed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())', 'Grievances closed this month']
@@ -4099,7 +4151,7 @@ function setupDashboardCalcSheet() {
     ['Withdrawn', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")', 'Cases withdrawn'],
     ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*"))*100,1),0)', 'Wins / (Wins + Settled + Denied)'],
     ['Avg Days to Resolution', '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)', 'Average days for closed cases'],
-    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")', 'Cases past deadline'],
+    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"Overdue")', 'Cases past deadline'],
     ['Due This Week', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")', 'Cases due in next 7 days'],
     ['Filed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())', 'Grievances filed this month'],
     ['Closed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())', 'Grievances closed this month']
