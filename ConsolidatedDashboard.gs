@@ -498,35 +498,35 @@ var DEFAULT_CONFIG = {
 };
 
 /**
- * Grievance status priority order for auto-sorting
- * Lower number = higher priority (appears first in sorted list)
- * Active cases appear first, resolved cases last
+ * Grievance STATUS priority for auto-sorting
+ * Status = workflow state only (where the case is in the process)
+ * Lower number = higher priority (appears first)
  */
 var GRIEVANCE_STATUS_PRIORITY = {
   'Open': 1,
   'Pending Info': 2,
   'In Arbitration': 3,
   'Appealed': 4,
-  'Settled': 5,
-  'Won': 6,
-  'Denied': 7,
-  'Withdrawn': 8,
-  'Closed': 9
+  'Closed': 5
 };
 
 /**
- * Resolution priority order for auto-sorting resolved grievances
- * Lower number = higher priority (appears first in sorted list)
+ * Grievance RESOLUTION priority for auto-sorting closed cases
+ * Resolution = outcome (how the case ended, only when Status = Closed)
+ * Lower number = higher priority (appears first)
  */
 var GRIEVANCE_RESOLUTION_PRIORITY = {
   'Won - Full': 1,
   'Won - Partial': 2,
-  'Settled - Favorable': 3,
-  'Settled - Neutral': 4,
-  'Denied - Appealing': 5,
-  'Denied - Final': 6,
-  'Withdrawn': 7,
-  'Pending': 8,
+  'Won': 3,
+  'Settled - Favorable': 4,
+  'Settled - Neutral': 5,
+  'Settled': 6,
+  'Denied - Appealing': 7,
+  'Denied - Final': 8,
+  'Denied': 9,
+  'Withdrawn': 10,
+  'Pending': 50,
   '': 99
 };
 
@@ -3163,11 +3163,12 @@ function syncGrievanceFormulasToLog() {
 }
 
 /**
- * Auto-sort the Grievance Log by status and resolution priority
+ * Auto-sort the Grievance Log
+ *
  * Sort order:
- *   1. Status priority (Open first, Closed last)
- *   2. Resolution priority (Won - Full first, then other resolutions)
- *   3. Days to Deadline (most urgent first)
+ *   1. STATUS (workflow state): Open → Pending Info → In Arbitration → Appealed → Closed
+ *   2. For active cases: Days to Deadline (most urgent first)
+ *   3. For closed cases: RESOLUTION (outcome): Won → Settled → Denied → Withdrawn
  */
 function sortGrievanceLogByStatus() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -3182,55 +3183,52 @@ function sortGrievanceLogByStatus() {
   var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
   var data = dataRange.getValues();
 
-  // Sort by status priority, then resolution, then deadline
   data.sort(function(a, b) {
     var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
     var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
 
-    // Get status priority (default to 99 for unknown statuses)
+    // Get status priority (default to 99 for unknown)
     var statusPriorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
     var statusPriorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
 
-    // Primary sort: by status priority (lower number = higher priority)
+    // 1. Primary sort: by STATUS (workflow state)
     if (statusPriorityA !== statusPriorityB) {
       return statusPriorityA - statusPriorityB;
     }
 
-    // Secondary sort: by Resolution (column AB = index 27)
+    // 2. For ACTIVE cases (not Closed): sort by Days to Deadline
+    if (statusA !== 'Closed') {
+      var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+      var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+      if (daysA === '' || daysA === null || isNaN(daysA)) daysA = 9999;
+      if (daysB === '' || daysB === null || isNaN(daysB)) daysB = 9999;
+
+      return daysA - daysB;
+    }
+
+    // 3. For CLOSED cases: sort by RESOLUTION (outcome)
     var resolutionA = a[GRIEVANCE_COLS.RESOLUTION - 1] || '';
     var resolutionB = b[GRIEVANCE_COLS.RESOLUTION - 1] || '';
 
-    // Get resolution priority (default to 50 for unknown resolutions)
     var resPriorityA = GRIEVANCE_RESOLUTION_PRIORITY[resolutionA];
     var resPriorityB = GRIEVANCE_RESOLUTION_PRIORITY[resolutionB];
 
-    // If exact match not found, check for partial matches
+    // Partial match fallback
     if (resPriorityA === undefined) {
-      if (resolutionA.indexOf('Won') >= 0) resPriorityA = 2;
-      else if (resolutionA.indexOf('Settled') >= 0) resPriorityA = 4;
-      else if (resolutionA.indexOf('Denied') >= 0) resPriorityA = 6;
+      if (resolutionA.indexOf('Won') >= 0) resPriorityA = 3;
+      else if (resolutionA.indexOf('Settled') >= 0) resPriorityA = 6;
+      else if (resolutionA.indexOf('Denied') >= 0) resPriorityA = 9;
       else resPriorityA = 50;
     }
     if (resPriorityB === undefined) {
-      if (resolutionB.indexOf('Won') >= 0) resPriorityB = 2;
-      else if (resolutionB.indexOf('Settled') >= 0) resPriorityB = 4;
-      else if (resolutionB.indexOf('Denied') >= 0) resPriorityB = 6;
+      if (resolutionB.indexOf('Won') >= 0) resPriorityB = 3;
+      else if (resolutionB.indexOf('Settled') >= 0) resPriorityB = 6;
+      else if (resolutionB.indexOf('Denied') >= 0) resPriorityB = 9;
       else resPriorityB = 50;
     }
 
-    if (resPriorityA !== resPriorityB) {
-      return resPriorityA - resPriorityB;
-    }
-
-    // Tertiary sort: by Days to Deadline (column U) - most urgent first
-    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-
-    // Handle empty/non-numeric values
-    if (daysA === '' || daysA === null || isNaN(daysA)) daysA = 9999;
-    if (daysB === '' || daysB === null || isNaN(daysB)) daysB = 9999;
-
-    return daysA - daysB;
+    return resPriorityA - resPriorityB;
   });
 
   // Write sorted data back
@@ -3241,7 +3239,7 @@ function sortGrievanceLogByStatus() {
     sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
-  Logger.log('Grievance Log sorted by status and resolution priority');
+  Logger.log('Grievance Log sorted by status and resolution');
 }
 
 // ============================================================================
