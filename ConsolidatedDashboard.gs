@@ -619,7 +619,10 @@ function onOpen() {
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
-      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'))
+      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
+      .addSeparator()
+      .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
+      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown'))
     .addToUi();
 
   // Sheet Manager Menu
@@ -790,6 +793,11 @@ function CREATE_509_DASHBOARD() {
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
     setupDataValidations();
+
+    // Setup live grievance links and member dropdown
+    ss.toast('Setting up live data links...', '🏗️ Progress', 3);
+    setupLiveGrievanceFormulas();
+    setupGrievanceMemberDropdown();
 
     // Move Config to first position
     var configSheet = ss.getSheetByName(SHEETS.CONFIG);
@@ -1807,6 +1815,47 @@ function onEdit(e) {
   }
 }
 
+/**
+ * onSelectionChange trigger - highlights entire row when cell selected
+ * Works on Member Directory and Grievance Log sheets
+ */
+function onSelectionChange(e) {
+  // Safety check
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only apply to Member Directory and Grievance Log
+  if (sheetName !== SHEETS.MEMBER_DIR && sheetName !== SHEETS.GRIEVANCE_LOG) return;
+
+  var row = e.range.getRow();
+
+  // Don't highlight header row
+  if (row === 1) return;
+
+  // Get the previous highlighted row from properties
+  var props = PropertiesService.getDocumentProperties();
+  var propKey = 'highlightedRow_' + sheetName;
+  var previousRow = props.getProperty(propKey);
+
+  // Clear previous highlight
+  if (previousRow && previousRow !== String(row)) {
+    var prevRowNum = parseInt(previousRow);
+    var lastCol = sheet.getLastColumn();
+    if (lastCol > 0) {
+      sheet.getRange(prevRowNum, 1, 1, lastCol).setBackground(null);
+    }
+  }
+
+  // Highlight current row (soft yellow)
+  var lastCol = sheet.getLastColumn();
+  if (lastCol > 0 && row > 1) {
+    sheet.getRange(row, 1, 1, lastCol).setBackground('#FFF9C4');
+    props.setProperty(propKey, String(row));
+  }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
@@ -2384,6 +2433,93 @@ function refreshMemberDirectoryFormulas() {
   repairMemberCheckboxes();
 
   ss.toast('Member Directory refreshed!', '✅ Success', 3);
+}
+
+/**
+ * Setup live formulas in Member Directory for grievance data (AB-AD columns)
+ * These formulas auto-update when Grievance Log changes
+ */
+function setupLiveGrievanceFormulas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!memberSheet || !grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  ss.toast('Setting up live grievance formulas...', '🔄 Setup', 3);
+
+  // Get column letters for Grievance Log
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
+  var gNextActionCol = getColumnLetter(GRIEVANCE_COLS.NEXT_ACTION_DUE);
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+
+  // Get column letter for Member ID in Member Directory
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+
+  // Grievance Log range reference
+  var gLogRange = '\'' + SHEETS.GRIEVANCE_LOG + '\'!';
+
+  // Column AB: Has Open Grievance (Yes/No)
+  // Checks if there's any grievance with status "Open" or "Pending Info" for this member
+  var hasOpenFormula = '=IF(' + mMemberIdCol + '2="","",IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No"))';
+  memberSheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
+
+  // Column AC: Grievance Status (most urgent open status)
+  // Returns the status of the most urgent open grievance (Open > Pending Info)
+  var statusFormula = '=IF(' + mMemberIdCol + '2="","",IFERROR(IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info","")),""))';
+  memberSheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
+
+  // Column AD: Days to Deadline (minimum days to deadline for open grievances)
+  // Shows the most urgent deadline across all open grievances for this member
+  var deadlineFormula = '=IF(' + mMemberIdCol + '2="","",IFERROR(MINIFS(' + gLogRange + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Closed",' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Settled",' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",' + gLogRange + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">0"),""))';
+  memberSheet.getRange(2, MEMBER_COLS.NEXT_DEADLINE).setFormula(deadlineFormula);
+
+  // Copy formulas down for all rows
+  var lastRow = Math.max(memberSheet.getLastRow(), 100);
+  if (lastRow > 2) {
+    memberSheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE, 1, 3).copyTo(
+      memberSheet.getRange(3, MEMBER_COLS.HAS_OPEN_GRIEVANCE, lastRow - 2, 3),
+      SpreadsheetApp.CopyPasteType.PASTE_FORMULA
+    );
+  }
+
+  ss.toast('Live grievance formulas set up!', '✅ Success', 3);
+}
+
+/**
+ * Setup Member ID dropdown in Grievance Log from Member Directory
+ * This allows users to select a member when creating a grievance
+ */
+function setupGrievanceMemberDropdown() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!memberSheet || !grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  ss.toast('Setting up Member ID dropdown...', '🔄 Setup', 3);
+
+  // Get column letter for Member ID in Member Directory
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+
+  // Create data validation rule that references Member Directory Member IDs
+  var memberIdRange = '\'' + SHEETS.MEMBER_DIR + '\'!' + mMemberIdCol + '2:' + mMemberIdCol;
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(memberSheet.getRange(mMemberIdCol + '2:' + mMemberIdCol), true)
+    .setAllowInvalid(true)  // Allow manual entry too
+    .build();
+
+  // Apply to Member ID column in Grievance Log (column B, rows 2-1000)
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).setDataValidation(rule);
+
+  ss.toast('Member ID dropdown set up!', '✅ Success', 3);
 }
 
 function rebuildDashboard() {
