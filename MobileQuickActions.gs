@@ -753,6 +753,30 @@ function getInteractiveDashboardHtml() {
     'function renderAnalytics(data){' +
     '  var c=document.getElementById("analytics-charts");' +
     '  var html="";' +
+    // Member Directory Stats section
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">👥 Member Directory Statistics</div>";' +
+    '  html+="<div class=\\"stats-grid\\" style=\\"margin-bottom:15px\\">";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.total+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.memberStats.stewards+"</div><div class=\\"stat-label\\">Stewards</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.withOpenGrievance+"</div><div class=\\"stat-label\\">With Open Case</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.stewardRatio+"</div><div class=\\"stat-label\\">Member:Steward</div></div>";' +
+    '  html+="</div></div>";' +
+    // Members by Location chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Members by Location</div><div class=\\"bar-chart\\">";' +
+    '  var maxLoc=Math.max.apply(null,data.memberStats.byLocation.map(function(l){return l.count}))||1;' +
+    '  data.memberStats.byLocation.forEach(function(loc){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+loc.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(loc.count/maxLoc*100)+"%25;background:#059669\\"></div></div><div class=\\"bar-value\\">"+loc.count+"</div></div>";' +
+    '  });' +
+    '  if(data.memberStats.byLocation.length===0)html+="<div class=\\"empty-state\\">No location data</div>";' +
+    '  html+="</div></div>";' +
+    // Members by Unit chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🏢 Members by Unit</div><div class=\\"bar-chart\\">";' +
+    '  var maxUnit=Math.max.apply(null,data.memberStats.byUnit.map(function(u){return u.count}))||1;' +
+    '  data.memberStats.byUnit.forEach(function(unit){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+unit.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(unit.count/maxUnit*100)+"%25;background:#1a73e8\\"></div></div><div class=\\"bar-value\\">"+unit.count+"</div></div>";' +
+    '  });' +
+    '  if(data.memberStats.byUnit.length===0)html+="<div class=\\"empty-state\\">No unit data</div>";' +
+    '  html+="</div></div>";' +
     // Status distribution chart
     '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Grievance Status Distribution</div><div class=\\"bar-chart\\">";' +
     '  var total=data.statusCounts.open+data.statusCounts.pending+data.statusCounts.closed;' +
@@ -881,44 +905,101 @@ function getInteractiveGrievanceData() {
  */
 function getInteractiveAnalyticsData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
 
   var data = {
+    memberStats: {
+      total: 0,
+      stewards: 0,
+      withOpenGrievance: 0,
+      stewardRatio: '0:0',
+      byLocation: [],
+      byUnit: []
+    },
     statusCounts: { open: 0, pending: 0, closed: 0 },
     topCategories: [],
     resolutions: { won: 0, settled: 0, withdrawn: 0, denied: 0 }
   };
 
-  if (!sheet || sheet.getLastRow() <= 1) return data;
+  // Get Member Directory statistics
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, MEMBER_COLS.HAS_OPEN_GRIEVANCE).getValues();
+    var locationMap = {};
+    var unitMap = {};
 
-  var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
-  var categoryMap = {};
+    memberData.forEach(function(row) {
+      if (!row[MEMBER_COLS.MEMBER_ID - 1]) return; // Skip empty rows
 
-  rows.forEach(function(row) {
-    var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
-    var category = row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'Other';
-    var resolution = (row[GRIEVANCE_COLS.RESOLUTION - 1] || '').toLowerCase();
+      data.memberStats.total++;
 
-    // Status counts
-    if (status === 'Open') data.statusCounts.open++;
-    else if (status === 'Pending Info') data.statusCounts.pending++;
-    else data.statusCounts.closed++;
+      // Count stewards
+      if (row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes') data.memberStats.stewards++;
 
-    // Category counts
-    if (!categoryMap[category]) categoryMap[category] = 0;
-    categoryMap[category]++;
+      // Count members with open grievances
+      if (row[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1] === 'Yes') data.memberStats.withOpenGrievance++;
 
-    // Resolution counts
-    if (resolution.indexOf('won') >= 0) data.resolutions.won++;
-    else if (resolution.indexOf('settled') >= 0) data.resolutions.settled++;
-    else if (resolution.indexOf('withdrawn') >= 0) data.resolutions.withdrawn++;
-    else if (resolution.indexOf('denied') >= 0 || resolution.indexOf('lost') >= 0) data.resolutions.denied++;
-  });
+      // Count by location
+      var location = row[MEMBER_COLS.WORK_LOCATION - 1] || 'Unknown';
+      if (!locationMap[location]) locationMap[location] = 0;
+      locationMap[location]++;
 
-  // Get top 5 categories
-  data.topCategories = Object.keys(categoryMap).map(function(key) {
-    return { name: key, count: categoryMap[key] };
-  }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+      // Count by unit
+      var unit = row[MEMBER_COLS.UNIT - 1] || 'Unknown';
+      if (!unitMap[unit]) unitMap[unit] = 0;
+      unitMap[unit]++;
+    });
+
+    // Calculate steward ratio
+    if (data.memberStats.stewards > 0) {
+      var ratio = Math.round(data.memberStats.total / data.memberStats.stewards);
+      data.memberStats.stewardRatio = ratio + ':1';
+    } else {
+      data.memberStats.stewardRatio = 'N/A';
+    }
+
+    // Get top 5 locations
+    data.memberStats.byLocation = Object.keys(locationMap).map(function(key) {
+      return { name: key, count: locationMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+
+    // Get top 5 units
+    data.memberStats.byUnit = Object.keys(unitMap).map(function(key) {
+      return { name: key, count: unitMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+  }
+
+  // Get Grievance Log statistics
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+    var rows = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
+    var categoryMap = {};
+
+    rows.forEach(function(row) {
+      var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
+      var category = row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'Other';
+      var resolution = (row[GRIEVANCE_COLS.RESOLUTION - 1] || '').toLowerCase();
+
+      // Status counts
+      if (status === 'Open') data.statusCounts.open++;
+      else if (status === 'Pending Info') data.statusCounts.pending++;
+      else data.statusCounts.closed++;
+
+      // Category counts
+      if (!categoryMap[category]) categoryMap[category] = 0;
+      categoryMap[category]++;
+
+      // Resolution counts
+      if (resolution.indexOf('won') >= 0) data.resolutions.won++;
+      else if (resolution.indexOf('settled') >= 0) data.resolutions.settled++;
+      else if (resolution.indexOf('withdrawn') >= 0) data.resolutions.withdrawn++;
+      else if (resolution.indexOf('denied') >= 0 || resolution.indexOf('lost') >= 0) data.resolutions.denied++;
+    });
+
+    // Get top 5 categories
+    data.topCategories = Object.keys(categoryMap).map(function(key) {
+      return { name: key, count: categoryMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+  }
 
   return data;
 }
