@@ -2084,12 +2084,16 @@ function showMultiSelectDialog() {
 
 /**
  * Get values from a Config sheet column
+ * Note: Row 1 = section headers, Row 2 = column headers, Row 3+ = data
  * @param {Sheet} configSheet - The Config sheet
  * @param {number} col - Column number
  * @returns {Array} Array of non-empty values
  */
 function getConfigValues(configSheet, col) {
-  var data = configSheet.getRange(3, col, 100, 1).getValues();
+  var lastRow = configSheet.getLastRow();
+  if (lastRow < 3) return [];
+
+  var data = configSheet.getRange(3, col, lastRow - 2, 1).getValues();
   var values = [];
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() !== '') {
@@ -5275,8 +5279,8 @@ function NUKE_CONFIG_DROPDOWNS() {
 
   userColumns.forEach(function(col) {
     var lastRow = sheet.getLastRow();
-    if (lastRow > 1) {
-      sheet.getRange(2, col, lastRow - 1, 1).clear();
+    if (lastRow > 2) {
+      sheet.getRange(3, col, lastRow - 2, 1).clear();
     }
   });
 
@@ -5288,13 +5292,14 @@ function NUKE_CONFIG_DROPDOWNS() {
 // ============================================================================
 
 /**
- * Get values from a Config column (excluding header and empty cells)
+ * Get values from a Config column (excluding headers and empty cells)
+ * Note: Row 1 = section headers, Row 2 = column headers, Row 3+ = data
  */
 function getConfigValues(configSheet, column) {
   var lastRow = configSheet.getLastRow();
-  if (lastRow < 2) return [];
+  if (lastRow < 3) return [];
 
-  var values = configSheet.getRange(2, column, lastRow - 1, 1).getValues();
+  var values = configSheet.getRange(3, column, lastRow - 2, 1).getValues();
   return values
     .map(function(row) { return row[0]; })
     .filter(function(v) { return v !== '' && v !== null; });
