@@ -514,6 +514,22 @@ var GRIEVANCE_STATUS_PRIORITY = {
   'Closed': 9
 };
 
+/**
+ * Resolution priority order for auto-sorting resolved grievances
+ * Lower number = higher priority (appears first in sorted list)
+ */
+var GRIEVANCE_RESOLUTION_PRIORITY = {
+  'Won - Full': 1,
+  'Won - Partial': 2,
+  'Settled - Favorable': 3,
+  'Settled - Neutral': 4,
+  'Denied - Appealing': 5,
+  'Denied - Final': 6,
+  'Withdrawn': 7,
+  'Pending': 8,
+  '': 99
+};
+
 // ============================================================================
 // MULTI-SELECT COLUMN CONFIGURATION
 // ============================================================================
@@ -3147,9 +3163,11 @@ function syncGrievanceFormulasToLog() {
 }
 
 /**
- * Auto-sort the Grievance Log by status priority
- * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
- * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ * Auto-sort the Grievance Log by status and resolution priority
+ * Sort order:
+ *   1. Status priority (Open first, Closed last)
+ *   2. Resolution priority (Won - Full first, then other resolutions)
+ *   3. Days to Deadline (most urgent first)
  */
 function sortGrievanceLogByStatus() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -3164,27 +3182,53 @@ function sortGrievanceLogByStatus() {
   var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
   var data = dataRange.getValues();
 
-  // Sort by status priority (column E = index 4)
+  // Sort by status priority, then resolution, then deadline
   data.sort(function(a, b) {
     var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
     var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
 
-    // Get priority (default to 99 for unknown statuses)
-    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
-    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
+    // Get status priority (default to 99 for unknown statuses)
+    var statusPriorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
+    var statusPriorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
 
     // Primary sort: by status priority (lower number = higher priority)
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
+    if (statusPriorityA !== statusPriorityB) {
+      return statusPriorityA - statusPriorityB;
     }
 
-    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
+    // Secondary sort: by Resolution (column AB = index 27)
+    var resolutionA = a[GRIEVANCE_COLS.RESOLUTION - 1] || '';
+    var resolutionB = b[GRIEVANCE_COLS.RESOLUTION - 1] || '';
+
+    // Get resolution priority (default to 50 for unknown resolutions)
+    var resPriorityA = GRIEVANCE_RESOLUTION_PRIORITY[resolutionA];
+    var resPriorityB = GRIEVANCE_RESOLUTION_PRIORITY[resolutionB];
+
+    // If exact match not found, check for partial matches
+    if (resPriorityA === undefined) {
+      if (resolutionA.indexOf('Won') >= 0) resPriorityA = 2;
+      else if (resolutionA.indexOf('Settled') >= 0) resPriorityA = 4;
+      else if (resolutionA.indexOf('Denied') >= 0) resPriorityA = 6;
+      else resPriorityA = 50;
+    }
+    if (resPriorityB === undefined) {
+      if (resolutionB.indexOf('Won') >= 0) resPriorityB = 2;
+      else if (resolutionB.indexOf('Settled') >= 0) resPriorityB = 4;
+      else if (resolutionB.indexOf('Denied') >= 0) resPriorityB = 6;
+      else resPriorityB = 50;
+    }
+
+    if (resPriorityA !== resPriorityB) {
+      return resPriorityA - resPriorityB;
+    }
+
+    // Tertiary sort: by Days to Deadline (column U) - most urgent first
     var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
     var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
 
     // Handle empty/non-numeric values
-    if (daysA === '' || daysA === null) daysA = 9999;
-    if (daysB === '' || daysB === null) daysB = 9999;
+    if (daysA === '' || daysA === null || isNaN(daysA)) daysA = 9999;
+    if (daysB === '' || daysB === null || isNaN(daysB)) daysB = 9999;
 
     return daysA - daysB;
   });
@@ -3197,7 +3241,7 @@ function sortGrievanceLogByStatus() {
     sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
-  Logger.log('Grievance Log sorted by status priority');
+  Logger.log('Grievance Log sorted by status and resolution priority');
 }
 
 // ============================================================================
