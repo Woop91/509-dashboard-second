@@ -1774,6 +1774,39 @@ function refreshInteractiveCharts() {
   ss.toast('Charts updated!', '📊 Interactive Dashboard', 3);
 }
 
+/**
+ * Main onEdit trigger - handles all edit events
+ * Auto-refreshes Interactive Dashboard charts when dropdowns change
+ */
+function onEdit(e) {
+  // Safety check
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Handle Interactive Dashboard dropdown changes
+  if (sheetName === SHEETS.INTERACTIVE) {
+    var row = e.range.getRow();
+    var col = e.range.getColumn();
+
+    // Check if edit is in the control panel row (row 6, columns A-F)
+    if (row === 6 && col >= 1 && col <= 6) {
+      // Small delay to let formulas recalculate
+      Utilities.sleep(300);
+      refreshInteractiveCharts();
+    }
+  }
+
+  // Call other onEdit handlers
+  if (typeof onEditMultiSelect === 'function') {
+    onEditMultiSelect(e);
+  }
+  if (typeof onEditAutoSync === 'function') {
+    onEditAutoSync(e);
+  }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
