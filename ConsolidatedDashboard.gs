@@ -716,11 +716,11 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🌱 Seed Data')
         .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
         .addSeparator()
-        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
+        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
         .addSeparator()
-        .addItem('👥 Seed 50 Members', 'seed50Members')
-        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
+        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
+        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
@@ -4645,17 +4645,20 @@ function seedConfigData() {
 }
 
 /**
- * Seed N members
+ * Seed N members and optionally seed grievances for some of them
  * @param {number} count - Number of members to seed (max 2000)
+ * @param {number} grievancePercent - Percentage of members to give grievances (0-100, default 30)
  */
-function SEED_MEMBERS(count) {
+function SEED_MEMBERS(count, grievancePercent) {
   count = Math.min(count || 50, 2000);
+  grievancePercent = (grievancePercent !== undefined) ? grievancePercent : 30; // Default 30% get grievances
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
 
-  if (!sheet || !configSheet) {
+  if (!memberSheet || !grievanceSheet || !configSheet) {
     SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
     return;
   }
@@ -4678,7 +4681,14 @@ function SEED_MEMBERS(count) {
   if (stewards.length === 0) stewards = ['Mary Steward'];
   if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
 
-  // Expanded name pools for better variety (100+ names each = 10,000+ unique combinations)
+  // Grievance config
+  var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
+  var resolutions = DEFAULT_CONFIG.GRIEVANCE_RESOLUTION;
+  var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
+  var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
+  var articles = DEFAULT_CONFIG.ARTICLES;
+
+  // Expanded name pools for better variety
   var firstNames = [
     'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
     'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen',
@@ -4710,45 +4720,57 @@ function SEED_MEMBERS(count) {
   var officeDays = DEFAULT_CONFIG.OFFICE_DAYS;
   var commMethods = DEFAULT_CONFIG.COMM_METHODS;
 
-  var startRow = Math.max(sheet.getLastRow() + 1, 2);
+  var memberStartRow = Math.max(memberSheet.getLastRow() + 1, 2);
+  var grievanceStartRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
 
-  // Build set of existing member IDs to prevent duplicates
+  // Build set of existing IDs to prevent duplicates
   var existingMemberIds = {};
-  if (startRow > 2) {
-    var existingData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, startRow - 2, 1).getValues();
-    for (var e = 0; e < existingData.length; e++) {
-      if (existingData[e][0]) {
-        existingMemberIds[existingData[e][0]] = true;
-      }
+  var existingGrievanceIds = {};
+  if (memberStartRow > 2) {
+    var existingMemberData = memberSheet.getRange(2, MEMBER_COLS.MEMBER_ID, memberStartRow - 2, 1).getValues();
+    for (var e = 0; e < existingMemberData.length; e++) {
+      if (existingMemberData[e][0]) existingMemberIds[existingMemberData[e][0]] = true;
+    }
+  }
+  if (grievanceStartRow > 2) {
+    var existingGrievanceData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, grievanceStartRow - 2, 1).getValues();
+    for (var g = 0; g < existingGrievanceData.length; g++) {
+      if (existingGrievanceData[g][0]) existingGrievanceIds[existingGrievanceData[g][0]] = true;
     }
   }
 
-  var rows = [];
-  var seededIds = []; // Track IDs for this seeding session
+  var memberRows = [];
+  var grievanceRows = [];
+  var seededMemberIds = [];
+  var seededGrievanceIds = [];
   var batchSize = 50;
   var today = new Date();
+  var grievanceCount = 0;
 
   for (var i = 0; i < count; i++) {
     var firstName = randomChoice(firstNames);
     var lastName = randomChoice(lastNames);
     var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
-    existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
-    seededIds.push(memberId); // Track for persistence
+    existingMemberIds[memberId] = true;
+    seededMemberIds.push(memberId);
+
+    var memberLocation = randomChoice(locations);
+    var memberUnit = randomChoice(units);
+    var assignedSteward = randomChoice(stewards);
     var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
     var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
-    var assignedSteward = randomChoice(stewards);
 
-    // Generate recent contact data (50% chance of having recent contact)
+    // Generate recent contact data (50% chance)
     var hasRecentContact = Math.random() < 0.5;
     var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
     var contactSteward = hasRecentContact ? assignedSteward : '';
 
-    var row = generateSingleMemberRow(
+    var memberRow = generateSingleMemberRow(
       memberId, firstName, lastName,
       randomChoice(jobTitles),
-      randomChoice(locations),
-      randomChoice(units),
+      memberLocation,
+      memberUnit,
       randomChoice(officeDays),
       email, phone,
       randomChoice(commMethods),
@@ -4762,31 +4784,80 @@ function SEED_MEMBERS(count) {
       recentContactDate,
       contactSteward
     );
+    memberRows.push(memberRow);
 
-    rows.push(row);
+    // Create grievance for this member based on percentage
+    if (Math.random() * 100 < grievancePercent) {
+      var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
+      existingGrievanceIds[grievanceId] = true;
+      seededGrievanceIds.push(grievanceId);
 
-    // Write in batches
-    if (rows.length >= batchSize || i === count - 1) {
-      sheet.getRange(startRow, 1, rows.length, 31).setValues(rows);
-      startRow += rows.length;
-      rows = [];
-      Utilities.sleep(100);
+      var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
+      var status = randomChoice(statuses);
+      var step = randomChoice(steps);
+      var resolution = (status === 'Closed') ? randomChoice(resolutions) : '';
+
+      var grievanceRow = generateSingleGrievanceRow(
+        grievanceId,
+        memberId,
+        firstName,
+        lastName,
+        status,
+        step,
+        incidentDate,
+        randomChoice(articles),
+        randomChoice(categories),
+        email,
+        memberUnit,
+        memberLocation,
+        assignedSteward,
+        resolution
+      );
+      grievanceRows.push(grievanceRow);
+      grievanceCount++;
+    }
+
+    // Write members in batches
+    if (memberRows.length >= batchSize || i === count - 1) {
+      memberSheet.getRange(memberStartRow, 1, memberRows.length, 31).setValues(memberRows);
+      memberStartRow += memberRows.length;
+      memberRows = [];
+      Utilities.sleep(50);
+    }
+
+    // Write grievances in batches
+    if (grievanceRows.length >= batchSize || i === count - 1) {
+      if (grievanceRows.length > 0) {
+        grievanceSheet.getRange(grievanceStartRow, 1, grievanceRows.length, 34).setValues(grievanceRows);
+        grievanceStartRow += grievanceRows.length;
+        grievanceRows = [];
+        Utilities.sleep(50);
+      }
     }
   }
 
-  // Re-apply checkboxes to Start Grievance column (AE) - setValues overwrites them
-  var lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+  // Re-apply checkboxes
+  var memberLastRow = memberSheet.getLastRow();
+  if (memberLastRow >= 2) {
+    memberSheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, memberLastRow - 1, 1).insertCheckboxes();
+  }
+  var grievanceLastRow = grievanceSheet.getLastRow();
+  if (grievanceLastRow >= 2) {
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, grievanceLastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync grievance data to Member Directory (populates AB-AD: Has Open Grievance, Status, Next Deadline)
+  // Sync data
   syncGrievanceToMemberDirectory();
+  syncGrievanceFormulasToLog();
 
-  // Track seeded IDs for later cleanup (nuke only removes seeded data)
-  trackSeededMemberIdsBatch(seededIds);
+  // Sort grievances by status and resolution
+  sortGrievanceLogByStatus();
 
-  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
+  // Track seeded IDs for cleanup
+  trackSeededMemberIdsBatch(seededMemberIds);
+  trackSeededGrievanceIdsBatch(seededGrievanceIds);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members + ' + grievanceCount + ' grievances seeded!', '✅ Success', 3);
 }
 
 /**
@@ -4850,250 +4921,7 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
   ];
 }
 
-/**
- * Seed N grievances
- * @param {number} count - Number of grievances to seed (max 300)
- */
-function SEED_GRIEVANCES(count) {
-  count = Math.min(count || 25, 300);
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
-
-  if (!grievanceSheet || !memberSheet || !configSheet) {
-    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
-    return;
-  }
-
-  // Get members
-  var memberData = memberSheet.getDataRange().getValues();
-  if (memberData.length < 2) {
-    SpreadsheetApp.getUi().alert('Error: No members found. Please seed members first.');
-    return;
-  }
-
-  var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
-  var resolutions = DEFAULT_CONFIG.GRIEVANCE_RESOLUTION;
-  var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
-  var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
-  var articles = DEFAULT_CONFIG.ARTICLES;
-
-  // Get config values for stewards
-  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-
-  var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
-
-  // Build set of existing grievance IDs to prevent duplicates
-  var existingGrievanceIds = {};
-  if (startRow > 2) {
-    var existingData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, startRow - 2, 1).getValues();
-    for (var e = 0; e < existingData.length; e++) {
-      if (existingData[e][0]) {
-        existingGrievanceIds[existingData[e][0]] = true;
-      }
-    }
-  }
-
-  var rows = [];
-  var seededIds = []; // Track IDs for this seeding session
-  var batchSize = 25;
-  var today = new Date();
-
-  // Create shuffled list of member indices (excluding header row)
-  // This ensures each member is used before repeating
-  var memberIndices = [];
-  for (var m = 1; m < memberData.length; m++) {
-    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) { // Only include rows with valid member ID
-      memberIndices.push(m);
-    }
-  }
-  var shuffledMembers = shuffleArray(memberIndices);
-  var memberIndex = 0;
-
-  // Distribute incident dates across the 90-day range to avoid clustering
-  var dateRangeStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  var dateSpread = 90 / count; // Days between each grievance's base date
-
-  for (var i = 0; i < count; i++) {
-    // Use shuffled members - cycle through if more grievances than members
-    if (memberIndex >= shuffledMembers.length) {
-      shuffledMembers = shuffleArray(memberIndices); // Reshuffle for next cycle
-      memberIndex = 0;
-    }
-    var memberRow = memberData[shuffledMembers[memberIndex]];
-    memberIndex++;
-
-    var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
-
-    // Skip if no member ID (shouldn't happen due to filtering above, but just in case)
-    if (!memberId) continue;
-
-    // Get member data directly from member row
-    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1] || '';
-    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1] || '';
-    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1] || '';
-    var memberUnit = memberRow[MEMBER_COLS.UNIT - 1] || '';
-    var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
-    var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
-
-    // Generate grievance ID using member's name with G prefix
-    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
-    existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
-    seededIds.push(grievanceId); // Track for persistence
-
-    // Distribute incident dates across the 90-day range with some randomness
-    // Each grievance gets a "slot" in the timeline, with +/- 2 days variation
-    var baseDate = new Date(dateRangeStart.getTime() + (i * dateSpread * 24 * 60 * 60 * 1000));
-    var variation = (Math.random() - 0.5) * 4 * 24 * 60 * 60 * 1000; // +/- 2 days
-    var incidentDate = new Date(Math.min(baseDate.getTime() + variation, today.getTime()));
-
-    var status = randomChoice(statuses);
-    var step = randomChoice(steps);
-
-    // Resolution only applies to Closed cases
-    var resolution = (status === 'Closed') ? randomChoice(resolutions) : '';
-
-    // Generate grievance row with all data populated directly
-    var row = generateSingleGrievanceRow(
-      grievanceId,
-      memberId,
-      firstName,
-      lastName,
-      status,
-      step,
-      incidentDate,
-      randomChoice(articles),
-      randomChoice(categories),
-      memberEmail,
-      memberUnit,
-      memberLocation,
-      memberSteward,
-      resolution
-    );
-
-    rows.push(row);
-
-    // Write in batches
-    if (rows.length >= batchSize || i === count - 1) {
-      grievanceSheet.getRange(startRow, 1, rows.length, 34).setValues(rows);
-      startRow += rows.length;
-      rows = [];
-      Utilities.sleep(100);
-    }
-  }
-
-  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
-  var lastRow = grievanceSheet.getLastRow();
-  if (lastRow >= 2) {
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
-  }
-
-  // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
-  syncGrievanceFormulasToLog();
-
-  // Track seeded IDs for later cleanup (nuke only removes seeded data)
-  trackSeededGrievanceIdsBatch(seededIds);
-
-  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
-}
-
-/**
- * Generate a grievance row for seeding - leaves formula columns empty
- * Formula columns (C, D, H, J, L, N, P, S, T, U, X, Y, Z, AA) will be auto-populated
- */
-function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, incidentDate, articles, category) {
-  var today = new Date();
-
-  // Calculate dates for manual entry columns only
-  // Date Filed - always set if status is not brand new
-  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
-
-  // Initialize timeline variables for manual entry columns
-  var step1Rcvd = '';
-  var step2AppealFiled = '';
-  var step2Rcvd = '';
-  var step3AppealFiled = '';
-  var dateClosed = '';
-
-  // Determine if case is closed (Status = 'Closed', Resolution has the outcome)
-  var isClosed = (status === 'Closed');
-
-  // Populate timeline based on current step
-  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
-
-  // Step I Due calculated by formula, but Step I Rcvd is manual
-  var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
-
-  // If Step I or beyond, Step I has been completed
-  if (stepIndex >= 1 || isClosed) {
-    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
-    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
-  }
-
-  // If Step II or beyond
-  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
-    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
-    var step2Due = addDays(step2AppealFiled, 30);
-    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
-    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
-  }
-
-  // If Step III or beyond
-  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
-    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
-  }
-
-  // Set date closed for resolved cases
-  if (isClosed) {
-    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
-    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
-  }
-
-  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
-  var resolution = dateClosed ? randomChoice(resolutions) : '';
-
-  // Return row with empty strings for formula columns
-  // Formula columns: C, D (names), H, J, L, N, P (deadlines), S, T, U (metrics), X, Y, Z, AA (member info)
-  return [
-    grievanceId,              // 1: Grievance ID (A)
-    memberId,                 // 2: Member ID (B)
-    '',                       // 3: First Name (C) - FORMULA
-    '',                       // 4: Last Name (D) - FORMULA
-    status,                   // 5: Status (E)
-    step,                     // 6: Current Step (F)
-    incidentDate,             // 7: Incident Date (G)
-    '',                       // 8: Filing Deadline (H) - FORMULA
-    dateFiled,                // 9: Date Filed (I)
-    '',                       // 10: Step I Due (J) - FORMULA
-    step1Rcvd,                // 11: Step I Rcvd (K)
-    '',                       // 12: Step II Appeal Due (L) - FORMULA
-    step2AppealFiled,         // 13: Step II Appeal Filed (M)
-    '',                       // 14: Step II Due (N) - FORMULA
-    step2Rcvd,                // 15: Step II Rcvd (O)
-    '',                       // 16: Step III Appeal Due (P) - FORMULA
-    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
-    dateClosed,               // 18: Date Closed (R)
-    '',                       // 19: Days Open (S) - FORMULA
-    '',                       // 20: Next Action Due (T) - FORMULA
-    '',                       // 21: Days to Deadline (U) - FORMULA
-    articles,                 // 22: Articles Violated (V)
-    category,                 // 23: Issue Category (W)
-    '',                       // 24: Member Email (X) - FORMULA
-    '',                       // 25: Unit (Y) - FORMULA
-    '',                       // 26: Location (Z) - FORMULA
-    '',                       // 27: Steward (AA) - FORMULA
-    resolution,               // 28: Resolution (AB)
-    false,                    // 29: Message Alert (AC) - checkbox
-    '',                       // 30: Coordinator Message (AD)
-    '',                       // 31: Acknowledged By (AE)
-    '',                       // 32: Acknowledged Date (AF)
-    '',                       // 33: Drive Folder ID (AG)
-    ''                        // 34: Drive Folder URL (AH)
-  ];
-}
+// SEED_GRIEVANCES removed - grievances are now seeded as part of SEED_MEMBERS
 
 /**
  * Generate a single grievance row with all 34 columns
@@ -5244,13 +5072,13 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
 // ============================================================================
 
 /**
- * Show dialog to seed custom number of members
+ * Show dialog to seed custom number of members (with grievances)
  */
 function SEED_MEMBERS_DIALOG() {
   var ui = SpreadsheetApp.getUi();
   var response = ui.prompt(
-    '👥 Seed Members',
-    'How many members to seed? (max 2000)',
+    '👥 Seed Members & Grievances',
+    'How many members to seed? (30% will get grievances)\nMax 2000:',
     ui.ButtonSet.OK_CANCEL
   );
 
@@ -5265,38 +5093,52 @@ function SEED_MEMBERS_DIALOG() {
 }
 
 /**
- * Show dialog to seed custom number of grievances
+ * Show dialog to seed with custom grievance percentage
  */
-function SEED_GRIEVANCES_DIALOG() {
+function SEED_MEMBERS_ADVANCED_DIALOG() {
   var ui = SpreadsheetApp.getUi();
-  var response = ui.prompt(
-    '📋 Seed Grievances',
-    'How many grievances to seed? (max 300)',
+
+  var countResponse = ui.prompt(
+    '👥 Seed Members (Step 1/2)',
+    'How many members to seed? (max 2000):',
     ui.ButtonSet.OK_CANCEL
   );
 
-  if (response.getSelectedButton() === ui.Button.OK) {
-    var count = parseInt(response.getResponseText(), 10);
-    if (isNaN(count) || count < 1) {
-      ui.alert('Please enter a valid number.');
-      return;
-    }
-    SEED_GRIEVANCES(count);
+  if (countResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var count = parseInt(countResponse.getResponseText(), 10);
+  if (isNaN(count) || count < 1) {
+    ui.alert('Please enter a valid number.');
+    return;
   }
+
+  var percentResponse = ui.prompt(
+    '📋 Grievance Percentage (Step 2/2)',
+    'What percentage of members should have grievances? (0-100, default 30):',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (percentResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var percent = parseInt(percentResponse.getResponseText(), 10);
+  if (isNaN(percent)) percent = 30;
+  percent = Math.max(0, Math.min(100, percent));
+
+  SEED_MEMBERS(count, percent);
 }
 
 /**
- * Seed 50 members shortcut
+ * Seed 50 members with 30% grievances (shortcut)
  */
 function seed50Members() {
-  SEED_MEMBERS(50);
+  SEED_MEMBERS(50, 30);
 }
 
 /**
- * Seed 25 grievances shortcut
+ * Seed 100 members with 50% grievances (shortcut)
  */
-function seed25Grievances() {
-  SEED_GRIEVANCES(25);
+function seed100MembersWithGrievances() {
+  SEED_MEMBERS(100, 50);
 }
 
 // ============================================================================
