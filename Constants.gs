@@ -485,6 +485,52 @@ var GRIEVANCE_STATUS_PRIORITY = {
 };
 
 // ============================================================================
+// JOB METADATA FIELDS - Maps Member Directory fields to Config dropdown sources
+// ============================================================================
+
+/**
+ * Job metadata field configuration
+ * Maps each Member Directory field to its corresponding Config sheet column
+ * @const {Array<Object>}
+ */
+var JOB_METADATA_FIELDS = [
+  { label: 'Job Title', memberCol: MEMBER_COLS.JOB_TITLE, configCol: CONFIG_COLS.JOB_TITLES, configName: 'Job Titles' },
+  { label: 'Work Location', memberCol: MEMBER_COLS.WORK_LOCATION, configCol: CONFIG_COLS.OFFICE_LOCATIONS, configName: 'Office Locations' },
+  { label: 'Unit', memberCol: MEMBER_COLS.UNIT, configCol: CONFIG_COLS.UNITS, configName: 'Units' },
+  { label: 'Supervisor', memberCol: MEMBER_COLS.SUPERVISOR, configCol: CONFIG_COLS.SUPERVISORS, configName: 'Supervisors' },
+  { label: 'Manager', memberCol: MEMBER_COLS.MANAGER, configCol: CONFIG_COLS.MANAGERS, configName: 'Managers' },
+  { label: 'Assigned Steward', memberCol: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, configName: 'Stewards' }
+];
+
+/**
+ * Get job metadata field config by label
+ * @param {string} label - The field label (e.g., 'Job Title')
+ * @returns {Object|null} Field config if found, null otherwise
+ */
+function getJobMetadataField(label) {
+  for (var i = 0; i < JOB_METADATA_FIELDS.length; i++) {
+    if (JOB_METADATA_FIELDS[i].label === label) {
+      return JOB_METADATA_FIELDS[i];
+    }
+  }
+  return null;
+}
+
+/**
+ * Get job metadata field config by member column number
+ * @param {number} memberCol - The member column number
+ * @returns {Object|null} Field config if found, null otherwise
+ */
+function getJobMetadataByMemberCol(memberCol) {
+  for (var i = 0; i < JOB_METADATA_FIELDS.length; i++) {
+    if (JOB_METADATA_FIELDS[i].memberCol === memberCol) {
+      return JOB_METADATA_FIELDS[i];
+    }
+  }
+  return null;
+}
+
+// ============================================================================
 // MULTI-SELECT COLUMN CONFIGURATION
 // ============================================================================
 
