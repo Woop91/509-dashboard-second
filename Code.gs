@@ -25,6 +25,7 @@ function onOpen() {
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
+    .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
     .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addSeparator()
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
