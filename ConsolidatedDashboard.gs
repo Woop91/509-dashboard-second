@@ -2437,58 +2437,22 @@ function refreshMemberDirectoryFormulas() {
 }
 
 /**
- * Setup live formulas in Member Directory for grievance data (AB-AD columns)
- * These formulas auto-update when Grievance Log changes
+ * Setup live grievance links in Member Directory (AB-AD columns)
+ * Uses hidden _Grievance_Calc sheet for self-healing capability
+ * Formulas in hidden sheet, values synced to Member Directory
  */
 function setupLiveGrievanceFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-
-  if (!memberSheet || !grievanceSheet) {
-    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
-    return;
-  }
 
   ss.toast('Setting up live grievance formulas...', '🔄 Setup', 3);
 
-  // Get column letters for Grievance Log
-  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);
-  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
-  var gNextActionCol = getColumnLetter(GRIEVANCE_COLS.NEXT_ACTION_DUE);
-  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
+  // Step 1: Rebuild the hidden _Grievance_Calc sheet with formulas
+  setupGrievanceCalcSheet();
 
-  // Get column letter for Member ID in Member Directory
-  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  // Step 2: Sync values from hidden sheet to Member Directory
+  syncGrievanceToMemberDirectory();
 
-  // Grievance Log range reference
-  var gLogRange = '\'' + SHEETS.GRIEVANCE_LOG + '\'!';
-
-  // Column AB: Has Open Grievance (Yes/No)
-  // Checks if there's any grievance with status "Open" or "Pending Info" for this member
-  var hasOpenFormula = '=IF(' + mMemberIdCol + '2="","",IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No"))';
-  memberSheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
-
-  // Column AC: Grievance Status (most urgent open status)
-  // Returns the status of the most urgent open grievance (Open > Pending Info)
-  var statusFormula = '=IF(' + mMemberIdCol + '2="","",IFERROR(IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info","")),""))';
-  memberSheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
-
-  // Column AD: Days to Deadline (minimum days to deadline for open grievances)
-  // Shows the most urgent deadline across all open grievances for this member
-  var deadlineFormula = '=IF(' + mMemberIdCol + '2="","",IFERROR(MINIFS(' + gLogRange + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',' + gLogRange + gMemberIdCol + ':' + gMemberIdCol + ',' + mMemberIdCol + '2,' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Closed",' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Settled",' + gLogRange + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",' + gLogRange + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">0"),""))';
-  memberSheet.getRange(2, MEMBER_COLS.NEXT_DEADLINE).setFormula(deadlineFormula);
-
-  // Copy formulas down for all rows
-  var lastRow = Math.max(memberSheet.getLastRow(), 100);
-  if (lastRow > 2) {
-    memberSheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE, 1, 3).copyTo(
-      memberSheet.getRange(3, MEMBER_COLS.HAS_OPEN_GRIEVANCE, lastRow - 2, 3),
-      SpreadsheetApp.CopyPasteType.PASTE_FORMULA
-    );
-  }
-
-  ss.toast('Live grievance formulas set up!', '✅ Success', 3);
+  ss.toast('Live grievance formulas set up in hidden sheet!', '✅ Success', 3);
 }
 
 /**
@@ -2691,13 +2655,13 @@ function setupGrievanceCalcSheet() {
   var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
   sheet.getRange('B2').setFormula(hasOpenFormula);
 
-  // Column C: Grievance Status (most recent active grievance status)
-  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  // Column C: Grievance Status (most urgent: Open > Pending Info)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Next Deadline (Days to Deadline countdown)
+  // Column D: Days to Deadline (minimum/most urgent deadline for open grievances)
   var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn"),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
