@@ -590,6 +590,28 @@ function getInteractiveDashboardHtml() {
     '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#7C3AED;border-radius:50%;animation:spin 1s linear infinite}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
 
+    // Sankey Diagram
+    '.sankey-container{position:relative;padding:20px 0}' +
+    '.sankey-nodes{display:flex;justify-content:space-between;position:relative;z-index:2}' +
+    '.sankey-column{display:flex;flex-direction:column;gap:8px;align-items:center}' +
+    '.sankey-node{padding:10px 15px;border-radius:8px;color:white;font-weight:600;font-size:12px;text-align:center;min-width:80px;box-shadow:0 2px 4px rgba(0,0,0,0.2)}' +
+    '.sankey-node.source{background:linear-gradient(135deg,#7C3AED,#9333EA)}' +
+    '.sankey-node.status-open{background:linear-gradient(135deg,#dc2626,#ef4444)}' +
+    '.sankey-node.status-pending{background:linear-gradient(135deg,#f97316,#fb923c)}' +
+    '.sankey-node.status-closed{background:linear-gradient(135deg,#059669,#10b981)}' +
+    '.sankey-node.resolution{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}' +
+    '.sankey-flows{position:absolute;top:0;left:0;right:0;bottom:0;z-index:1}' +
+    '.sankey-flow{position:absolute;height:4px;border-radius:2px;opacity:0.6;transition:opacity 0.2s}' +
+    '.sankey-flow:hover{opacity:1}' +
+    '.sankey-flow.flow-filed{background:linear-gradient(90deg,#7C3AED,#dc2626)}' +
+    '.sankey-flow.flow-open{background:linear-gradient(90deg,#dc2626,#1d4ed8)}' +
+    '.sankey-flow.flow-pending{background:linear-gradient(90deg,#f97316,#059669)}' +
+    '.sankey-flow.flow-closed{background:linear-gradient(90deg,#059669,#1d4ed8)}' +
+    '.sankey-label{font-size:11px;color:#666;margin-top:5px}' +
+    '.sankey-legend{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-top:15px;padding-top:15px;border-top:1px solid #e5e7eb}' +
+    '.sankey-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}' +
+    '.sankey-legend-color{width:12px;height:12px;border-radius:3px}' +
+
     // Responsive
     '@media (max-width:600px){' +
     '  .stats-grid{grid-template-columns:repeat(2,1fr)}' +
@@ -802,6 +824,44 @@ function getInteractiveDashboardHtml() {
     '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.resolutions.withdrawn+"</div><div class=\\"stat-label\\">Withdrawn</div></div>";' +
     '  html+="<div class=\\"stat-card red\\"><div class=\\"stat-value\\">"+data.resolutions.denied+"</div><div class=\\"stat-label\\">Denied</div></div>";' +
     '  html+="</div></div>";' +
+    // Sankey Diagram - Grievance Flow
+    '  var totalGrievances=data.statusCounts.open+data.statusCounts.pending+data.statusCounts.closed;' +
+    '  if(totalGrievances>0){' +
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🔀 Grievance Flow (Sankey Diagram)</div>";' +
+    '  html+="<div class=\\"sankey-container\\">";' +
+    '  html+="<div class=\\"sankey-nodes\\">";' +
+    // Source column (Filed)
+    '  html+="<div class=\\"sankey-column\\">";' +
+    '  html+="<div class=\\"sankey-node source\\">Filed<br/>"+totalGrievances+"</div>";' +
+    '  html+="<div class=\\"sankey-label\\">Total Filed</div>";' +
+    '  html+="</div>";' +
+    // Status column
+    '  html+="<div class=\\"sankey-column\\">";' +
+    '  if(data.statusCounts.open>0)html+="<div class=\\"sankey-node status-open\\">Open<br/>"+data.statusCounts.open+"</div>";' +
+    '  if(data.statusCounts.pending>0)html+="<div class=\\"sankey-node status-pending\\">Pending<br/>"+data.statusCounts.pending+"</div>";' +
+    '  if(data.statusCounts.closed>0)html+="<div class=\\"sankey-node status-closed\\">Closed<br/>"+data.statusCounts.closed+"</div>";' +
+    '  html+="<div class=\\"sankey-label\\">Current Status</div>";' +
+    '  html+="</div>";' +
+    // Resolution column
+    '  html+="<div class=\\"sankey-column\\">";' +
+    '  var totalResolved=data.resolutions.won+data.resolutions.settled+data.resolutions.withdrawn+data.resolutions.denied;' +
+    '  if(data.resolutions.won>0)html+="<div class=\\"sankey-node resolution\\" style=\\"background:linear-gradient(135deg,#059669,#10b981)\\">Won<br/>"+data.resolutions.won+"</div>";' +
+    '  if(data.resolutions.settled>0)html+="<div class=\\"sankey-node resolution\\" style=\\"background:linear-gradient(135deg,#f97316,#fb923c)\\">Settled<br/>"+data.resolutions.settled+"</div>";' +
+    '  if(data.resolutions.withdrawn>0)html+="<div class=\\"sankey-node resolution\\" style=\\"background:linear-gradient(135deg,#6b7280,#9ca3af)\\">Withdrawn<br/>"+data.resolutions.withdrawn+"</div>";' +
+    '  if(data.resolutions.denied>0)html+="<div class=\\"sankey-node resolution\\" style=\\"background:linear-gradient(135deg,#dc2626,#ef4444)\\">Denied<br/>"+data.resolutions.denied+"</div>";' +
+    '  if(totalResolved===0)html+="<div class=\\"sankey-node resolution\\" style=\\"background:#ccc\\">Pending<br/>Resolution</div>";' +
+    '  html+="<div class=\\"sankey-label\\">Outcome</div>";' +
+    '  html+="</div>";' +
+    '  html+="</div>";' +  // End sankey-nodes
+    // Legend
+    '  html+="<div class=\\"sankey-legend\\">";' +
+    '  html+="<div class=\\"sankey-legend-item\\"><div class=\\"sankey-legend-color\\" style=\\"background:#7C3AED\\"></div>Filed</div>";' +
+    '  html+="<div class=\\"sankey-legend-item\\"><div class=\\"sankey-legend-color\\" style=\\"background:#dc2626\\"></div>Open</div>";' +
+    '  html+="<div class=\\"sankey-legend-item\\"><div class=\\"sankey-legend-color\\" style=\\"background:#f97316\\"></div>Pending</div>";' +
+    '  html+="<div class=\\"sankey-legend-item\\"><div class=\\"sankey-legend-color\\" style=\\"background:#059669\\"></div>Closed/Won</div>";' +
+    '  html+="</div>";' +
+    '  html+="</div></div>";' +  // End sankey-container and chart-container
+    '  }' +
     '  c.innerHTML=html;' +
     '}' +
 
