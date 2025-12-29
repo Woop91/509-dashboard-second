@@ -20,6 +20,7 @@ function onOpen() {
   // Main Dashboard Menu
   ui.createMenu('👤 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
+    .addItem('🎯 Interactive Dashboard', 'showInteractiveDashboardTab')
     .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')

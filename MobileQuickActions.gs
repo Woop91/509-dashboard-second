@@ -481,3 +481,525 @@ function syncSingleGrievanceToCalendar(grievanceId) {
   SpreadsheetApp.getActiveSpreadsheet().toast('📅 Syncing ' + grievanceId + '...', 'Calendar', 3);
   if (typeof syncDeadlinesToCalendar === 'function') syncDeadlinesToCalendar();
 }
+
+// ==================== INTERACTIVE DASHBOARD TAB ====================
+
+/**
+ * Shows the Interactive Dashboard with tabbed interface
+ * Features: Overview, Members, Grievances, and Analytics tabs
+ */
+function showInteractiveDashboardTab() {
+  var html = HtmlService.createHtmlOutput(getInteractiveDashboardHtml())
+    .setWidth(900)
+    .setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '🎯 Interactive Dashboard');
+}
+
+/**
+ * Returns the HTML for the interactive dashboard with tabs
+ */
+function getInteractiveDashboardHtml() {
+  return '<!DOCTYPE html>' +
+    '<html><head>' +
+    '<base target="_top">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">' +
+    '<style>' +
+    // CSS Reset and base styles
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5;min-height:100vh}' +
+
+    // Header
+    '.header{background:linear-gradient(135deg,#7C3AED,#5B21B6);color:white;padding:20px;text-align:center}' +
+    '.header h1{font-size:clamp(18px,4vw,24px);margin-bottom:5px}' +
+    '.header .subtitle{font-size:clamp(11px,2.5vw,13px);opacity:0.9}' +
+
+    // Tab navigation
+    '.tabs{display:flex;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:0;z-index:100}' +
+    '.tab{flex:1;padding:clamp(12px,3vw,16px);text-align:center;font-size:clamp(12px,2.5vw,14px);font-weight:600;color:#666;' +
+    'border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;min-height:' + MOBILE_CONFIG.TOUCH_TARGET_SIZE + '}' +
+    '.tab:hover{background:#f8f9fa;color:#7C3AED}' +
+    '.tab.active{color:#7C3AED;border-bottom-color:#7C3AED;background:#f8f4ff}' +
+    '.tab-icon{display:block;font-size:18px;margin-bottom:4px}' +
+
+    // Tab content
+    '.tab-content{display:none;padding:15px;animation:fadeIn 0.3s}' +
+    '.tab-content.active{display:block}' +
+    '@keyframes fadeIn{from{opacity:0}to{opacity:1}}' +
+
+    // Stats grid
+    '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}' +
+    '.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;transition:transform 0.2s}' +
+    '.stat-card:hover{transform:translateY(-2px)}' +
+    '.stat-value{font-size:clamp(24px,5vw,32px);font-weight:bold;color:#7C3AED}' +
+    '.stat-label{font-size:clamp(10px,2vw,12px);color:#666;text-transform:uppercase;margin-top:5px}' +
+    '.stat-card.green .stat-value{color:#059669}' +
+    '.stat-card.red .stat-value{color:#DC2626}' +
+    '.stat-card.orange .stat-value{color:#F97316}' +
+
+    // Data table
+    '.data-table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.data-table th{background:#7C3AED;color:white;padding:12px;text-align:left;font-size:13px}' +
+    '.data-table td{padding:12px;border-bottom:1px solid #eee;font-size:13px}' +
+    '.data-table tr:hover{background:#f8f4ff}' +
+    '.data-table tr:last-child td{border-bottom:none}' +
+
+    // Status badges
+    '.badge{display:inline-block;padding:4px 10px;border-radius:12px;font-size:11px;font-weight:bold}' +
+    '.badge-open{background:#fee2e2;color:#dc2626}' +
+    '.badge-pending{background:#fef3c7;color:#d97706}' +
+    '.badge-closed{background:#d1fae5;color:#059669}' +
+
+    // Action buttons
+    '.action-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:none;border-radius:8px;' +
+    'cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;min-height:' + MOBILE_CONFIG.TOUCH_TARGET_SIZE + '}' +
+    '.action-btn-primary{background:#7C3AED;color:white}' +
+    '.action-btn-primary:hover{background:#5B21B6}' +
+    '.action-btn-secondary{background:#f3f4f6;color:#374151}' +
+    '.action-btn-secondary:hover{background:#e5e7eb}' +
+
+    // List items
+    '.list-container{display:flex;flex-direction:column;gap:10px}' +
+    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
+    '.list-item:hover{box-shadow:0 4px 8px rgba(0,0,0,0.1)}' +
+    '.list-item-main{flex:1;min-width:200px}' +
+    '.list-item-title{font-weight:600;color:#1f2937;margin-bottom:3px}' +
+    '.list-item-subtitle{font-size:12px;color:#666}' +
+
+    // Search input
+    '.search-container{position:relative;margin-bottom:15px}' +
+    '.search-input{width:100%;padding:12px 12px 12px 40px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;transition:border-color 0.2s}' +
+    '.search-input:focus{outline:none;border-color:#7C3AED}' +
+    '.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:#9ca3af}' +
+
+    // Charts section
+    '.chart-container{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:15px}' +
+    '.chart-title{font-weight:600;color:#1f2937;margin-bottom:15px;font-size:14px}' +
+    '.bar-chart{display:flex;flex-direction:column;gap:10px}' +
+    '.bar-row{display:flex;align-items:center;gap:10px}' +
+    '.bar-label{width:100px;font-size:12px;color:#666;text-align:right}' +
+    '.bar-container{flex:1;background:#e5e7eb;border-radius:4px;height:24px;overflow:hidden}' +
+    '.bar-fill{height:100%;border-radius:4px;transition:width 0.5s}' +
+    '.bar-value{width:50px;font-size:12px;font-weight:600;color:#374151}' +
+
+    // Empty state
+    '.empty-state{text-align:center;padding:40px;color:#9ca3af}' +
+    '.empty-state-icon{font-size:48px;margin-bottom:10px}' +
+
+    // Loading
+    '.loading{text-align:center;padding:40px;color:#666}' +
+    '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#7C3AED;border-radius:50%;animation:spin 1s linear infinite}' +
+    '@keyframes spin{to{transform:rotate(360deg)}}' +
+
+    // Responsive
+    '@media (max-width:600px){' +
+    '  .stats-grid{grid-template-columns:repeat(2,1fr)}' +
+    '  .list-item{flex-direction:column;align-items:flex-start}' +
+    '  .tab-icon{font-size:16px}' +
+    '}' +
+
+    '</style>' +
+    '</head><body>' +
+
+    // Header
+    '<div class="header">' +
+    '<h1>🎯 Interactive Dashboard</h1>' +
+    '<div class="subtitle">Real-time union data at your fingertips</div>' +
+    '</div>' +
+
+    // Tab Navigation
+    '<div class="tabs">' +
+    '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'members\',this)" id="tab-members"><span class="tab-icon">👥</span>Members</button>' +
+    '<button class="tab" onclick="switchTab(\'grievances\',this)" id="tab-grievances"><span class="tab-icon">📋</span>Grievances</button>' +
+    '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">📈</span>Analytics</button>' +
+    '</div>' +
+
+    // Overview Tab
+    '<div class="tab-content active" id="content-overview">' +
+    '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
+    '<div id="overview-actions" style="margin-top:15px;display:flex;flex-wrap:wrap;gap:10px"></div>' +
+    '</div>' +
+
+    // Members Tab
+    '<div class="tab-content" id="content-members">' +
+    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="member-search" placeholder="Search members..." oninput="filterMembers(this.value)"></div>' +
+    '<div class="list-container" id="members-list"><div class="loading"><div class="spinner"></div><p>Loading members...</p></div></div>' +
+    '</div>' +
+
+    // Grievances Tab
+    '<div class="tab-content" id="content-grievances">' +
+    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="grievance-search" placeholder="Search grievances..." oninput="filterGrievances(this.value)"></div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap">' +
+    '<button class="action-btn action-btn-primary" onclick="filterGrievanceStatus(\'all\')">All</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Open\')">Open</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Pending Info\')">Pending</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Closed\')">Closed</button>' +
+    '</div>' +
+    '<div class="list-container" id="grievances-list"><div class="loading"><div class="spinner"></div><p>Loading grievances...</p></div></div>' +
+    '</div>' +
+
+    // Analytics Tab
+    '<div class="tab-content" id="content-analytics">' +
+    '<div id="analytics-charts"><div class="loading"><div class="spinner"></div><p>Loading analytics...</p></div></div>' +
+    '</div>' +
+
+    // JavaScript
+    '<script>' +
+    'var allMembers=[];var allGrievances=[];var currentGrievanceFilter="all";' +
+
+    // Tab switching
+    'function switchTab(tabName,btn){' +
+    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
+    '  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
+    '  btn.classList.add("active");' +
+    '  document.getElementById("content-"+tabName).classList.add("active");' +
+    '  if(tabName==="members"&&allMembers.length===0)loadMembers();' +
+    '  if(tabName==="grievances"&&allGrievances.length===0)loadGrievances();' +
+    '  if(tabName==="analytics")loadAnalytics();' +
+    '}' +
+
+    // Load overview data
+    'function loadOverview(){' +
+    '  google.script.run.withSuccessHandler(function(data){renderOverview(data)}).getInteractiveOverviewData();' +
+    '}' +
+
+    // Render overview
+    'function renderOverview(data){' +
+    '  var html="";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalMembers+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.activeStewards+"</div><div class=\\"stat-label\\">Stewards</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalGrievances+"</div><div class=\\"stat-label\\">Total Grievances</div></div>";' +
+    '  html+="<div class=\\"stat-card red\\"><div class=\\"stat-value\\">"+data.openGrievances+"</div><div class=\\"stat-label\\">Open Cases</div></div>";' +
+    '  html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.pendingInfo+"</div><div class=\\"stat-label\\">Pending Info</div></div>";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.winRate+"</div><div class=\\"stat-label\\">Win Rate</div></div>";' +
+    '  document.getElementById("overview-stats").innerHTML=html;' +
+    '  var actions="";' +
+    '  actions+="<button class=\\"action-btn action-btn-primary\\" onclick=\\"google.script.run.showMobileUnifiedSearch()\\">🔍 Quick Search</button>";' +
+    '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"google.script.run.showMobileGrievanceList()\\">📋 View All Grievances</button>";' +
+    '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"google.script.run.showMyAssignedGrievances()\\">👤 My Cases</button>";' +
+    '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"location.reload()\\">🔄 Refresh</button>";' +
+    '  document.getElementById("overview-actions").innerHTML=actions;' +
+    '}' +
+
+    // Load members
+    'function loadMembers(){' +
+    '  google.script.run.withSuccessHandler(function(data){allMembers=data;renderMembers(data)}).getInteractiveMemberData();' +
+    '}' +
+
+    // Render members
+    'function renderMembers(data){' +
+    '  var c=document.getElementById("members-list");' +
+    '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">👥</div><p>No members found</p></div>";return}' +
+    '  c.innerHTML=data.slice(0,50).map(function(m){' +
+    '    return "<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+m.name+"</div><div class=\\"list-item-subtitle\\">"+m.id+" • "+m.title+" • "+m.location+"</div></div><div><span class=\\"badge "+(m.isSteward?"badge-closed":"badge-open")+"\\">"+(m.isSteward?"Steward":"Member")+"</span></div></div>"' +
+    '  }).join("");' +
+    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" members</p></div>";' +
+    '}' +
+
+    // Filter members
+    'function filterMembers(query){' +
+    '  if(!query||query.length<2){renderMembers(allMembers);return}' +
+    '  query=query.toLowerCase();' +
+    '  var filtered=allMembers.filter(function(m){return m.name.toLowerCase().indexOf(query)>=0||m.id.toLowerCase().indexOf(query)>=0||m.title.toLowerCase().indexOf(query)>=0});' +
+    '  renderMembers(filtered);' +
+    '}' +
+
+    // Load grievances
+    'function loadGrievances(){' +
+    '  google.script.run.withSuccessHandler(function(data){allGrievances=data;renderGrievances(data)}).getInteractiveGrievanceData();' +
+    '}' +
+
+    // Render grievances
+    'function renderGrievances(data){' +
+    '  var c=document.getElementById("grievances-list");' +
+    '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">📋</div><p>No grievances found</p></div>";return}' +
+    '  c.innerHTML=data.slice(0,50).map(function(g){' +
+    '    var badgeClass=g.status==="Open"?"badge-open":(g.status==="Pending Info"?"badge-pending":"badge-closed");' +
+    '    return "<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+g.id+" - "+g.memberName+"</div><div class=\\"list-item-subtitle\\">"+g.issueType+" • Filed: "+g.filedDate+"</div></div><div><span class=\\"badge "+badgeClass+"\\">"+g.status+"</span></div></div>"' +
+    '  }).join("");' +
+    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" grievances</p></div>";' +
+    '}' +
+
+    // Filter grievances
+    'function filterGrievances(query){' +
+    '  if(!query||query.length<2){applyGrievanceFilters();return}' +
+    '  query=query.toLowerCase();' +
+    '  var filtered=allGrievances.filter(function(g){return g.id.toLowerCase().indexOf(query)>=0||g.memberName.toLowerCase().indexOf(query)>=0||(g.issueType||"").toLowerCase().indexOf(query)>=0});' +
+    '  if(currentGrievanceFilter!=="all")filtered=filtered.filter(function(g){return g.status===currentGrievanceFilter});' +
+    '  renderGrievances(filtered);' +
+    '}' +
+
+    // Filter by status
+    'function filterGrievanceStatus(status){' +
+    '  currentGrievanceFilter=status;' +
+    '  applyGrievanceFilters();' +
+    '}' +
+
+    // Apply filters
+    'function applyGrievanceFilters(){' +
+    '  var query=document.getElementById("grievance-search").value.toLowerCase();' +
+    '  var filtered=allGrievances;' +
+    '  if(currentGrievanceFilter!=="all")filtered=filtered.filter(function(g){return g.status===currentGrievanceFilter});' +
+    '  if(query&&query.length>=2)filtered=filtered.filter(function(g){return g.id.toLowerCase().indexOf(query)>=0||g.memberName.toLowerCase().indexOf(query)>=0});' +
+    '  renderGrievances(filtered);' +
+    '}' +
+
+    // Load analytics
+    'function loadAnalytics(){' +
+    '  google.script.run.withSuccessHandler(function(data){renderAnalytics(data)}).getInteractiveAnalyticsData();' +
+    '}' +
+
+    // Render analytics
+    'function renderAnalytics(data){' +
+    '  var c=document.getElementById("analytics-charts");' +
+    '  var html="";' +
+    // Member Directory Stats section
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">👥 Member Directory Statistics</div>";' +
+    '  html+="<div class=\\"stats-grid\\" style=\\"margin-bottom:15px\\">";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.total+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.memberStats.stewards+"</div><div class=\\"stat-label\\">Stewards</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.withOpenGrievance+"</div><div class=\\"stat-label\\">With Open Case</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.memberStats.stewardRatio+"</div><div class=\\"stat-label\\">Member:Steward</div></div>";' +
+    '  html+="</div></div>";' +
+    // Members by Location chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Members by Location</div><div class=\\"bar-chart\\">";' +
+    '  var maxLoc=Math.max.apply(null,data.memberStats.byLocation.map(function(l){return l.count}))||1;' +
+    '  data.memberStats.byLocation.forEach(function(loc){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+loc.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(loc.count/maxLoc*100)+"%25;background:#059669\\"></div></div><div class=\\"bar-value\\">"+loc.count+"</div></div>";' +
+    '  });' +
+    '  if(data.memberStats.byLocation.length===0)html+="<div class=\\"empty-state\\">No location data</div>";' +
+    '  html+="</div></div>";' +
+    // Members by Unit chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🏢 Members by Unit</div><div class=\\"bar-chart\\">";' +
+    '  var maxUnit=Math.max.apply(null,data.memberStats.byUnit.map(function(u){return u.count}))||1;' +
+    '  data.memberStats.byUnit.forEach(function(unit){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+unit.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(unit.count/maxUnit*100)+"%25;background:#1a73e8\\"></div></div><div class=\\"bar-value\\">"+unit.count+"</div></div>";' +
+    '  });' +
+    '  if(data.memberStats.byUnit.length===0)html+="<div class=\\"empty-state\\">No unit data</div>";' +
+    '  html+="</div></div>";' +
+    // Status distribution chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Grievance Status Distribution</div><div class=\\"bar-chart\\">";' +
+    '  var total=data.statusCounts.open+data.statusCounts.pending+data.statusCounts.closed;' +
+    '  if(total>0){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Open</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.open/total*100)+"%25;background:#dc2626\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.open+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Pending</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.pending/total*100)+"%25;background:#f97316\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.pending+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Closed</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.closed/total*100)+"%25;background:#059669\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.closed+"</div></div>";' +
+    '  }else{html+="<div class=\\"empty-state\\">No grievances</div>"}' +
+    '  html+="</div></div>";' +
+    // Issue category chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📋 Top Issue Categories</div><div class=\\"bar-chart\\">";' +
+    '  var maxCat=Math.max.apply(null,data.topCategories.map(function(c){return c.count}))||1;' +
+    '  data.topCategories.forEach(function(cat){' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+cat.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(cat.count/maxCat*100)+"%25;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+cat.count+"</div></div>";' +
+    '  });' +
+    '  if(data.topCategories.length===0)html+="<div class=\\"empty-state\\">No data</div>";' +
+    '  html+="</div></div>";' +
+    // Resolution summary
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🏆 Resolution Summary</div>";' +
+    '  html+="<div class=\\"stats-grid\\" style=\\"margin:0\\">";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.resolutions.won+"</div><div class=\\"stat-label\\">Won</div></div>";' +
+    '  html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.resolutions.settled+"</div><div class=\\"stat-label\\">Settled</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.resolutions.withdrawn+"</div><div class=\\"stat-label\\">Withdrawn</div></div>";' +
+    '  html+="<div class=\\"stat-card red\\"><div class=\\"stat-value\\">"+data.resolutions.denied+"</div><div class=\\"stat-label\\">Denied</div></div>";' +
+    '  html+="</div></div>";' +
+    '  c.innerHTML=html;' +
+    '}' +
+
+    // Initialize
+    'loadOverview();' +
+    '</script>' +
+
+    '</body></html>';
+}
+
+/**
+ * Get overview data for interactive dashboard
+ */
+function getInteractiveOverviewData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var data = {
+    totalMembers: 0,
+    activeStewards: 0,
+    totalGrievances: 0,
+    openGrievances: 0,
+    pendingInfo: 0,
+    winRate: '0%'
+  };
+
+  // Get member stats
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, MEMBER_COLS.IS_STEWARD).getValues();
+    data.totalMembers = memberData.length;
+    memberData.forEach(function(row) {
+      if (row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes') data.activeStewards++;
+    });
+  }
+
+  // Get grievance stats
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+    var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
+    data.totalGrievances = grievanceData.length;
+    var wonCount = 0;
+    var closedCount = 0;
+    grievanceData.forEach(function(row) {
+      var status = row[GRIEVANCE_COLS.STATUS - 1];
+      var resolution = row[GRIEVANCE_COLS.RESOLUTION - 1] || '';
+      if (status === 'Open') data.openGrievances++;
+      if (status === 'Pending Info') data.pendingInfo++;
+      if (status !== 'Open' && status !== 'Pending Info') closedCount++;
+      if (resolution.toLowerCase().indexOf('won') >= 0) wonCount++;
+    });
+    if (closedCount > 0) {
+      data.winRate = Math.round(wonCount / closedCount * 100) + '%';
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Get member data for interactive dashboard
+ */
+function getInteractiveMemberData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MEMBER_COLS.IS_STEWARD).getValues();
+  return data.map(function(row) {
+    return {
+      id: row[MEMBER_COLS.MEMBER_ID - 1] || '',
+      name: (row[MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (row[MEMBER_COLS.LAST_NAME - 1] || ''),
+      title: row[MEMBER_COLS.JOB_TITLE - 1] || 'N/A',
+      location: row[MEMBER_COLS.WORK_LOCATION - 1] || 'N/A',
+      isSteward: row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes'
+    };
+  }).filter(function(m) { return m.id; });
+}
+
+/**
+ * Get grievance data for interactive dashboard
+ */
+function getInteractiveGrievanceData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
+  return data.map(function(row) {
+    var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    return {
+      id: row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '',
+      memberName: (row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || ''),
+      status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
+      issueType: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
+      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'MMM d, yyyy') : (filed || 'N/A')
+    };
+  }).filter(function(g) { return g.id; });
+}
+
+/**
+ * Get analytics data for interactive dashboard
+ */
+function getInteractiveAnalyticsData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var data = {
+    memberStats: {
+      total: 0,
+      stewards: 0,
+      withOpenGrievance: 0,
+      stewardRatio: '0:0',
+      byLocation: [],
+      byUnit: []
+    },
+    statusCounts: { open: 0, pending: 0, closed: 0 },
+    topCategories: [],
+    resolutions: { won: 0, settled: 0, withdrawn: 0, denied: 0 }
+  };
+
+  // Get Member Directory statistics
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, MEMBER_COLS.HAS_OPEN_GRIEVANCE).getValues();
+    var locationMap = {};
+    var unitMap = {};
+
+    memberData.forEach(function(row) {
+      if (!row[MEMBER_COLS.MEMBER_ID - 1]) return; // Skip empty rows
+
+      data.memberStats.total++;
+
+      // Count stewards
+      if (row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes') data.memberStats.stewards++;
+
+      // Count members with open grievances
+      if (row[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1] === 'Yes') data.memberStats.withOpenGrievance++;
+
+      // Count by location
+      var location = row[MEMBER_COLS.WORK_LOCATION - 1] || 'Unknown';
+      if (!locationMap[location]) locationMap[location] = 0;
+      locationMap[location]++;
+
+      // Count by unit
+      var unit = row[MEMBER_COLS.UNIT - 1] || 'Unknown';
+      if (!unitMap[unit]) unitMap[unit] = 0;
+      unitMap[unit]++;
+    });
+
+    // Calculate steward ratio
+    if (data.memberStats.stewards > 0) {
+      var ratio = Math.round(data.memberStats.total / data.memberStats.stewards);
+      data.memberStats.stewardRatio = ratio + ':1';
+    } else {
+      data.memberStats.stewardRatio = 'N/A';
+    }
+
+    // Get top 5 locations
+    data.memberStats.byLocation = Object.keys(locationMap).map(function(key) {
+      return { name: key, count: locationMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+
+    // Get top 5 units
+    data.memberStats.byUnit = Object.keys(unitMap).map(function(key) {
+      return { name: key, count: unitMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+  }
+
+  // Get Grievance Log statistics
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+    var rows = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
+    var categoryMap = {};
+
+    rows.forEach(function(row) {
+      var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
+      var category = row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'Other';
+      var resolution = (row[GRIEVANCE_COLS.RESOLUTION - 1] || '').toLowerCase();
+
+      // Status counts
+      if (status === 'Open') data.statusCounts.open++;
+      else if (status === 'Pending Info') data.statusCounts.pending++;
+      else data.statusCounts.closed++;
+
+      // Category counts
+      if (!categoryMap[category]) categoryMap[category] = 0;
+      categoryMap[category]++;
+
+      // Resolution counts
+      if (resolution.indexOf('won') >= 0) data.resolutions.won++;
+      else if (resolution.indexOf('settled') >= 0) data.resolutions.settled++;
+      else if (resolution.indexOf('withdrawn') >= 0) data.resolutions.withdrawn++;
+      else if (resolution.indexOf('denied') >= 0 || resolution.indexOf('lost') >= 0) data.resolutions.denied++;
+    });
+
+    // Get top 5 categories
+    data.topCategories = Object.keys(categoryMap).map(function(key) {
+      return { name: key, count: categoryMap[key] };
+    }).sort(function(a, b) { return b.count - a.count; }).slice(0, 5);
+  }
+
+  return data;
+}
