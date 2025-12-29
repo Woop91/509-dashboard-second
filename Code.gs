@@ -1423,8 +1423,481 @@ function REPAIR_DASHBOARD() {
 // MENU HANDLER FUNCTIONS
 // ============================================================================
 
+/**
+ * Show desktop search modal - comprehensive search for members and grievances
+ * Enhanced version of mobile search with more fields and filtering options
+ */
 function searchMembers() {
-  SpreadsheetApp.getUi().alert('Search Members feature - Coming soon!');
+  showDesktopSearch();
+}
+
+/**
+ * Show the desktop unified search dialog
+ * Optimized for larger screens with advanced filtering
+ */
+function showDesktopSearch() {
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f8fafc;color:#1e293b}' +
+
+    /* Header */
+    '.header{background:linear-gradient(135deg,#7C3AED 0%,#5B21B6 100%);color:white;padding:24px 30px}' +
+    '.header h1{font-size:24px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:12px}' +
+    '.header p{opacity:0.9;font-size:14px}' +
+
+    /* Search Container */
+    '.search-section{padding:20px 30px;background:white;border-bottom:1px solid #e2e8f0}' +
+    '.search-row{display:flex;gap:12px;align-items:center}' +
+    '.search-input-container{flex:1;position:relative}' +
+    '.search-input{width:100%;padding:14px 16px 14px 48px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;transition:all 0.2s}' +
+    '.search-input:focus{outline:none;border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,0.1)}' +
+    '.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;color:#94a3b8}' +
+
+    /* Tabs */
+    '.tabs{display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:8px;width:fit-content}' +
+    '.tab{padding:10px 20px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;color:#64748b;transition:all 0.2s}' +
+    '.tab:hover{background:#e2e8f0}' +
+    '.tab.active{background:white;color:#7C3AED;box-shadow:0 1px 3px rgba(0,0,0,0.1)}' +
+
+    /* Filters */
+    '.filters-section{padding:16px 30px;background:#f8fafc;border-bottom:1px solid #e2e8f0}' +
+    '.filters-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}' +
+    '.filter-group{display:flex;align-items:center;gap:8px}' +
+    '.filter-label{font-size:13px;color:#64748b;font-weight:500}' +
+    '.filter-select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;cursor:pointer;min-width:140px}' +
+    '.filter-select:focus{outline:none;border-color:#7C3AED}' +
+    '.clear-filters{padding:8px 16px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;font-size:13px;color:#64748b}' +
+    '.clear-filters:hover{background:#f1f5f9}' +
+
+    /* Results */
+    '.results-section{padding:20px 30px;flex:1;overflow-y:auto;max-height:400px}' +
+    '.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}' +
+    '.results-count{font-size:14px;color:#64748b}' +
+    '.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}' +
+
+    /* Result Card */
+    '.result-card{background:white;border-radius:12px;padding:20px;border:1px solid #e2e8f0;cursor:pointer;transition:all 0.2s}' +
+    '.result-card:hover{border-color:#7C3AED;box-shadow:0 4px 12px rgba(124,58,237,0.15);transform:translateY(-1px)}' +
+    '.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}' +
+    '.card-type{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}' +
+    '.type-member{background:#dbeafe;color:#1d4ed8}' +
+    '.type-grievance{background:#fee2e2;color:#dc2626}' +
+    '.card-id{font-size:12px;color:#94a3b8;font-family:monospace}' +
+    '.card-title{font-size:16px;font-weight:600;color:#1e293b;margin-bottom:8px}' +
+    '.card-details{display:flex;flex-direction:column;gap:6px}' +
+    '.detail-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b}' +
+    '.detail-icon{width:16px;text-align:center}' +
+    '.detail-label{color:#94a3b8;min-width:60px}' +
+    '.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}' +
+    '.status-open{background:#fef3c7;color:#d97706}' +
+    '.status-pending{background:#fef3c7;color:#b45309}' +
+    '.status-closed{background:#d1fae5;color:#059669}' +
+
+    /* Empty State */
+    '.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}' +
+    '.empty-icon{font-size:48px;margin-bottom:16px}' +
+    '.empty-title{font-size:18px;font-weight:600;color:#64748b;margin-bottom:8px}' +
+    '.empty-text{font-size:14px}' +
+
+    /* Loading */
+    '.loading{text-align:center;padding:40px;color:#64748b}' +
+    '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#7C3AED;border-radius:50%;animation:spin 1s linear infinite}' +
+    '@keyframes spin{to{transform:rotate(360deg)}}' +
+
+    /* Footer */
+    '.footer{padding:16px 30px;background:white;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}' +
+    '.footer-info{font-size:13px;color:#94a3b8}' +
+    '.close-btn{padding:10px 24px;background:#64748b;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}' +
+    '.close-btn:hover{background:#475569}' +
+    '</style></head><body>' +
+
+    '<div class="header">' +
+    '  <h1>🔍 Search Dashboard</h1>' +
+    '  <p>Search across members and grievances with advanced filters</p>' +
+    '</div>' +
+
+    '<div class="search-section">' +
+    '  <div class="search-row">' +
+    '    <div class="search-input-container">' +
+    '      <span class="search-icon">🔍</span>' +
+    '      <input type="text" class="search-input" id="searchQuery" placeholder="Search by name, ID, email, job title, location, or issue type..." autofocus>' +
+    '    </div>' +
+    '    <div class="tabs">' +
+    '      <button class="tab active" data-tab="all">All</button>' +
+    '      <button class="tab" data-tab="members">Members</button>' +
+    '      <button class="tab" data-tab="grievances">Grievances</button>' +
+    '    </div>' +
+    '  </div>' +
+    '</div>' +
+
+    '<div class="filters-section">' +
+    '  <div class="filters-row">' +
+    '    <div class="filter-group" id="statusFilter" style="display:none">' +
+    '      <span class="filter-label">Status:</span>' +
+    '      <select class="filter-select" id="filterStatus">' +
+    '        <option value="">All Statuses</option>' +
+    '        <option value="Open">Open</option>' +
+    '        <option value="Pending Info">Pending Info</option>' +
+    '        <option value="Settled">Settled</option>' +
+    '        <option value="Closed">Closed</option>' +
+    '        <option value="Won">Won</option>' +
+    '        <option value="Denied">Denied</option>' +
+    '      </select>' +
+    '    </div>' +
+    '    <div class="filter-group" id="locationFilter">' +
+    '      <span class="filter-label">Location:</span>' +
+    '      <select class="filter-select" id="filterLocation">' +
+    '        <option value="">All Locations</option>' +
+    '      </select>' +
+    '    </div>' +
+    '    <div class="filter-group" id="stewardFilter">' +
+    '      <span class="filter-label">Is Steward:</span>' +
+    '      <select class="filter-select" id="filterSteward">' +
+    '        <option value="">Any</option>' +
+    '        <option value="Yes">Yes</option>' +
+    '        <option value="No">No</option>' +
+    '      </select>' +
+    '    </div>' +
+    '    <button class="clear-filters" onclick="clearFilters()">Clear Filters</button>' +
+    '  </div>' +
+    '</div>' +
+
+    '<div class="results-section" id="resultsSection">' +
+    '  <div class="empty-state">' +
+    '    <div class="empty-icon">🔍</div>' +
+    '    <div class="empty-title">Start searching</div>' +
+    '    <div class="empty-text">Type at least 2 characters to search across all records</div>' +
+    '  </div>' +
+    '</div>' +
+
+    '<div class="footer">' +
+    '  <div class="footer-info">Press Enter to search • Click a result to navigate</div>' +
+    '  <button class="close-btn" onclick="google.script.host.close()">Close</button>' +
+    '</div>' +
+
+    '<script>' +
+    'var currentTab = "all";' +
+    'var currentResults = [];' +
+    'var locations = [];' +
+
+    /* Initialize */
+    'document.addEventListener("DOMContentLoaded", function() {' +
+    '  loadLocations();' +
+    '  setupEventListeners();' +
+    '});' +
+
+    /* Load locations for filter */
+    'function loadLocations() {' +
+    '  google.script.run.withSuccessHandler(function(locs) {' +
+    '    locations = locs || [];' +
+    '    var select = document.getElementById("filterLocation");' +
+    '    locations.forEach(function(loc) {' +
+    '      if (loc) {' +
+    '        var opt = document.createElement("option");' +
+    '        opt.value = loc;' +
+    '        opt.textContent = loc;' +
+    '        select.appendChild(opt);' +
+    '      }' +
+    '    });' +
+    '  }).getDesktopSearchLocations();' +
+    '}' +
+
+    /* Event Listeners */
+    'function setupEventListeners() {' +
+    '  var input = document.getElementById("searchQuery");' +
+    '  var debounceTimer;' +
+    '  input.addEventListener("input", function() {' +
+    '    clearTimeout(debounceTimer);' +
+    '    debounceTimer = setTimeout(function() { doSearch(); }, 300);' +
+    '  });' +
+    '  input.addEventListener("keydown", function(e) {' +
+    '    if (e.key === "Enter") { doSearch(); }' +
+    '  });' +
+    '  document.querySelectorAll(".tab").forEach(function(tab) {' +
+    '    tab.addEventListener("click", function() {' +
+    '      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });' +
+    '      this.classList.add("active");' +
+    '      currentTab = this.dataset.tab;' +
+    '      updateFilterVisibility();' +
+    '      doSearch();' +
+    '    });' +
+    '  });' +
+    '  document.querySelectorAll(".filter-select").forEach(function(sel) {' +
+    '    sel.addEventListener("change", function() { doSearch(); });' +
+    '  });' +
+    '}' +
+
+    /* Update filter visibility based on tab */
+    'function updateFilterVisibility() {' +
+    '  var statusFilter = document.getElementById("statusFilter");' +
+    '  var stewardFilter = document.getElementById("stewardFilter");' +
+    '  if (currentTab === "grievances") {' +
+    '    statusFilter.style.display = "flex";' +
+    '    stewardFilter.style.display = "none";' +
+    '  } else if (currentTab === "members") {' +
+    '    statusFilter.style.display = "none";' +
+    '    stewardFilter.style.display = "flex";' +
+    '  } else {' +
+    '    statusFilter.style.display = "flex";' +
+    '    stewardFilter.style.display = "flex";' +
+    '  }' +
+    '}' +
+
+    /* Clear all filters */
+    'function clearFilters() {' +
+    '  document.getElementById("filterStatus").value = "";' +
+    '  document.getElementById("filterLocation").value = "";' +
+    '  document.getElementById("filterSteward").value = "";' +
+    '  doSearch();' +
+    '}' +
+
+    /* Perform search */
+    'function doSearch() {' +
+    '  var query = document.getElementById("searchQuery").value.trim();' +
+    '  var filters = {' +
+    '    status: document.getElementById("filterStatus").value,' +
+    '    location: document.getElementById("filterLocation").value,' +
+    '    isSteward: document.getElementById("filterSteward").value' +
+    '  };' +
+    '  if (query.length < 2 && !filters.status && !filters.location && !filters.isSteward) {' +
+    '    showEmptyState();' +
+    '    return;' +
+    '  }' +
+    '  showLoading();' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data) { renderResults(data); })' +
+    '    .withFailureHandler(function(err) { showError(err.message); })' +
+    '    .getDesktopSearchData(query, currentTab, filters);' +
+    '}' +
+
+    /* Show loading state */
+    'function showLoading() {' +
+    '  document.getElementById("resultsSection").innerHTML = ' +
+    '    \'<div class="loading"><div class="spinner"></div><p style="margin-top:12px">Searching...</p></div>\';' +
+    '}' +
+
+    /* Show empty state */
+    'function showEmptyState() {' +
+    '  document.getElementById("resultsSection").innerHTML = ' +
+    '    \'<div class="empty-state"><div class="empty-icon">🔍</div>\' +' +
+    '    \'<div class="empty-title">Start searching</div>\' +' +
+    '    \'<div class="empty-text">Type at least 2 characters to search</div></div>\';' +
+    '}' +
+
+    /* Show error */
+    'function showError(msg) {' +
+    '  document.getElementById("resultsSection").innerHTML = ' +
+    '    \'<div class="empty-state"><div class="empty-icon">⚠️</div>\' +' +
+    '    \'<div class="empty-title">Error</div>\' +' +
+    '    \'<div class="empty-text">\' + msg + \'</div></div>\';' +
+    '}' +
+
+    /* Render results */
+    'function renderResults(data) {' +
+    '  currentResults = data || [];' +
+    '  var container = document.getElementById("resultsSection");' +
+    '  if (currentResults.length === 0) {' +
+    '    container.innerHTML = \'<div class="empty-state"><div class="empty-icon">📭</div>\' +' +
+    '      \'<div class="empty-title">No results found</div>\' +' +
+    '      \'<div class="empty-text">Try adjusting your search or filters</div></div>\';' +
+    '    return;' +
+    '  }' +
+    '  var html = \'<div class="results-header"><div class="results-count">\' + currentResults.length + \' result\' + (currentResults.length !== 1 ? "s" : "") + \' found</div></div>\';' +
+    '  html += \'<div class="results-grid">\';' +
+    '  currentResults.forEach(function(r, i) {' +
+    '    var statusClass = "";' +
+    '    if (r.status) {' +
+    '      statusClass = r.status === "Open" ? "status-open" : (r.status.indexOf("Pending") >= 0 ? "status-pending" : "status-closed");' +
+    '    }' +
+    '    html += \'<div class="result-card" onclick="navigateToResult(\' + i + \')">\';' +
+    '    html += \'<div class="card-header">\';' +
+    '    html += \'<span class="card-type \' + (r.type === "member" ? "type-member" : "type-grievance") + \'">\' + (r.type === "member" ? "👤 Member" : "📋 Grievance") + \'</span>\';' +
+    '    html += \'<span class="card-id">\' + r.id + \'</span>\';' +
+    '    html += \'</div>\';' +
+    '    html += \'<div class="card-title">\' + r.title + \'</div>\';' +
+    '    html += \'<div class="card-details">\';' +
+    '    if (r.email) html += \'<div class="detail-row"><span class="detail-icon">📧</span>\' + r.email + \'</div>\';' +
+    '    if (r.location) html += \'<div class="detail-row"><span class="detail-icon">📍</span>\' + r.location + \'</div>\';' +
+    '    if (r.jobTitle) html += \'<div class="detail-row"><span class="detail-icon">💼</span>\' + r.jobTitle + \'</div>\';' +
+    '    if (r.status) html += \'<div class="detail-row"><span class="detail-icon">📌</span><span class="status-badge \' + statusClass + \'">\' + r.status + \'</span></div>\';' +
+    '    if (r.issueType) html += \'<div class="detail-row"><span class="detail-icon">⚖️</span>\' + r.issueType + \'</div>\';' +
+    '    if (r.steward) html += \'<div class="detail-row"><span class="detail-icon">🛡️</span>Steward: \' + r.steward + \'</div>\';' +
+    '    if (r.filedDate) html += \'<div class="detail-row"><span class="detail-icon">📅</span>Filed: \' + r.filedDate + \'</div>\';' +
+    '    if (r.isSteward === "Yes") html += \'<div class="detail-row"><span class="detail-icon">⭐</span>Union Steward</div>\';' +
+    '    html += \'</div></div>\';' +
+    '  });' +
+    '  html += \'</div>\';' +
+    '  container.innerHTML = html;' +
+    '}' +
+
+    /* Navigate to result */
+    'function navigateToResult(index) {' +
+    '  var r = currentResults[index];' +
+    '  if (!r) return;' +
+    '  google.script.run.withSuccessHandler(function() {' +
+    '    google.script.host.close();' +
+    '  }).navigateToSearchResult(r.type, r.id, r.row);' +
+    '}' +
+    '</script></body></html>'
+  ).setWidth(900).setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Search Dashboard');
+}
+
+/**
+ * Get locations for desktop search filter dropdown
+ * @returns {Array} Array of unique locations
+ */
+function getDesktopSearchLocations() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var locations = [];
+
+  // Get locations from Member Directory
+  var mSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (mSheet && mSheet.getLastRow() > 1) {
+    var mData = mSheet.getRange(2, MEMBER_COLS.WORK_LOCATION, mSheet.getLastRow() - 1, 1).getValues();
+    mData.forEach(function(row) {
+      var loc = row[0];
+      if (loc && locations.indexOf(loc) === -1) {
+        locations.push(loc);
+      }
+    });
+  }
+
+  return locations.sort();
+}
+
+/**
+ * Get search data for desktop search
+ * Searches more fields than mobile: job title, location, issue type, etc.
+ * @param {string} query - Search query
+ * @param {string} tab - Tab filter: 'all', 'members', 'grievances'
+ * @param {Object} filters - Additional filters: status, location, isSteward
+ * @returns {Array} Array of search results
+ */
+function getDesktopSearchData(query, tab, filters) {
+  var results = [];
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var q = (query || '').toLowerCase();
+  filters = filters || {};
+
+  // Search Members
+  if (tab === 'all' || tab === 'members') {
+    var mSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (mSheet && mSheet.getLastRow() > 1) {
+      var lastCol = Math.max(MEMBER_COLS.IS_STEWARD, MEMBER_COLS.WORK_LOCATION, MEMBER_COLS.JOB_TITLE, MEMBER_COLS.EMAIL);
+      var mData = mSheet.getRange(2, 1, mSheet.getLastRow() - 1, lastCol).getValues();
+
+      mData.forEach(function(row, index) {
+        var memberId = row[MEMBER_COLS.MEMBER_ID - 1] || '';
+        var firstName = row[MEMBER_COLS.FIRST_NAME - 1] || '';
+        var lastName = row[MEMBER_COLS.LAST_NAME - 1] || '';
+        var fullName = firstName + ' ' + lastName;
+        var email = row[MEMBER_COLS.EMAIL - 1] || '';
+        var jobTitle = row[MEMBER_COLS.JOB_TITLE - 1] || '';
+        var location = row[MEMBER_COLS.WORK_LOCATION - 1] || '';
+        var isSteward = row[MEMBER_COLS.IS_STEWARD - 1] || '';
+
+        // Apply filters
+        if (filters.location && location !== filters.location) return;
+        if (filters.isSteward && isSteward !== filters.isSteward) return;
+
+        // Search across fields
+        var searchable = (memberId + ' ' + fullName + ' ' + email + ' ' + jobTitle + ' ' + location).toLowerCase();
+        if (q.length >= 2 && searchable.indexOf(q) === -1) return;
+
+        // Skip if no query and no filters
+        if (q.length < 2 && !filters.location && !filters.isSteward) return;
+
+        results.push({
+          type: 'member',
+          id: memberId,
+          title: fullName.trim() || 'Unnamed Member',
+          email: email,
+          jobTitle: jobTitle,
+          location: location,
+          isSteward: isSteward,
+          row: index + 2 // 1-indexed + header row
+        });
+      });
+    }
+  }
+
+  // Search Grievances
+  if (tab === 'all' || tab === 'grievances') {
+    var gSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+    if (gSheet && gSheet.getLastRow() > 1) {
+      var lastGCol = Math.max(GRIEVANCE_COLS.STATUS, GRIEVANCE_COLS.ISSUE_CATEGORY, GRIEVANCE_COLS.LOCATION, GRIEVANCE_COLS.STEWARD, GRIEVANCE_COLS.DATE_FILED);
+      var gData = gSheet.getRange(2, 1, gSheet.getLastRow() - 1, lastGCol).getValues();
+
+      gData.forEach(function(row, index) {
+        var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
+        var firstName = row[GRIEVANCE_COLS.FIRST_NAME - 1] || '';
+        var lastName = row[GRIEVANCE_COLS.LAST_NAME - 1] || '';
+        var fullName = firstName + ' ' + lastName;
+        var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
+        var issueType = row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || '';
+        var location = row[GRIEVANCE_COLS.LOCATION - 1] || '';
+        var steward = row[GRIEVANCE_COLS.STEWARD - 1] || '';
+        var dateFiled = row[GRIEVANCE_COLS.DATE_FILED - 1] || '';
+
+        // Apply filters
+        if (filters.status && status !== filters.status) return;
+        if (filters.location && location !== filters.location) return;
+
+        // Search across fields
+        var searchable = (grievanceId + ' ' + fullName + ' ' + status + ' ' + issueType + ' ' + location + ' ' + steward).toLowerCase();
+        if (q.length >= 2 && searchable.indexOf(q) === -1) return;
+
+        // Skip if no query and no filters
+        if (q.length < 2 && !filters.status && !filters.location) return;
+
+        // Format date
+        var filedDateStr = '';
+        if (dateFiled) {
+          try {
+            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'MMM d, yyyy');
+          } catch(e) {
+            filedDateStr = dateFiled.toString();
+          }
+        }
+
+        results.push({
+          type: 'grievance',
+          id: grievanceId,
+          title: fullName.trim() || 'Unknown Member',
+          status: status,
+          issueType: issueType,
+          location: location,
+          steward: steward,
+          filedDate: filedDateStr,
+          row: index + 2
+        });
+      });
+    }
+  }
+
+  // Limit results
+  return results.slice(0, 50);
+}
+
+/**
+ * Navigate to a search result in the spreadsheet
+ * @param {string} type - 'member' or 'grievance'
+ * @param {string} id - The record ID
+ * @param {number} row - The row number
+ */
+function navigateToSearchResult(type, id, row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = type === 'member' ? SHEETS.MEMBER_DIR : SHEETS.GRIEVANCE_LOG;
+  var sheet = ss.getSheetByName(sheetName);
+
+  if (sheet && row) {
+    ss.setActiveSheet(sheet);
+    sheet.setActiveRange(sheet.getRange(row, 1));
+    SpreadsheetApp.flush();
+  }
 }
 
 function viewActiveGrievances() {
