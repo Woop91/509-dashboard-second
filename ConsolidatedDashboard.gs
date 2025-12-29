@@ -1390,56 +1390,58 @@ function createInteractiveDashboard(ss) {
     .setFontSize(20)
     .setFontWeight('bold')
     .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:F1').merge();
+  sheet.getRange('A1:H1').merge();
 
   // Instructions
-  sheet.getRange('A3').setValue('Select metrics and chart types using the dropdowns below. Metrics auto-update from live data.')
+  sheet.getRange('A3').setValue('Select metrics, chart types, and time range. Charts auto-update from live data.')
     .setFontStyle('italic');
-  sheet.getRange('A3:F3').merge();
+  sheet.getRange('A3:H3').merge();
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // METRIC SELECTION ROW
+  // CONTROL PANEL - ROW 5-6
   // ═══════════════════════════════════════════════════════════════════════════
-  var controlLabels = [['Metric 1', 'Metric 2', 'Metric 3', 'Time Range', 'Show Trend', 'Theme']];
+  var controlLabels = [['Metric 1', 'Chart Type 1', 'Metric 2', 'Chart Type 2', 'Time Range', 'Theme']];
   sheet.getRange('A5:F5').setValues(controlLabels)
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
 
   // Default selections
-  var defaultSelections = [['Total Members', 'Open Grievances', 'Win Rate', 'All Time', 'Yes', 'Default']];
+  var defaultSelections = [['Total Members', 'Bar Chart', 'Open Grievances', 'Pie Chart', 'All Time', 'Default']];
   sheet.getRange('A6:F6').setValues(defaultSelections);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SELECTED METRICS DISPLAY
+  // METRIC LOOKUP TABLE (Hidden reference data) - Rows 8-16
   // ═══════════════════════════════════════════════════════════════════════════
-  sheet.getRange('A8').setValue('SELECTED METRICS')
+  sheet.getRange('A8').setValue('METRIC DATA')
     .setFontWeight('bold')
-    .setBackground(COLORS.UNION_GREEN)
+    .setBackground(COLORS.PRIMARY_PURPLE)
     .setFontColor(COLORS.WHITE);
-  sheet.getRange('A8:F8').merge();
+  sheet.getRange('A8:C8').merge();
 
-  // Headers for metrics
-  sheet.getRange('A9:C9').setValues([['Metric', 'Current Value', 'Description']])
+  sheet.getRange('A9:C9').setValues([['Metric Name', 'Value', 'Description']])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
 
-  // Dynamic metric formulas based on selection
+  // Dynamic metric formulas
   var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
   var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
+  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
+  var mUnitCol = getColumnLetter(MEMBER_COLS.UNIT);
   var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
   var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
   var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+  var gCategoryCol = getColumnLetter(GRIEVANCE_COLS.ISSUE_CATEGORY);
+  var gFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
 
-  // Metric lookup table (row 10-17)
   var metricData = [
-    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members'],
     ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
     ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
     ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
-    ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
+    ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Awaiting information'],
     ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],
-    ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")', 'Cases won (full or partial)'],
-    ['Win Rate', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)*100,1)&"%","0%")', 'Win percentage of all cases']
+    ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")', 'Cases won'],
+    ['Win Rate', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)*100,1)&"%","0%")', 'Win percentage']
   ];
 
   for (var i = 0; i < metricData.length; i++) {
@@ -1447,6 +1449,137 @@ function createInteractiveDashboard(ss) {
     sheet.getRange(10 + i, 2).setFormula(metricData[i][1]);
     sheet.getRange(10 + i, 3).setValue(metricData[i][2]);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHART 1 DISPLAY AREA - Rows 19-30
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A19').setValue('📊 CHART 1: ')
+    .setFontWeight('bold')
+    .setFontSize(12);
+  sheet.getRange('B19').setFormula('=A6')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor(COLORS.PRIMARY_PURPLE);
+  sheet.getRange('C19').setValue(' (')
+    .setFontWeight('bold');
+  sheet.getRange('D19').setFormula('=B6')
+    .setFontWeight('bold')
+    .setFontColor(COLORS.UNION_GREEN);
+  sheet.getRange('E19').setValue(')')
+    .setFontWeight('bold');
+
+  // Chart 1 data header
+  sheet.getRange('A20:D20').setValues([['Category', 'Count', 'Percentage', 'Visual']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Chart 1 dynamic data - Status breakdown for grievances or location for members
+  var chart1Data = [
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Open","Location 1")',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),1,1)))',
+     '=IFERROR(ROUND(B21/SUM($B$21:$B$25)*100,1)&"%","0%")',
+     '=REPT("█",ROUND(B21/MAX($B$21:$B$25)*10))'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Pending Info","Location 2")',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),2,1),"")))',
+     '=IFERROR(ROUND(B22/SUM($B$21:$B$25)*100,1)&"%","0%")',
+     '=REPT("█",ROUND(B22/MAX($B$21:$B$25)*10))'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Settled","Location 3")',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled"),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),3,1),"")))',
+     '=IFERROR(ROUND(B23/SUM($B$21:$B$25)*100,1)&"%","0%")',
+     '=REPT("█",ROUND(B23/MAX($B$21:$B$25)*10))'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Closed","Location 4")',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Closed"),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),4,1),"")))',
+     '=IFERROR(ROUND(B24/SUM($B$21:$B$25)*100,1)&"%","0%")',
+     '=REPT("█",ROUND(B24/MAX($B$21:$B$25)*10))'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Withdrawn","Location 5")',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn"),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),5,1),"")))',
+     '=IFERROR(ROUND(B25/SUM($B$21:$B$25)*100,1)&"%","0%")',
+     '=REPT("█",ROUND(B25/MAX($B$21:$B$25)*10))']
+  ];
+
+  for (var r = 0; r < chart1Data.length; r++) {
+    sheet.getRange(21 + r, 1).setFormula(chart1Data[r][0]);
+    sheet.getRange(21 + r, 2).setFormula(chart1Data[r][1]);
+    sheet.getRange(21 + r, 3).setFormula(chart1Data[r][2]);
+    sheet.getRange(21 + r, 4).setFormula(chart1Data[r][3]).setFontColor(COLORS.PRIMARY_PURPLE);
+  }
+
+  // Chart 1 Total
+  sheet.getRange('A26:D26').setValues([['TOTAL', '=SUM(B21:B25)', '100%', '']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHART 2 DISPLAY AREA - Rows 28-38
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A28').setValue('📈 CHART 2: ')
+    .setFontWeight('bold')
+    .setFontSize(12);
+  sheet.getRange('B28').setFormula('=C6')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor(COLORS.PRIMARY_PURPLE);
+  sheet.getRange('C28').setValue(' (')
+    .setFontWeight('bold');
+  sheet.getRange('D28').setFormula('=D6')
+    .setFontWeight('bold')
+    .setFontColor(COLORS.UNION_GREEN);
+  sheet.getRange('E28').setValue(')')
+    .setFontWeight('bold');
+
+  // Chart 2 data header
+  sheet.getRange('A29:D29').setValues([['Category', 'Count', 'Percentage', 'Visual']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Chart 2 dynamic data - Issue categories or units
+  var chart2Data = [
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),"Category 1","Unit 1")',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),1,1),"")),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),1,1),"")))',
+     '=IFERROR(ROUND(B30/SUM($B$30:$B$34)*100,1)&"%","0%")',
+     '=REPT("▓",ROUND(B30/MAX($B$30:$B$34)*10))'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),"Category 2","Unit 2")',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),2,1),"")),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),2,1),"")))',
+     '=IFERROR(ROUND(B31/SUM($B$30:$B$34)*100,1)&"%","0%")',
+     '=REPT("▓",ROUND(B31/MAX($B$30:$B$34)*10))'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),"Category 3","Unit 3")',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),3,1),"")),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),3,1),"")))',
+     '=IFERROR(ROUND(B32/SUM($B$30:$B$34)*100,1)&"%","0%")',
+     '=REPT("▓",ROUND(B32/MAX($B$30:$B$34)*10))'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),"Category 4","Unit 4")',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),4,1),"")),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),4,1),"")))',
+     '=IFERROR(ROUND(B33/SUM($B$30:$B$34)*100,1)&"%","0%")',
+     '=REPT("▓",ROUND(B33/MAX($B$30:$B$34)*10))'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),"Category 5","Unit 5")',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),5,1),"")),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),5,1),"")))',
+     '=IFERROR(ROUND(B34/SUM($B$30:$B$34)*100,1)&"%","0%")',
+     '=REPT("▓",ROUND(B34/MAX($B$30:$B$34)*10))']
+  ];
+
+  for (var r = 0; r < chart2Data.length; r++) {
+    sheet.getRange(30 + r, 1).setFormula(chart2Data[r][0]);
+    sheet.getRange(30 + r, 2).setFormula(chart2Data[r][1]);
+    sheet.getRange(30 + r, 3).setFormula(chart2Data[r][2]);
+    sheet.getRange(30 + r, 4).setFormula(chart2Data[r][3]).setFontColor(COLORS.UNION_GREEN);
+  }
+
+  // Chart 2 Total
+  sheet.getRange('A35:D35').setValues([['TOTAL', '=SUM(B30:B34)', '100%', '']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUMMARY STATS - Row 37-38
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A37').setValue('📋 QUICK STATS')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setBackground(COLORS.UNION_GREEN)
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A37:D37').merge();
+
+  sheet.getRange('A38:D38').setValues([['Selected Metric 1', '=VLOOKUP(A6,A10:B17,2,FALSE)', 'Selected Metric 2', '=VLOOKUP(C6,A10:B17,2,FALSE)']])
+    .setFontWeight('bold');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DROPDOWN VALIDATIONS
@@ -1457,9 +1590,17 @@ function createInteractiveDashboard(ss) {
     .requireValueInList(metricOptions, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange('A6').setDataValidation(metricRule);
-  sheet.getRange('B6').setDataValidation(metricRule);
-  sheet.getRange('C6').setDataValidation(metricRule);
+  sheet.getRange('A6').setDataValidation(metricRule);  // Metric 1
+  sheet.getRange('C6').setDataValidation(metricRule);  // Metric 2
+
+  // Chart type options
+  var chartOptions = ['Bar Chart', 'Horizontal Bar', 'Pie Chart', 'Line Graph', 'Area Chart', 'Sparkline', 'Progress Bar', 'Gauge'];
+  var chartRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(chartOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange('B6').setDataValidation(chartRule);  // Chart Type 1
+  sheet.getRange('D6').setDataValidation(chartRule);  // Chart Type 2
 
   // Time range options
   var timeOptions = ['All Time', 'This Month', 'This Quarter', 'This Year', 'Last 30 Days', 'Last 90 Days'];
@@ -1467,14 +1608,7 @@ function createInteractiveDashboard(ss) {
     .requireValueInList(timeOptions, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange('D6').setDataValidation(timeRule);
-
-  // Yes/No options
-  var yesNoRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Yes', 'No'], true)
-    .setAllowInvalid(false)
-    .build();
-  sheet.getRange('E6').setDataValidation(yesNoRule);
+  sheet.getRange('E6').setDataValidation(timeRule);
 
   // Theme options
   var themeOptions = ['Default', 'Dark', 'High Contrast', 'Print Friendly'];
@@ -1484,9 +1618,16 @@ function createInteractiveDashboard(ss) {
     .build();
   sheet.getRange('F6').setDataValidation(themeRule);
 
-  // Format
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FORMATTING
+  // ═══════════════════════════════════════════════════════════════════════════
   sheet.autoResizeColumns(1, 6);
-  sheet.setColumnWidth(3, 250);
+  sheet.setColumnWidth(3, 200);
+  sheet.setColumnWidth(4, 150);
+
+  // Add borders to chart areas
+  sheet.getRange('A20:D26').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange('A29:D35').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
 }
 
 // ============================================================================
