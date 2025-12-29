@@ -1474,7 +1474,7 @@ function createInteractiveDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY);
 
   // Visual formula that changes based on Chart Type 1 selection (B6)
-  // Chart types: Bar Chart, Horizontal Bar, Pie Chart, Line Graph, Area Chart, Sparkline, Progress Bar, Gauge
+  // Chart types: Bar Chart, Horizontal Bar, Pie Chart, Line Graph, Area Chart, Sparkline, Progress Bar, Gauge, Sankey Diagram
   var visual1Formula = function(row) {
     return '=IFERROR(SWITCH($B$6,' +
       '"Bar Chart",REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10)),' +
@@ -1485,6 +1485,7 @@ function createInteractiveDashboard(ss) {
       '"Sparkline",SPARKLINE(B' + row + ',{"charttype","bar";"max",MAX($B$21:$B$25);"color1","#7C3AED"}),' +
       '"Progress Bar","["&REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10))&REPT("░",10-ROUND(B' + row + '/MAX($B$21:$B$25)*10))&"]",' +
       '"Gauge",IF(B' + row + '/MAX($B$21:$B$25)<0.25,"◔",IF(B' + row + '/MAX($B$21:$B$25)<0.5,"◑",IF(B' + row + '/MAX($B$21:$B$25)<0.75,"◕","●")))&" "&C' + row + ',' +
+      '"Sankey Diagram","▐"&REPT("═",ROUND(B' + row + '/MAX($B$21:$B$25)*8))&"▶ "&C' + row + ',' +
       'REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10))),"")';
   };
 
@@ -1554,6 +1555,7 @@ function createInteractiveDashboard(ss) {
       '"Sparkline",SPARKLINE(B' + row + ',{"charttype","bar";"max",MAX($B$30:$B$34);"color1","#059669"}),' +
       '"Progress Bar","["&REPT("█",ROUND(B' + row + '/MAX($B$30:$B$34)*10))&REPT("░",10-ROUND(B' + row + '/MAX($B$30:$B$34)*10))&"]",' +
       '"Gauge",IF(B' + row + '/MAX($B$30:$B$34)<0.25,"◔",IF(B' + row + '/MAX($B$30:$B$34)<0.5,"◑",IF(B' + row + '/MAX($B$30:$B$34)<0.75,"◕","●")))&" "&C' + row + ',' +
+      '"Sankey Diagram","▐"&REPT("═",ROUND(B' + row + '/MAX($B$30:$B$34)*8))&"▶ "&C' + row + ',' +
       'REPT("█",ROUND(B' + row + '/MAX($B$30:$B$34)*10))),"")';
   };
 
@@ -1615,7 +1617,7 @@ function createInteractiveDashboard(ss) {
   sheet.getRange('C6').setDataValidation(metricRule);  // Metric 2
 
   // Chart type options
-  var chartOptions = ['Bar Chart', 'Horizontal Bar', 'Pie Chart', 'Line Graph', 'Area Chart', 'Sparkline', 'Progress Bar', 'Gauge'];
+  var chartOptions = ['Bar Chart', 'Horizontal Bar', 'Pie Chart', 'Line Graph', 'Area Chart', 'Sparkline', 'Progress Bar', 'Gauge', 'Sankey Diagram'];
   var chartRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(chartOptions, true)
     .setAllowInvalid(false)
@@ -1687,7 +1689,8 @@ function refreshInteractiveCharts() {
     'Area Chart': Charts.ChartType.AREA,
     'Sparkline': Charts.ChartType.BAR,
     'Progress Bar': Charts.ChartType.BAR,
-    'Gauge': Charts.ChartType.PIE
+    'Gauge': Charts.ChartType.PIE,
+    'Sankey Diagram': Charts.ChartType.BAR  // Use stacked bar as Sankey approximation
   };
 
   // Get chart type or default to COLUMN
@@ -1712,6 +1715,11 @@ function refreshInteractiveCharts() {
   if (type1 === Charts.ChartType.PIE) {
     chart1Builder.setOption('pieHole', 0);
     chart1Builder.setOption('is3D', false);
+  } else if (chartType1 === 'Sankey Diagram') {
+    // Sankey-style stacked bar with flow colors
+    chart1Builder.setOption('colors', ['#7C3AED', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE']);
+    chart1Builder.setOption('isStacked', true);
+    chart1Builder.setOption('bar', { groupWidth: '80%' });
   } else if (type1 === Charts.ChartType.BAR || type1 === Charts.ChartType.COLUMN) {
     chart1Builder.setOption('colors', ['#7C3AED']);
   } else if (type1 === Charts.ChartType.LINE || type1 === Charts.ChartType.AREA) {
@@ -1736,6 +1744,11 @@ function refreshInteractiveCharts() {
   if (type2 === Charts.ChartType.PIE) {
     chart2Builder.setOption('pieHole', 0);
     chart2Builder.setOption('is3D', false);
+  } else if (chartType2 === 'Sankey Diagram') {
+    // Sankey-style stacked bar with flow colors
+    chart2Builder.setOption('colors', ['#059669', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5']);
+    chart2Builder.setOption('isStacked', true);
+    chart2Builder.setOption('bar', { groupWidth: '80%' });
   } else if (type2 === Charts.ChartType.BAR || type2 === Charts.ChartType.COLUMN) {
     chart2Builder.setOption('colors', ['#059669']);
   } else if (type2 === Charts.ChartType.LINE || type2 === Charts.ChartType.AREA) {
