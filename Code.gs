@@ -36,6 +36,7 @@ function onOpen() {
   // Sheet Manager Menu
   ui.createMenu('📊 Sheet Manager')
     .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
+    .addItem('📈 Refresh Interactive Charts', 'refreshInteractiveCharts')
     .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
     .addSeparator()
     .addSubMenu(ui.createMenu('📁 Google Drive')

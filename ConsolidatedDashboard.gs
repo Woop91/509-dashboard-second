@@ -1649,6 +1649,104 @@ function createInteractiveDashboard(ss) {
   // Add borders to chart areas
   sheet.getRange('A20:D26').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
   sheet.getRange('A29:D35').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
+
+  // Create initial charts
+  refreshInteractiveCharts();
+}
+
+/**
+ * Refresh/Update embedded charts based on dropdown selections
+ * Call this function when dropdowns change or manually via menu
+ */
+function refreshInteractiveCharts() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Interactive Dashboard not found. Please run CREATE 509 DASHBOARD first.');
+    return;
+  }
+
+  // Read dropdown selections
+  var metric1 = sheet.getRange('A6').getValue();
+  var chartType1 = sheet.getRange('B6').getValue();
+  var metric2 = sheet.getRange('C6').getValue();
+  var chartType2 = sheet.getRange('D6').getValue();
+
+  // Remove existing charts
+  var charts = sheet.getCharts();
+  charts.forEach(function(chart) {
+    sheet.removeChart(chart);
+  });
+
+  // Chart type mapping
+  var chartTypeMap = {
+    'Bar Chart': Charts.ChartType.BAR,
+    'Horizontal Bar': Charts.ChartType.BAR,
+    'Pie Chart': Charts.ChartType.PIE,
+    'Line Graph': Charts.ChartType.LINE,
+    'Area Chart': Charts.ChartType.AREA,
+    'Sparkline': Charts.ChartType.BAR,
+    'Progress Bar': Charts.ChartType.BAR,
+    'Gauge': Charts.ChartType.PIE
+  };
+
+  // Get chart type or default to COLUMN
+  var type1 = chartTypeMap[chartType1] || Charts.ChartType.COLUMN;
+  var type2 = chartTypeMap[chartType2] || Charts.ChartType.COLUMN;
+
+  // For "Bar Chart" use COLUMN (vertical), for "Horizontal Bar" use BAR
+  if (chartType1 === 'Bar Chart') type1 = Charts.ChartType.COLUMN;
+  if (chartType2 === 'Bar Chart') type2 = Charts.ChartType.COLUMN;
+
+  // Create Chart 1 - positioned at column E, rows 19-26
+  var chart1Builder = sheet.newChart()
+    .setChartType(type1)
+    .addRange(sheet.getRange('A21:B25'))  // Category and Count columns
+    .setPosition(19, 5, 0, 0)  // Row 19, Column E
+    .setOption('title', metric1)
+    .setOption('legend', { position: 'bottom' })
+    .setOption('width', 350)
+    .setOption('height', 250);
+
+  // Apply chart-specific options
+  if (type1 === Charts.ChartType.PIE) {
+    chart1Builder.setOption('pieHole', 0);
+    chart1Builder.setOption('is3D', false);
+  } else if (type1 === Charts.ChartType.BAR || type1 === Charts.ChartType.COLUMN) {
+    chart1Builder.setOption('colors', ['#7C3AED']);
+  } else if (type1 === Charts.ChartType.LINE || type1 === Charts.ChartType.AREA) {
+    chart1Builder.setOption('colors', ['#7C3AED']);
+    chart1Builder.setOption('curveType', 'function');
+  }
+
+  var chart1 = chart1Builder.build();
+  sheet.insertChart(chart1);
+
+  // Create Chart 2 - positioned at column E, rows 28-35
+  var chart2Builder = sheet.newChart()
+    .setChartType(type2)
+    .addRange(sheet.getRange('A30:B34'))  // Category and Count columns
+    .setPosition(28, 5, 0, 0)  // Row 28, Column E
+    .setOption('title', metric2)
+    .setOption('legend', { position: 'bottom' })
+    .setOption('width', 350)
+    .setOption('height', 250);
+
+  // Apply chart-specific options
+  if (type2 === Charts.ChartType.PIE) {
+    chart2Builder.setOption('pieHole', 0);
+    chart2Builder.setOption('is3D', false);
+  } else if (type2 === Charts.ChartType.BAR || type2 === Charts.ChartType.COLUMN) {
+    chart2Builder.setOption('colors', ['#059669']);
+  } else if (type2 === Charts.ChartType.LINE || type2 === Charts.ChartType.AREA) {
+    chart2Builder.setOption('colors', ['#059669']);
+    chart2Builder.setOption('curveType', 'function');
+  }
+
+  var chart2 = chart2Builder.build();
+  sheet.insertChart(chart2);
+
+  ss.toast('Charts updated!', '📊 Interactive Dashboard', 3);
 }
 
 // ============================================================================
