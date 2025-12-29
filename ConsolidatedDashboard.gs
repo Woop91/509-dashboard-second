@@ -463,7 +463,10 @@ function getGrievanceHeaders() {
 var DEFAULT_CONFIG = {
   OFFICE_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   YES_NO: ['Yes', 'No'],
-  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'Settled', 'Withdrawn', 'Denied', 'Won', 'Appealed', 'In Arbitration', 'Closed'],
+  // Status = workflow state (where is the case in the process)
+  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'In Arbitration', 'Appealed', 'Closed'],
+  // Resolution = outcome (how did the case end, only when Status = Closed)
+  GRIEVANCE_RESOLUTION: ['Won - Full', 'Won - Partial', 'Settled - Favorable', 'Settled - Neutral', 'Denied - Appealing', 'Denied - Final', 'Withdrawn'],
   GRIEVANCE_STEP: ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'],
   ISSUE_CATEGORY: ['Discipline', 'Workload', 'Scheduling', 'Pay', 'Benefits', 'Safety', 'Harassment', 'Discrimination', 'Contract Violation', 'Other'],
   ARTICLES: [
@@ -4872,6 +4875,7 @@ function SEED_GRIEVANCES(count) {
   }
 
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
+  var resolutions = DEFAULT_CONFIG.GRIEVANCE_RESOLUTION;
   var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
   var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
   var articles = DEFAULT_CONFIG.ARTICLES;
@@ -4949,6 +4953,9 @@ function SEED_GRIEVANCES(count) {
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
+    // Resolution only applies to Closed cases
+    var resolution = (status === 'Closed') ? randomChoice(resolutions) : '';
+
     // Generate grievance row with all data populated directly
     var row = generateSingleGrievanceRow(
       grievanceId,
@@ -4963,7 +4970,8 @@ function SEED_GRIEVANCES(count) {
       memberEmail,
       memberUnit,
       memberLocation,
-      memberSteward
+      memberSteward,
+      resolution
     );
 
     rows.push(row);
@@ -5010,8 +5018,8 @@ function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed
-  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+  // Determine if case is closed (Status = 'Closed', Resolution has the outcome)
+  var isClosed = (status === 'Closed');
 
   // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
@@ -5090,8 +5098,9 @@ function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, 
 /**
  * Generate a single grievance row with all 34 columns
  * Properly calculates all timeline fields based on grievance step progression
+ * @param {string} resolution - Resolution (only for Closed status)
  */
-function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward) {
+function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward, resolution) {
   var today = new Date();
   var filingDeadline = addDays(incidentDate, 21);
 
@@ -5111,8 +5120,8 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed
-  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+  // Determine if case is closed (Status = 'Closed', Resolution has the outcome)
+  var isClosed = (status === 'Closed');
 
   // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
@@ -5189,8 +5198,8 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
     daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
   }
 
-  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
-  var resolution = dateClosed ? randomChoice(resolutions) : '';
+  // Use passed resolution parameter (only set for Closed status)
+  resolution = resolution || '';
 
   return [
     grievanceId,              // 1: Grievance ID (A)
