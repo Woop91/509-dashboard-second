@@ -396,9 +396,8 @@ function createMemberDirectory(ss) {
   sheet.setColumnWidth(MEMBER_COLS.EMAIL, 200);
   sheet.setColumnWidth(MEMBER_COLS.CONTACT_NOTES, 250);
 
-  // Add checkbox for Start Grievance column
-  var checkboxRange = sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 998, 1);
-  checkboxRange.insertCheckboxes();
+  // Add checkbox for Start Grievance column (pre-allocate for future rows)
+  sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -428,9 +427,8 @@ function createGrievanceLog(ss) {
   sheet.setColumnWidth(GRIEVANCE_COLS.RESOLUTION, 250);
   sheet.setColumnWidth(GRIEVANCE_COLS.COORDINATOR_MESSAGE, 250);
 
-  // Add checkbox for Message Alert column (AC)
-  var checkboxRange = sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 998, 1);
-  checkboxRange.insertCheckboxes();
+  // Add checkbox for Message Alert column (pre-allocate for future rows)
+  sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 4999, 1).insertCheckboxes();
 
   // Format date columns
   var dateColumns = [
