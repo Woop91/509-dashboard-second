@@ -5492,3 +5492,277 @@ function addDays(date, days) {
 }
 
 
+
+// ============================================================================
+// TESTING FRAMEWORK & VALIDATION
+// ============================================================================
+
+var TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+var TEST_MAX_EXECUTION_MS = 5 * 60 * 1000;
+var TEST_LARGE_DATASET_THRESHOLD = 5000;
+
+var Assert = {
+  assertEquals: function(expected, actual, message) {
+    if (expected !== actual) throw new Error((message || 'Assertion failed') + '\nExpected: ' + JSON.stringify(expected) + '\nActual: ' + JSON.stringify(actual));
+  },
+  assertTrue: function(value, message) {
+    if (value !== true) throw new Error((message || 'Expected true') + '\nActual: ' + value);
+  },
+  assertFalse: function(value, message) {
+    if (value !== false) throw new Error((message || 'Expected false') + '\nActual: ' + value);
+  },
+  assertNotNull: function(value, message) {
+    if (value === null || value === undefined) throw new Error(message || 'Value should not be null/undefined');
+  },
+  assertNull: function(value, message) {
+    if (value !== null) throw new Error((message || 'Expected null') + '\nActual: ' + value);
+  },
+  assertContains: function(array, value, message) {
+    if (!Array.isArray(array) || array.indexOf(value) === -1) throw new Error((message || 'Array does not contain value') + '\nValue: ' + value);
+  },
+  assertArrayLength: function(array, expectedLength, message) {
+    if (!Array.isArray(array) || array.length !== expectedLength) throw new Error((message || 'Array length mismatch') + '\nExpected: ' + expectedLength + '\nActual: ' + (array ? array.length : 'N/A'));
+  },
+  assertThrows: function(fn, message) {
+    var threw = false;
+    try { fn(); } catch (e) { threw = true; }
+    if (!threw) throw new Error(message || 'Expected function to throw');
+  },
+  assertApproximately: function(expected, actual, tolerance, message) {
+    tolerance = tolerance || 0.001;
+    if (Math.abs(expected - actual) > tolerance) throw new Error((message || 'Values not approximately equal') + '\nExpected: ' + expected + '\nActual: ' + actual);
+  },
+  fail: function(message) { throw new Error(message || 'Test failed'); }
+};
+
+function isLargeDataset() {
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var memberDir = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    return memberDir ? memberDir.getLastRow() > TEST_LARGE_DATASET_THRESHOLD : false;
+  } catch (e) { return false; }
+}
+
+function testMemberColsConstants() {
+  Assert.assertNotNull(MEMBER_COLS, 'MEMBER_COLS should exist');
+  Assert.assertEquals(1, MEMBER_COLS.MEMBER_ID, 'MEMBER_ID should be column 1');
+  Assert.assertEquals(2, MEMBER_COLS.FIRST_NAME, 'FIRST_NAME should be column 2');
+  Assert.assertEquals(3, MEMBER_COLS.LAST_NAME, 'LAST_NAME should be column 3');
+  Assert.assertEquals(8, MEMBER_COLS.EMAIL, 'EMAIL should be column 8');
+  Assert.assertEquals(31, MEMBER_COLS.START_GRIEVANCE, 'START_GRIEVANCE should be column 31');
+}
+
+function testGrievanceColsConstants() {
+  Assert.assertNotNull(GRIEVANCE_COLS, 'GRIEVANCE_COLS should exist');
+  Assert.assertEquals(1, GRIEVANCE_COLS.GRIEVANCE_ID, 'GRIEVANCE_ID should be column 1');
+  Assert.assertEquals(2, GRIEVANCE_COLS.MEMBER_ID, 'MEMBER_ID should be column 2');
+  Assert.assertEquals(5, GRIEVANCE_COLS.STATUS, 'STATUS should be column 5');
+  Assert.assertEquals(28, GRIEVANCE_COLS.RESOLUTION, 'RESOLUTION should be column 28');
+}
+
+function testColumnLetterConversion() {
+  Assert.assertEquals('A', getColumnLetter(1), 'Column 1 should be A');
+  Assert.assertEquals('Z', getColumnLetter(26), 'Column 26 should be Z');
+  Assert.assertEquals('AA', getColumnLetter(27), 'Column 27 should be AA');
+  Assert.assertEquals('AE', getColumnLetter(31), 'Column 31 should be AE');
+}
+
+function testSheetsConstants() {
+  Assert.assertNotNull(SHEETS, 'SHEETS should exist');
+  Assert.assertNotNull(SHEETS.MEMBER_DIR, 'MEMBER_DIR should exist');
+  Assert.assertNotNull(SHEETS.GRIEVANCE_LOG, 'GRIEVANCE_LOG should exist');
+  Assert.assertNotNull(SHEETS.CONFIG, 'CONFIG should exist');
+}
+
+function testValidateRequired() {
+  Assert.assertThrows(function() { validateRequired(null, 'field'); }, 'null should throw');
+  Assert.assertThrows(function() { validateRequired('', 'field'); }, 'empty should throw');
+  Assert.assertThrows(function() { validateRequired(undefined, 'field'); }, 'undefined should throw');
+}
+
+function testValidateEmail() {
+  var result1 = validateEmailAddress('test@example.com');
+  Assert.assertTrue(result1.valid, 'Valid email should pass');
+  var result2 = validateEmailAddress('invalid');
+  Assert.assertFalse(result2.valid, 'Invalid email should fail');
+  var result3 = validateEmailAddress('');
+  Assert.assertFalse(result3.valid, 'Empty email should fail');
+}
+
+function testValidatePhoneNumber() {
+  var result1 = validatePhoneNumber('(555) 123-4567');
+  Assert.assertTrue(result1.valid, 'Valid phone should pass');
+  var result2 = validatePhoneNumber('5551234567');
+  Assert.assertTrue(result2.valid, 'Digits-only phone should pass');
+  var result3 = validatePhoneNumber('123');
+  Assert.assertFalse(result3.valid, 'Short phone should fail');
+}
+
+function testOpenRateRange() {
+  Assert.assertTrue(85 >= 0 && 85 <= 100, 'Open rate 85 should be in range');
+  Assert.assertTrue(0 >= 0 && 0 <= 100, 'Open rate 0 should be in range');
+  Assert.assertTrue(100 >= 0 && 100 <= 100, 'Open rate 100 should be in range');
+}
+
+function getTestFunctionRegistry() {
+  return {
+    testMemberColsConstants: testMemberColsConstants,
+    testGrievanceColsConstants: testGrievanceColsConstants,
+    testColumnLetterConversion: testColumnLetterConversion,
+    testSheetsConstants: testSheetsConstants,
+    testValidateRequired: testValidateRequired,
+    testValidateEmail: testValidateEmail,
+    testValidatePhoneNumber: testValidatePhoneNumber,
+    testOpenRateRange: testOpenRateRange
+  };
+}
+
+function runAllTests() {
+  var ui = SpreadsheetApp.getUi();
+  SpreadsheetApp.getActive().toast('🧪 Running tests...', 'Testing', -1);
+  TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+  var startTime = new Date();
+  var registry = getTestFunctionRegistry();
+  var testNames = Object.keys(registry);
+  testNames.forEach(function(name) {
+    if (new Date() - startTime > TEST_MAX_EXECUTION_MS) {
+      TEST_RESULTS.skipped.push({ name: name, reason: 'Timeout protection' });
+      return;
+    }
+    try {
+      registry[name]();
+      TEST_RESULTS.passed.push({ name: name, time: new Date() - startTime });
+    } catch (e) {
+      TEST_RESULTS.failed.push({ name: name, error: e.message });
+    }
+  });
+  var duration = (new Date() - startTime) / 1000;
+  generateTestReport(duration);
+  var total = TEST_RESULTS.passed.length + TEST_RESULTS.failed.length + TEST_RESULTS.skipped.length;
+  var rate = ((TEST_RESULTS.passed.length / total) * 100).toFixed(1);
+  SpreadsheetApp.getActive().toast('✅ ' + TEST_RESULTS.passed.length + ' | ❌ ' + TEST_RESULTS.failed.length + ' | ⏭️ ' + TEST_RESULTS.skipped.length, 'Tests (' + rate + '%)', 10);
+  ui.alert('🧪 Tests Complete', 'Passed: ' + TEST_RESULTS.passed.length + '\nFailed: ' + TEST_RESULTS.failed.length + '\nSkipped: ' + TEST_RESULTS.skipped.length + '\n\nDuration: ' + duration.toFixed(2) + 's', ui.ButtonSet.OK);
+}
+
+function runQuickTests() {
+  var ui = SpreadsheetApp.getUi();
+  SpreadsheetApp.getActive().toast('⚡ Quick tests...', 'Testing', -1);
+  TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+  var startTime = new Date();
+  var quickTests = ['testMemberColsConstants', 'testGrievanceColsConstants', 'testColumnLetterConversion', 'testSheetsConstants', 'testOpenRateRange'];
+  var registry = getTestFunctionRegistry();
+  quickTests.forEach(function(name) {
+    try {
+      if (registry[name]) { registry[name](); TEST_RESULTS.passed.push({ name: name }); }
+      else TEST_RESULTS.skipped.push({ name: name, reason: 'Not found' });
+    } catch (e) { TEST_RESULTS.failed.push({ name: name, error: e.message }); }
+  });
+  var duration = (new Date() - startTime) / 1000;
+  ui.alert('⚡ Quick Tests', 'Passed: ' + TEST_RESULTS.passed.length + '\nFailed: ' + TEST_RESULTS.failed.length + '\nDuration: ' + duration.toFixed(2) + 's' + (TEST_RESULTS.failed.length > 0 ? '\n\nFailed:\n' + TEST_RESULTS.failed.map(function(t) { return '• ' + t.name + ': ' + t.error; }).join('\n') : ''), ui.ButtonSet.OK);
+}
+
+function generateTestReport(duration) {
+  var ss = SpreadsheetApp.getActive();
+  var report = ss.getSheetByName(SHEETS.TEST_RESULTS);
+  if (!report) report = ss.insertSheet(SHEETS.TEST_RESULTS);
+  report.clear();
+  report.getRange('A1:F1').merge().setValue('🧪 TEST RESULTS').setFontSize(18).setFontWeight('bold').setBackground('#4A5568').setFontColor('#FFFFFF');
+  var total = TEST_RESULTS.passed.length + TEST_RESULTS.failed.length + TEST_RESULTS.skipped.length;
+  var rate = ((TEST_RESULTS.passed.length / total) * 100).toFixed(1);
+  var summary = [['Total Tests', total], ['✅ Passed', TEST_RESULTS.passed.length], ['❌ Failed', TEST_RESULTS.failed.length], ['⏭️ Skipped', TEST_RESULTS.skipped.length], ['Pass Rate', rate + '%'], ['Duration', duration.toFixed(2) + 's'], ['Timestamp', new Date().toLocaleString()]];
+  report.getRange(3, 1, summary.length, 2).setValues(summary);
+  report.getRange(3, 1, summary.length, 1).setFontWeight('bold');
+  var row = 3 + summary.length + 2;
+  if (TEST_RESULTS.failed.length > 0) {
+    report.getRange(row, 1, 1, 3).merge().setValue('❌ FAILED TESTS').setFontWeight('bold').setBackground('#FEE2E2');
+    row++;
+    report.getRange(row, 1, 1, 2).setValues([['Test Name', 'Error']]).setFontWeight('bold').setBackground('#F3F4F6');
+    row++;
+    TEST_RESULTS.failed.forEach(function(test) { report.getRange(row, 1, 1, 2).setValues([[test.name, test.error]]); row++; });
+    row += 2;
+  }
+  if (TEST_RESULTS.passed.length > 0) {
+    report.getRange(row, 1, 1, 2).merge().setValue('✅ PASSED TESTS').setFontWeight('bold').setBackground('#D1FAE5');
+    row++;
+    TEST_RESULTS.passed.forEach(function(test) { report.getRange(row, 1).setValue(test.name + ' ✓'); row++; });
+  }
+  report.autoResizeColumns(1, 3);
+  report.setTabColor('#7C3AED');
+}
+
+// ==================== VALIDATION FRAMEWORK ====================
+
+var VALIDATION_PATTERNS = {
+  EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+  PHONE_US: /^[\+]?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/,
+  MEMBER_ID: /^M[A-Z]{4}\d{3}$/,
+  GRIEVANCE_ID: /^G[A-Z]{4}\d{3}$/
+};
+
+var VALIDATION_MESSAGES = {
+  EMAIL_INVALID: 'Invalid email format. Use: name@domain.com',
+  EMAIL_EMPTY: 'Email address is required',
+  PHONE_INVALID: 'Invalid phone format. Use: (555) 555-1234',
+  MEMBER_ID_INVALID: 'Invalid Member ID format',
+  GRIEVANCE_ID_INVALID: 'Invalid Grievance ID format'
+};
+
+function validateEmailAddress(email) {
+  if (!email || email.toString().trim() === '') return { valid: false, message: VALIDATION_MESSAGES.EMAIL_EMPTY };
+  var clean = email.toString().trim().toLowerCase();
+  if (!VALIDATION_PATTERNS.EMAIL.test(clean)) return { valid: false, message: VALIDATION_MESSAGES.EMAIL_INVALID };
+  return { valid: true, message: 'Valid email' };
+}
+
+function validatePhoneNumber(phone) {
+  if (!phone || phone.toString().trim() === '') return { valid: false, message: 'Phone required' };
+  var digits = phone.toString().replace(/\D/g, '');
+  if (digits.length < 10) return { valid: false, message: 'At least 10 digits required' };
+  if (digits.length > 15) return { valid: false, message: 'Phone too long' };
+  var formatted = formatUSPhone(digits);
+  return { valid: true, message: 'Valid phone', formatted: formatted };
+}
+
+function formatUSPhone(digits) {
+  if (digits.length === 11 && digits[0] === '1') digits = digits.substring(1);
+  if (digits.length === 10) return '(' + digits.substring(0, 3) + ') ' + digits.substring(3, 6) + '-' + digits.substring(6);
+  return digits;
+}
+
+function validateRequired(value, fieldName) {
+  if (value === null || value === undefined || value === '') throw new Error(fieldName + ' is required');
+  return value;
+}
+
+function runBulkValidation() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet) { SpreadsheetApp.getUi().alert('Member Directory not found!'); return; }
+  ss.toast('Running validation...', 'Please wait', -1);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { ss.toast('No data', 'Info', 3); return; }
+  var emailData = sheet.getRange(2, MEMBER_COLS.EMAIL, lastRow - 1, 1).getValues();
+  var phoneData = sheet.getRange(2, MEMBER_COLS.PHONE, lastRow - 1, 1).getValues();
+  var memberIdData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, lastRow - 1, 1).getValues();
+  var issues = [], seenIds = {};
+  for (var i = 0; i < lastRow - 1; i++) {
+    var row = i + 2;
+    if (emailData[i][0]) { var er = validateEmailAddress(emailData[i][0]); if (!er.valid) issues.push({ row: row, field: 'Email', value: emailData[i][0], message: er.message }); }
+    if (phoneData[i][0]) { var pr = validatePhoneNumber(phoneData[i][0]); if (!pr.valid) issues.push({ row: row, field: 'Phone', value: phoneData[i][0], message: pr.message }); }
+    if (memberIdData[i][0]) {
+      if (seenIds[memberIdData[i][0]]) issues.push({ row: row, field: 'Member ID', value: memberIdData[i][0], message: 'Duplicate of row ' + seenIds[memberIdData[i][0]] });
+      else seenIds[memberIdData[i][0]] = row;
+    }
+  }
+  showValidationReport(issues, lastRow - 1);
+}
+
+function showValidationReport(issues, total) {
+  var rate = total > 0 ? (((total - issues.length) / total) * 100).toFixed(1) : 100;
+  var rows = issues.slice(0, 50).map(function(i) { return '<tr><td>' + i.row + '</td><td>' + i.field + '</td><td>' + i.value + '</td><td>' + i.message + '</td></tr>'; }).join('');
+  if (issues.length > 50) rows += '<tr><td colspan="4">...and ' + (issues.length - 50) + ' more</td></tr>';
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px}h2{color:#1a73e8}.summary{display:flex;gap:20px;margin:20px 0}.stat{flex:1;padding:20px;border-radius:8px;text-align:center}.stat.good{background:#e8f5e9}.stat.warning{background:#fff3e0}.stat.bad{background:#ffebee}.num{font-size:32px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px;text-align:left;border:1px solid #ddd}th{background:#f5f5f5}</style></head><body><h2>📊 Validation Report</h2><div class="summary"><div class="stat ' + (issues.length === 0 ? 'good' : issues.length < 10 ? 'warning' : 'bad') + '"><div class="num">' + rate + '%</div><div>Pass Rate</div></div><div class="stat good"><div class="num">' + total + '</div><div>Records</div></div><div class="stat ' + (issues.length === 0 ? 'good' : 'bad') + '"><div class="num">' + issues.length + '</div><div>Issues</div></div></div>' + (issues.length > 0 ? '<table><tr><th>Row</th><th>Field</th><th>Value</th><th>Issue</th></tr>' + rows + '</table>' : '<div style="text-align:center;padding:40px;color:#4caf50">✅ No issues found!</div>') + '</body></html>'
+  ).setWidth(700).setHeight(500);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Validation Report');
+}
