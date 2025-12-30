@@ -2412,7 +2412,7 @@ function REPAIR_DASHBOARD() {
 // ============================================================================
 
 function searchMembers() {
-  SpreadsheetApp.getUi().alert('Search Members feature - Coming soon!');
+  showDesktopSearch();
 }
 
 function viewActiveGrievances() {
