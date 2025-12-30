@@ -22,7 +22,6 @@ function onOpen() {
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
     .addItem('🎯 Interactive Dashboard', 'showInteractiveDashboardTab')
     .addSeparator()
-    .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
@@ -32,6 +31,11 @@ function onOpen() {
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
       .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'))
+    .addToUi();
+
+  // Member Search Menu (standalone for quick access)
+  ui.createMenu('🔍 Search')
+    .addItem('🔍 Search Members', 'searchMembers')
     .addToUi();
 
   // Sheet Manager Menu
@@ -91,7 +95,6 @@ function onOpen() {
 
   // Setup Menu
   ui.createMenu('🏗️ Setup')
-    .addItem('🏗️ CREATE 509 DASHBOARD', 'CREATE_509_DASHBOARD')
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
