@@ -2101,19 +2101,54 @@ function showMultiSelectDialog() {
   var currentValue = cell.getValue() || '';
   var currentValues = currentValue ? currentValue.split(/,\s*/) : [];
 
-  // Create and show dialog
-  var html = HtmlService.createHtmlOutputFromFile('MultiSelectDialog')
-    .setWidth(350)
-    .setHeight(420);
-
-  // Pass data to dialog
+  // Dialog data
   var dialogData = {
     label: config.label,
     options: options,
     currentValues: currentValues
   };
 
-  html.append('<script>initDialog(' + JSON.stringify(dialogData) + ');</script>');
+  // Create inline HTML for multi-select dialog
+  var htmlContent = '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    '*{box-sizing:border-box;font-family:"Google Sans",Arial,sans-serif}' +
+    'body{margin:0;padding:16px;background:#fff}' +
+    'h3{margin:0 0 12px 0;color:#7C3AED;font-size:16px}' +
+    '.options-container{max-height:250px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:8px;padding:8px;margin-bottom:16px}' +
+    '.option-item{display:flex;align-items:center;padding:8px 12px;margin:2px 0;border-radius:6px;cursor:pointer;transition:background 0.15s}' +
+    '.option-item:hover{background:#f3f4f6}.option-item.selected{background:#ede9fe}' +
+    '.option-item input[type="checkbox"]{margin-right:10px;width:18px;height:18px;accent-color:#7C3AED}' +
+    '.option-item label{flex:1;cursor:pointer;font-size:14px;color:#1f2937}' +
+    '.button-row{display:flex;gap:8px;justify-content:flex-end}' +
+    'button{padding:10px 20px;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.15s}' +
+    '.btn-primary{background:#7C3AED;color:white}.btn-primary:hover{background:#6d28d9}' +
+    '.btn-secondary{background:#f3f4f6;color:#374151}.btn-secondary:hover{background:#e5e7eb}' +
+    '.btn-clear{background:#fef2f2;color:#dc2626}.btn-clear:hover{background:#fee2e2}' +
+    '.selected-count{font-size:12px;color:#6b7280;margin-bottom:8px}' +
+    '.quick-actions{display:flex;gap:8px;margin-bottom:12px}.quick-actions button{padding:6px 12px;font-size:12px}' +
+    '</style></head><body>' +
+    '<h3 id="dialogTitle">Select Options</h3>' +
+    '<div class="quick-actions"><button class="btn-secondary" onclick="selectAll()">Select All</button>' +
+    '<button class="btn-clear" onclick="clearAll()">Clear All</button></div>' +
+    '<div class="selected-count" id="selectedCount">0 selected</div>' +
+    '<div class="options-container" id="optionsContainer"></div>' +
+    '<div class="button-row"><button class="btn-secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="btn-primary" onclick="saveSelection()">Save</button></div>' +
+    '<script>' +
+    'var options=[];var currentSelection=[];' +
+    'function initDialog(data){document.getElementById("dialogTitle").textContent="Select "+data.label;options=data.options;currentSelection=data.currentValues||[];renderOptions();updateCount()}' +
+    'function renderOptions(){var c=document.getElementById("optionsContainer");c.innerHTML="";options.forEach(function(o,i){var s=currentSelection.indexOf(o)!==-1;var d=document.createElement("div");d.className="option-item"+(s?" selected":"");d.onclick=function(){toggleOption(i)};var cb=document.createElement("input");cb.type="checkbox";cb.id="opt_"+i;cb.checked=s;var l=document.createElement("label");l.htmlFor="opt_"+i;l.textContent=o;d.appendChild(cb);d.appendChild(l);c.appendChild(d)})}' +
+    'function toggleOption(i){var o=options[i];var p=currentSelection.indexOf(o);if(p===-1){currentSelection.push(o)}else{currentSelection.splice(p,1)}renderOptions();updateCount()}' +
+    'function selectAll(){currentSelection=options.slice();renderOptions();updateCount()}' +
+    'function clearAll(){currentSelection=[];renderOptions();updateCount()}' +
+    'function updateCount(){document.getElementById("selectedCount").textContent=currentSelection.length+" selected"}' +
+    'function saveSelection(){var v=currentSelection.join(", ");google.script.run.withSuccessHandler(function(){google.script.host.close()}).withFailureHandler(function(e){alert("Error: "+e.message)}).applyMultiSelectValue(v)}' +
+    '</script>' +
+    '<script>initDialog(' + JSON.stringify(dialogData) + ');</script>' +
+    '</body></html>';
+
+  var html = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(350)
+    .setHeight(420);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Multi-Select: ' + config.label);
 }
@@ -2604,7 +2639,7 @@ function showSmartDashboard() {
  */
 function showCacheStatusDashboard() {
   var cache = CacheService.getScriptCache();
-  var cacheKeys = ['memberData', 'grievanceData', 'configData'];
+  var cacheKeys = ['memberMeta', 'grievanceMeta', 'configData'];
   var status = [];
 
   cacheKeys.forEach(function(key) {
@@ -2646,7 +2681,7 @@ function showCacheStatusDashboard() {
  */
 function clearAllCaches() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['memberData', 'grievanceData', 'configData']);
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
   SpreadsheetApp.getActiveSpreadsheet().toast('All caches cleared!', '✅ Success', 3);
 }
 
@@ -3072,26 +3107,53 @@ function clearUndoHistory() {
 
 /**
  * Warm up caches
+ * Note: CacheService has a 100KB limit per item, so we cache metadata only
  */
 function warmUpCaches() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var cache = CacheService.getScriptCache();
+  var cached = 0;
 
-  // Cache member data
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  if (memberSheet && memberSheet.getLastRow() > 1) {
-    var memberData = memberSheet.getDataRange().getValues();
-    cache.put('memberData', JSON.stringify(memberData), 21600);
+  try {
+    // Cache member count and column info (small data)
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (memberSheet && memberSheet.getLastRow() > 1) {
+      var memberMeta = {
+        lastRow: memberSheet.getLastRow(),
+        lastCol: memberSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('memberMeta', JSON.stringify(memberMeta), 21600);
+      cached++;
+    }
+
+    // Cache grievance count and column info (small data)
+    var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+    if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+      var grievanceMeta = {
+        lastRow: grievanceSheet.getLastRow(),
+        lastCol: grievanceSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('grievanceMeta', JSON.stringify(grievanceMeta), 21600);
+      cached++;
+    }
+
+    // Cache config data (usually small enough)
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+    if (configSheet) {
+      var configData = configSheet.getDataRange().getValues();
+      var configStr = JSON.stringify(configData);
+      if (configStr.length < 100000) {  // Only cache if under 100KB
+        cache.put('configData', configStr, 21600);
+        cached++;
+      }
+    }
+
+    ss.toast('Cached ' + cached + ' items successfully!', 'Cache Warmup', 3);
+  } catch (e) {
+    ss.toast('Cache warmup partial: ' + e.message, 'Cache', 3);
   }
-
-  // Cache grievance data
-  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
-    var grievanceData = grievanceSheet.getDataRange().getValues();
-    cache.put('grievanceData', JSON.stringify(grievanceData), 21600);
-  }
-
-  ss.toast('Caches warmed up!', 'Cache', 3);
 }
 
 /**
@@ -3099,7 +3161,7 @@ function warmUpCaches() {
  */
 function invalidateAllCaches() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['memberData', 'grievanceData', 'configData']);
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
   SpreadsheetApp.getActiveSpreadsheet().toast('All caches invalidated!', 'Cache', 3);
 }
 

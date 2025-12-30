@@ -214,10 +214,12 @@
   - `setCachedData()` - Store data in cache
   - `invalidateCache()` - Clear specific cache
   - `invalidateAllCaches()` - Clear all caches
-  - `warmUpCaches()` - Pre-populate caches
+  - `warmUpCaches()` - Pre-populate caches (metadata only, see note below)
   - `getCachedGrievances()`, `getCachedMembers()`, `getCachedStewards()` - Cached data getters
   - `getCachedDashboardMetrics()` - Cached dashboard metrics
   - `showCacheStatusDashboard()` - Cache status UI
+  - **Cache Keys**: `memberMeta`, `grievanceMeta`, `configData`
+  - **Note**: CacheService has 100KB limit per item. Full data caching is avoided; only metadata (row/column counts, timestamps) is cached.
 - Undo/Redo:
   - `getUndoHistory()`, `saveUndoHistory()` - History management
   - `recordAction()` - Record an action for undo
