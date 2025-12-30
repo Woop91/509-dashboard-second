@@ -4674,14 +4674,52 @@ function SEED_MEMBERS(count, grievancePercent) {
   var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
   var homeTowns = getConfigValues(configSheet, CONFIG_COLS.HOME_TOWNS);
 
-  // If config is empty, use defaults
-  if (jobTitles.length === 0) jobTitles = ['Social Worker', 'Case Manager', 'Supervisor'];
-  if (locations.length === 0) locations = ['Boston Main Office', 'Worcester Regional'];
-  if (units.length === 0) units = ['Child Welfare', 'Adult Services'];
-  if (supervisors.length === 0) supervisors = ['Jane Supervisor'];
-  if (managers.length === 0) managers = ['John Manager'];
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-  if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
+  // If config is empty, use defaults (matching SeedNuke.gs)
+  if (jobTitles.length === 0) jobTitles = [
+    'Social Worker', 'Case Manager', 'Program Coordinator', 'Administrative Assistant',
+    'Supervisor', 'Director', 'Clinician', 'Counselor', 'Specialist', 'Analyst',
+    'Manager', 'Senior Social Worker', 'Lead Case Manager', 'Program Manager',
+    'Executive Assistant', 'HR Coordinator', 'Finance Associate', 'IT Support',
+    'Communications Specialist', 'Outreach Worker'
+  ];
+  if (locations.length === 0) locations = [
+    'Boston Main Office', 'Worcester Regional', 'Springfield Center', 'Cambridge Branch',
+    'Lowell Office', 'Brockton Center', 'Quincy Regional', 'New Bedford Office',
+    'Fall River Branch', 'Lawrence Center', 'Framingham Office', 'Somerville Branch',
+    'Lynn Regional', 'Haverhill Center', 'Malden Office', 'Medford Branch',
+    'Waltham Regional', 'Newton Center', 'Brookline Office', 'Salem Branch'
+  ];
+  if (units.length === 0) units = [
+    'Child Welfare', 'Adult Services', 'Mental Health', 'Disability Services',
+    'Elder Affairs', 'Housing Assistance', 'Employment Services', 'Youth Services',
+    'Family Support', 'Administration'
+  ];
+  if (supervisors.length === 0) supervisors = [
+    'Maria Rodriguez', 'James Wilson', 'Sarah Chen', 'Michael Brown',
+    'Jennifer Davis', 'Robert Taylor', 'Lisa Anderson', 'David Martinez',
+    'Emily Johnson', 'Christopher Lee', 'Amanda White', 'Daniel Garcia'
+  ];
+  if (managers.length === 0) managers = [
+    'Patricia Thompson', 'William Jackson', 'Elizabeth Moore', 'Richard Harris',
+    'Susan Clark', 'Joseph Lewis', 'Margaret Robinson', 'Charles Walker'
+  ];
+  if (stewards.length === 0) stewards = [
+    'John Smith', 'Mary Johnson', 'Robert Williams', 'Patricia Jones',
+    'Michael Davis', 'Linda Miller', 'William Brown', 'Barbara Wilson',
+    'David Moore', 'Susan Taylor', 'James Anderson', 'Karen Thomas'
+  ];
+  if (homeTowns.length === 0) homeTowns = [
+    'Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell', 'Brockton',
+    'Quincy', 'New Bedford', 'Fall River', 'Lawrence', 'Framingham', 'Somerville',
+    'Lynn', 'Haverhill', 'Malden', 'Medford', 'Waltham', 'Newton', 'Brookline'
+  ];
+
+  // Get committees from config or use defaults
+  var committees = getConfigValues(configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+  if (committees.length === 0) committees = [
+    'Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
+    'Political Action Committee', 'Membership Committee', 'Executive Board'
+  ];
 
   // Grievance config
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
@@ -4780,7 +4818,7 @@ function SEED_MEMBERS(count, grievancePercent) {
       randomChoice(supervisors),
       randomChoice(managers),
       isSteward,
-      isSteward === 'Yes' ? 'Grievance Committee' : '',
+      isSteward === 'Yes' ? randomChoice(committees) : '',
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,

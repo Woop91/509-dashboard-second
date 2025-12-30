@@ -306,6 +306,13 @@ function SEED_MEMBERS(count) {
     'Lynn', 'Haverhill', 'Malden', 'Medford', 'Waltham', 'Newton', 'Brookline'
   ];
 
+  // Get committees from config or use defaults
+  var committees = getConfigValues(configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+  if (committees.length === 0) committees = [
+    'Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
+    'Political Action Committee', 'Membership Committee', 'Executive Board'
+  ];
+
   // Expanded name pools for better variety (100+ names each = 10,000+ unique combinations)
   var firstNames = [
     'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
@@ -384,7 +391,7 @@ function SEED_MEMBERS(count) {
       randomChoice(supervisors),
       randomChoice(managers),
       isSteward,
-      isSteward === 'Yes' ? 'Grievance Committee' : '',
+      isSteward === 'Yes' ? randomChoice(committees) : '',
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,
