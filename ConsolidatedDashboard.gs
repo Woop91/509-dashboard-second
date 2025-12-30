@@ -2818,6 +2818,42 @@ function setupLiveGrievanceFormulas() {
 }
 
 /**
+ * Reset theme to default (light theme)
+ */
+function resetToDefaultTheme() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+
+  // Default light theme colors
+  var defaultTheme = {
+    headerBackground: '#1a73e8',
+    headerText: '#ffffff',
+    evenRow: '#f8f9fa',
+    oddRow: '#ffffff'
+  };
+
+  sheets.forEach(function(sheet) {
+    var lastRow = Math.max(sheet.getLastRow(), 1);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+
+    // Reset header row
+    if (lastCol > 0) {
+      sheet.getRange(1, 1, 1, lastCol)
+        .setBackground(defaultTheme.headerBackground)
+        .setFontColor(defaultTheme.headerText);
+    }
+
+    // Reset data rows with alternating colors
+    for (var row = 2; row <= lastRow; row++) {
+      var bgColor = (row % 2 === 0) ? defaultTheme.evenRow : defaultTheme.oddRow;
+      sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor).setFontColor('#202124');
+    }
+  });
+
+  ss.toast('Theme reset to default!', '✅ Success', 3);
+}
+
+/**
  * Setup Member ID dropdown in Grievance Log from Member Directory
  * This allows users to select a member when creating a grievance
  */
