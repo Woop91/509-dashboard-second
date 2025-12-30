@@ -364,6 +364,24 @@ function SEED_MEMBERS(count) {
     var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
     var contactSteward = hasRecentContact ? assignedSteward : '';
 
+    // Sample contact notes for members who have been contacted
+    var sampleContactNotes = [
+      'Discussed workload concerns',
+      'Follow up on scheduling issue',
+      'Interested in becoming steward',
+      'Addressed safety complaint',
+      'Positive feedback received',
+      'Needs info on benefits',
+      'Question about contract language',
+      'Planning to attend next meeting',
+      'Grievance update provided',
+      'Initial outreach - new member',
+      'Discussed upcoming negotiations',
+      'Shared resources on workplace rights',
+      'Scheduling meeting for next week'
+    ];
+    var contactNotes = hasRecentContact ? randomChoice(sampleContactNotes) : '';
+
     var row = generateSingleMemberRow(
       memberId, firstName, lastName,
       randomChoice(jobTitles),
@@ -380,7 +398,8 @@ function SEED_MEMBERS(count) {
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,
-      contactSteward
+      contactSteward,
+      contactNotes
     );
 
     rows.push(row);
@@ -431,7 +450,7 @@ function SEED_MEMBERS(count) {
  * @param {Date|string} recentContactDate - Recent contact date
  * @param {string} contactSteward - Steward who made contact
  */
-function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward) {
+function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward, contactNotes) {
   var today = new Date();
   var lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -462,7 +481,7 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
     homeTown || '',                              // 24: Home Town (X)
     recentContactDate || '',                     // 25: Recent Contact Date (Y)
     contactSteward || '',                        // 26: Contact Steward (Z)
-    '',                                          // 27: Contact Notes (AA) - manual entry
+    contactNotes || '',                          // 27: Contact Notes (AA) - seeded if contacted
     '',                                          // 28: Has Open Grievance (AB) - auto-calculated from Grievance Log
     '',                                          // 29: Grievance Status (AC) - auto-calculated from Grievance Log
     '',                                          // 30: Next Deadline (AD) - auto-calculated from Grievance Log

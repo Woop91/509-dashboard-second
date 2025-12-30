@@ -2415,6 +2415,218 @@ function searchMembers() {
   showDesktopSearch();
 }
 
+/**
+ * Show desktop search dialog
+ */
+function showDesktopSearch() {
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f8fafc;color:#1e293b}' +
+    '.header{background:linear-gradient(135deg,#7C3AED 0%,#5B21B6 100%);color:white;padding:24px 30px}' +
+    '.header h1{font-size:24px;font-weight:600;margin-bottom:8px}' +
+    '.header p{opacity:0.9;font-size:14px}' +
+    '.search-section{padding:20px 30px;background:white;border-bottom:1px solid #e2e8f0}' +
+    '.search-input{width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px}' +
+    '.search-input:focus{outline:none;border-color:#7C3AED}' +
+    '.results{padding:20px 30px;max-height:400px;overflow-y:auto}' +
+    '.result-card{background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:12px;cursor:pointer}' +
+    '.result-card:hover{border-color:#7C3AED;box-shadow:0 4px 12px rgba(124,58,237,0.15)}' +
+    '.result-name{font-size:16px;font-weight:600;color:#1e293b}' +
+    '.result-details{font-size:13px;color:#64748b;margin-top:4px}' +
+    '.result-id{font-size:11px;color:#94a3b8;font-family:monospace}' +
+    '.empty{text-align:center;padding:40px;color:#94a3b8}' +
+    '.footer{padding:16px 30px;background:white;border-top:1px solid #e2e8f0;text-align:right}' +
+    '.close-btn{padding:10px 24px;background:#64748b;color:white;border:none;border-radius:8px;cursor:pointer}' +
+    '</style></head><body>' +
+    '<div class="header"><h1>🔍 Search Members</h1><p>Search by name, ID, email, or location</p></div>' +
+    '<div class="search-section"><input type="text" class="search-input" id="q" placeholder="Type to search..." autofocus></div>' +
+    '<div class="results" id="results"><div class="empty">Type at least 2 characters to search</div></div>' +
+    '<div class="footer"><button class="close-btn" onclick="google.script.host.close()">Close</button></div>' +
+    '<script>' +
+    'var timer;' +
+    'document.getElementById("q").addEventListener("input",function(){' +
+    '  clearTimeout(timer);' +
+    '  timer=setTimeout(doSearch,300);' +
+    '});' +
+    'function doSearch(){' +
+    '  var q=document.getElementById("q").value;' +
+    '  if(q.length<2){document.getElementById("results").innerHTML="<div class=\\"empty\\">Type at least 2 characters</div>";return;}' +
+    '  document.getElementById("results").innerHTML="<div class=\\"empty\\">Searching...</div>";' +
+    '  google.script.run.withSuccessHandler(showResults).searchMembersData(q);' +
+    '}' +
+    'function showResults(data){' +
+    '  if(!data||data.length===0){document.getElementById("results").innerHTML="<div class=\\"empty\\">No results found</div>";return;}' +
+    '  var html="";' +
+    '  data.forEach(function(r,i){' +
+    '    html+="<div class=\\"result-card\\" onclick=\\"goTo("+i+")\\">";' +
+    '    html+="<div class=\\"result-name\\">"+r.name+"</div>";' +
+    '    html+="<div class=\\"result-details\\">"+r.location+" • "+r.jobTitle+"</div>";' +
+    '    html+="<div class=\\"result-id\\">"+r.id+" • "+r.email+"</div></div>";' +
+    '  });' +
+    '  document.getElementById("results").innerHTML=html;' +
+    '  window.searchResults=data;' +
+    '}' +
+    'function goTo(i){' +
+    '  var r=window.searchResults[i];' +
+    '  google.script.run.withSuccessHandler(function(){google.script.host.close();}).navigateToMemberRow(r.row);' +
+    '}' +
+    '</script></body></html>'
+  ).setWidth(600).setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Search Members');
+}
+
+/**
+ * Search members data for the search dialog
+ */
+function searchMembersData(query) {
+  var results = [];
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet || sheet.getLastRow() < 2) return results;
+
+  var q = (query || '').toLowerCase();
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.max(MEMBER_COLS.EMAIL, MEMBER_COLS.WORK_LOCATION, MEMBER_COLS.JOB_TITLE)).getValues();
+
+  data.forEach(function(row, index) {
+    var id = row[MEMBER_COLS.MEMBER_ID - 1] || '';
+    var firstName = row[MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = row[MEMBER_COLS.LAST_NAME - 1] || '';
+    var email = row[MEMBER_COLS.EMAIL - 1] || '';
+    var location = row[MEMBER_COLS.WORK_LOCATION - 1] || '';
+    var jobTitle = row[MEMBER_COLS.JOB_TITLE - 1] || '';
+
+    var searchable = (id + ' ' + firstName + ' ' + lastName + ' ' + email + ' ' + location + ' ' + jobTitle).toLowerCase();
+    if (searchable.indexOf(q) !== -1) {
+      results.push({
+        id: id,
+        name: (firstName + ' ' + lastName).trim() || 'Unknown',
+        email: email || 'No email',
+        location: location || 'Unknown location',
+        jobTitle: jobTitle || 'Unknown title',
+        row: index + 2
+      });
+    }
+  });
+
+  return results.slice(0, 50); // Limit to 50 results
+}
+
+/**
+ * Navigate to a member row
+ */
+function navigateToMemberRow(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+    sheet.setActiveRange(sheet.getRange(row, 1));
+  }
+}
+
+/**
+ * Show smart dashboard (auto-detect device)
+ */
+function showSmartDashboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var totalMembers = memberSheet ? Math.max(0, memberSheet.getLastRow() - 1) : 0;
+  var totalGrievances = grievanceSheet ? Math.max(0, grievanceSheet.getLastRow() - 1) : 0;
+  var openGrievances = 0;
+
+  if (grievanceSheet && totalGrievances > 0) {
+    var statusData = grievanceSheet.getRange(2, GRIEVANCE_COLS.STATUS, totalGrievances, 1).getValues();
+    statusData.forEach(function(row) {
+      if (row[0] === 'Open' || row[0] === 'Pending Info') openGrievances++;
+    });
+  }
+
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5}' +
+    '.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:24px;text-align:center}' +
+    '.header h1{font-size:24px;margin-bottom:8px}' +
+    '.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:20px}' +
+    '.stat{background:white;padding:24px;border-radius:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.stat-value{font-size:36px;font-weight:bold;color:#1a73e8}' +
+    '.stat-label{font-size:13px;color:#666;margin-top:8px}' +
+    '.actions{padding:0 20px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px}' +
+    '.action-btn{background:white;border:none;padding:16px;border-radius:12px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.action-btn:hover{background:#e8f0fe}' +
+    '.action-icon{font-size:24px;margin-bottom:8px}' +
+    '.action-label{font-weight:500}' +
+    '</style></head><body>' +
+    '<div class="header"><h1>📊 509 Dashboard</h1></div>' +
+    '<div class="stats">' +
+    '<div class="stat"><div class="stat-value">' + totalMembers + '</div><div class="stat-label">Total Members</div></div>' +
+    '<div class="stat"><div class="stat-value">' + totalGrievances + '</div><div class="stat-label">Total Grievances</div></div>' +
+    '<div class="stat"><div class="stat-value">' + openGrievances + '</div><div class="stat-label">Open Cases</div></div>' +
+    '</div>' +
+    '<div class="actions">' +
+    '<button class="action-btn" onclick="google.script.run.searchMembers();google.script.host.close()"><div class="action-icon">🔍</div><div class="action-label">Search Members</div></button>' +
+    '<button class="action-btn" onclick="google.script.run.viewActiveGrievances();google.script.host.close()"><div class="action-icon">📋</div><div class="action-label">View Grievances</div></button>' +
+    '</div>' +
+    '</body></html>'
+  ).setWidth(500).setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Dashboard');
+}
+
+/**
+ * Show cache status dashboard
+ */
+function showCacheStatusDashboard() {
+  var cache = CacheService.getScriptCache();
+  var cacheKeys = ['memberData', 'grievanceData', 'configData'];
+  var status = [];
+
+  cacheKeys.forEach(function(key) {
+    var data = cache.get(key);
+    status.push({
+      key: key,
+      cached: data ? 'Yes' : 'No',
+      size: data ? Math.round(data.length / 1024) + ' KB' : '0 KB'
+    });
+  });
+
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;background:#f5f5f5}' +
+    'h2{margin-bottom:16px;color:#333}' +
+    'table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    'th,td{padding:12px 16px;text-align:left;border-bottom:1px solid #eee}' +
+    'th{background:#f8f9fa;font-weight:600}' +
+    '.yes{color:#059669;font-weight:500}' +
+    '.no{color:#dc2626}' +
+    '.btn{margin-top:16px;padding:10px 20px;background:#1a73e8;color:white;border:none;border-radius:6px;cursor:pointer}' +
+    '.btn:hover{background:#1557b0}' +
+    '</style></head><body>' +
+    '<h2>🗄️ Cache Status</h2>' +
+    '<table><tr><th>Cache Key</th><th>Cached</th><th>Size</th></tr>' +
+    status.map(function(s) {
+      return '<tr><td>' + s.key + '</td><td class="' + (s.cached === 'Yes' ? 'yes' : 'no') + '">' + s.cached + '</td><td>' + s.size + '</td></tr>';
+    }).join('') +
+    '</table>' +
+    '<button class="btn" onclick="google.script.run.clearAllCaches();google.script.host.close()">Clear All Caches</button>' +
+    '</body></html>'
+  ).setWidth(400).setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, '🗄️ Cache Status');
+}
+
+/**
+ * Clear all caches
+ */
+function clearAllCaches() {
+  var cache = CacheService.getScriptCache();
+  cache.removeAll(['memberData', 'grievanceData', 'configData']);
+  SpreadsheetApp.getActiveSpreadsheet().toast('All caches cleared!', '✅ Success', 3);
+}
+
 function viewActiveGrievances() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
@@ -2691,9 +2903,10 @@ function setupGrievanceCalcSheet() {
   var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Days to Deadline (minimum/most urgent deadline for open grievances)
+  // Column D: Days to Deadline (minimum/most urgent deadline for open grievances only)
+  // Excludes all closed statuses: Closed, Settled, Withdrawn, Denied, Won
   var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn"),"")))';
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
@@ -4806,6 +5019,24 @@ function SEED_MEMBERS(count, grievancePercent) {
     var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
     var contactSteward = hasRecentContact ? assignedSteward : '';
 
+    // Sample contact notes for members who have been contacted
+    var sampleContactNotes = [
+      'Discussed workload concerns',
+      'Follow up on scheduling issue',
+      'Interested in becoming steward',
+      'Addressed safety complaint',
+      'Positive feedback received',
+      'Needs info on benefits',
+      'Question about contract language',
+      'Planning to attend next meeting',
+      'Grievance update provided',
+      'Initial outreach - new member',
+      'Discussed upcoming negotiations',
+      'Shared resources on workplace rights',
+      'Scheduling meeting for next week'
+    ];
+    var contactNotes = hasRecentContact ? randomChoice(sampleContactNotes) : '';
+
     var memberRow = generateSingleMemberRow(
       memberId, firstName, lastName,
       randomChoice(jobTitles),
@@ -4822,7 +5053,8 @@ function SEED_MEMBERS(count, grievancePercent) {
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,
-      contactSteward
+      contactSteward,
+      contactNotes
     );
     memberRows.push(memberRow);
 
@@ -4922,7 +5154,7 @@ function SEED_MEMBERS(count, grievancePercent) {
  * @param {Date|string} recentContactDate - Recent contact date
  * @param {string} contactSteward - Steward who made contact
  */
-function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward) {
+function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward, contactNotes) {
   var today = new Date();
   var lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -4953,7 +5185,7 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
     homeTown || '',                              // 24: Home Town (X)
     recentContactDate || '',                     // 25: Recent Contact Date (Y)
     contactSteward || '',                        // 26: Contact Steward (Z)
-    '',                                          // 27: Contact Notes (AA) - manual entry
+    contactNotes || '',                          // 27: Contact Notes (AA) - seeded if contacted
     '',                                          // 28: Has Open Grievance (AB) - auto-calculated from Grievance Log
     '',                                          // 29: Grievance Status (AC) - auto-calculated from Grievance Log
     '',                                          // 30: Next Deadline (AD) - auto-calculated from Grievance Log
