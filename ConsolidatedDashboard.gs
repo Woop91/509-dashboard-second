@@ -727,7 +727,9 @@ function onOpen() {
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
-        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
+        .addSeparator()
+        .addItem('🔄 Restore Config Dropdowns', 'seedConfigData'))
       .addToUi();
   }
 
