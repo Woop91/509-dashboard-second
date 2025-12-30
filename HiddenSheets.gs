@@ -1400,24 +1400,8 @@ function syncNewValueToConfig(e) {
   // Skip if empty or header row
   if (!newValue || e.range.getRow() === 1) return;
 
-  // Check if this column is a job metadata field
-  var fieldConfig = null;
-  for (var i = 0; i < JOB_METADATA_FIELDS.length; i++) {
-    if (JOB_METADATA_FIELDS[i].memberCol === col) {
-      fieldConfig = JOB_METADATA_FIELDS[i];
-      break;
-    }
-  }
-
-  // Also check Committees and Home Town (not in JOB_METADATA_FIELDS)
-  if (!fieldConfig) {
-    if (col === MEMBER_COLS.COMMITTEES) {
-      fieldConfig = { configCol: CONFIG_COLS.STEWARD_COMMITTEES, configName: 'Steward Committees' };
-    } else if (col === MEMBER_COLS.HOME_TOWN) {
-      fieldConfig = { configCol: CONFIG_COLS.HOME_TOWNS, configName: 'Home Towns' };
-    }
-  }
-
+  // Check if this column is a job metadata field (includes Committees and Home Town)
+  var fieldConfig = getJobMetadataByMemberCol(col);
   if (!fieldConfig) return; // Not a synced column
 
   // Get current Config values for this column

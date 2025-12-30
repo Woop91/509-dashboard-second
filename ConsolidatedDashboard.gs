@@ -5274,6 +5274,7 @@ function NUKE_CONFIG_DROPDOWNS() {
     CONFIG_COLS.SUPERVISORS,
     CONFIG_COLS.MANAGERS,
     CONFIG_COLS.STEWARDS,
+    CONFIG_COLS.STEWARD_COMMITTEES,
     CONFIG_COLS.GRIEVANCE_COORDINATORS,
     CONFIG_COLS.HOME_TOWNS
   ];
@@ -5291,20 +5292,7 @@ function NUKE_CONFIG_DROPDOWNS() {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Get values from a Config column (excluding headers and empty cells)
- * Note: Row 1 = section headers, Row 2 = column headers, Row 3+ = data
- */
-function getConfigValues(configSheet, column) {
-  var lastRow = configSheet.getLastRow();
-  if (lastRow < 3) return [];
-
-  var values = configSheet.getRange(3, column, lastRow - 2, 1).getValues();
-  return values
-    .map(function(row) { return row[0]; })
-    .filter(function(v) { return v !== '' && v !== null; });
-}
+// Note: getConfigValues is defined earlier in this file (line ~2090)
 
 /**
  * Get random element from array

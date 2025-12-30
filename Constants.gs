@@ -499,7 +499,9 @@ var JOB_METADATA_FIELDS = [
   { label: 'Unit', memberCol: MEMBER_COLS.UNIT, configCol: CONFIG_COLS.UNITS, configName: 'Units' },
   { label: 'Supervisor', memberCol: MEMBER_COLS.SUPERVISOR, configCol: CONFIG_COLS.SUPERVISORS, configName: 'Supervisors' },
   { label: 'Manager', memberCol: MEMBER_COLS.MANAGER, configCol: CONFIG_COLS.MANAGERS, configName: 'Managers' },
-  { label: 'Assigned Steward', memberCol: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, configName: 'Stewards' }
+  { label: 'Assigned Steward', memberCol: MEMBER_COLS.ASSIGNED_STEWARD, configCol: CONFIG_COLS.STEWARDS, configName: 'Stewards' },
+  { label: 'Committees', memberCol: MEMBER_COLS.COMMITTEES, configCol: CONFIG_COLS.STEWARD_COMMITTEES, configName: 'Steward Committees' },
+  { label: 'Home Town', memberCol: MEMBER_COLS.HOME_TOWN, configCol: CONFIG_COLS.HOME_TOWNS, configName: 'Home Towns' }
 ];
 
 /**
