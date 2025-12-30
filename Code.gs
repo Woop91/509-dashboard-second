@@ -119,7 +119,7 @@ function onOpen() {
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
         .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
         .addSeparator()
-        .addItem('🔄 Restore Config Dropdowns', 'seedConfigData'))
+        .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
       .addToUi();
   }
 
