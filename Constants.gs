@@ -114,8 +114,9 @@ var MEMBER_COLS = {
   NEXT_DEADLINE: 30,               // AD - Script-calculated (static value)
   START_GRIEVANCE: 31,             // AE - Checkbox to start grievance
 
-  // ALIAS - For backward compatibility
-  LOCATION: 5                      // Alias for WORK_LOCATION
+  // ALIASES - For backward compatibility
+  LOCATION: 5,                     // Alias for WORK_LOCATION
+  DAYS_TO_DEADLINE: 30             // Alias for NEXT_DEADLINE
 };
 
 // ============================================================================
