@@ -4577,81 +4577,80 @@ function seedConfigData() {
   // Data row start (after section headers row 1 and column headers row 2)
   var dataStartRow = 3;
 
+  // Helper: only seed column if it's empty (preserves user data)
+  function seedIfEmpty(column, values) {
+    var existing = getConfigValues(sheet, column);
+    if (existing.length === 0) {
+      sheet.getRange(dataStartRow, column, values.length, 1)
+        .setValues(values.map(function(v) { return [v]; }));
+      return true;
+    }
+    return false;
+  }
+
+  var seededAny = false;
+
   // Job Titles (Column A)
-  var jobTitles = [
+  if (seedIfEmpty(CONFIG_COLS.JOB_TITLES, [
     'Social Worker', 'Case Manager', 'Program Coordinator', 'Administrative Assistant',
     'Supervisor', 'Director', 'Clinician', 'Counselor', 'Specialist', 'Analyst',
     'Manager', 'Senior Social Worker', 'Lead Case Manager', 'Program Manager',
     'Executive Assistant', 'HR Coordinator', 'Finance Associate', 'IT Support',
     'Communications Specialist', 'Outreach Worker'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.JOB_TITLES, jobTitles.length, 1)
-    .setValues(jobTitles.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Office Locations (Column B)
-  var locations = [
+  if (seedIfEmpty(CONFIG_COLS.OFFICE_LOCATIONS, [
     'Boston Main Office', 'Worcester Regional', 'Springfield Center', 'Cambridge Branch',
     'Lowell Office', 'Brockton Center', 'Quincy Regional', 'New Bedford Office',
     'Fall River Branch', 'Lawrence Center', 'Framingham Office', 'Somerville Branch',
     'Lynn Regional', 'Haverhill Center', 'Malden Office', 'Medford Branch',
     'Waltham Regional', 'Newton Center', 'Brookline Office', 'Salem Branch'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.OFFICE_LOCATIONS, locations.length, 1)
-    .setValues(locations.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Units (Column C)
-  var units = [
+  if (seedIfEmpty(CONFIG_COLS.UNITS, [
     'Child Welfare', 'Adult Services', 'Mental Health', 'Disability Services',
     'Elder Affairs', 'Housing Assistance', 'Employment Services', 'Youth Services',
     'Family Support', 'Administration'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.UNITS, units.length, 1)
-    .setValues(units.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Supervisors (Column F)
-  var supervisors = [
+  if (seedIfEmpty(CONFIG_COLS.SUPERVISORS, [
     'Maria Rodriguez', 'James Wilson', 'Sarah Chen', 'Michael Brown',
     'Jennifer Davis', 'Robert Taylor', 'Lisa Anderson', 'David Martinez',
     'Emily Johnson', 'Christopher Lee', 'Amanda White', 'Daniel Garcia'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.SUPERVISORS, supervisors.length, 1)
-    .setValues(supervisors.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Managers (Column G)
-  var managers = [
+  if (seedIfEmpty(CONFIG_COLS.MANAGERS, [
     'Patricia Thompson', 'William Jackson', 'Elizabeth Moore', 'Richard Harris',
     'Susan Clark', 'Joseph Lewis', 'Margaret Robinson', 'Charles Walker'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.MANAGERS, managers.length, 1)
-    .setValues(managers.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Stewards (Column H)
-  var stewards = [
+  if (seedIfEmpty(CONFIG_COLS.STEWARDS, [
     'John Smith', 'Mary Johnson', 'Robert Williams', 'Patricia Jones',
     'Michael Davis', 'Linda Miller', 'William Brown', 'Barbara Wilson',
     'David Moore', 'Susan Taylor', 'James Anderson', 'Karen Thomas'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.STEWARDS, stewards.length, 1)
-    .setValues(stewards.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Steward Committees (Column I)
-  var committees = [
+  if (seedIfEmpty(CONFIG_COLS.STEWARD_COMMITTEES, [
     'Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
     'Political Action Committee', 'Membership Committee', 'Executive Board'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.STEWARD_COMMITTEES, committees.length, 1)
-    .setValues(committees.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Home Towns (Column AF)
-  var homeTowns = [
+  if (seedIfEmpty(CONFIG_COLS.HOME_TOWNS, [
     'Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell', 'Brockton',
     'Quincy', 'New Bedford', 'Fall River', 'Lawrence', 'Framingham', 'Somerville',
     'Lynn', 'Haverhill', 'Malden', 'Medford', 'Waltham', 'Newton', 'Brookline'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.HOME_TOWNS, homeTowns.length, 1)
-    .setValues(homeTowns.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
+  if (seededAny) {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
+  }
 }
 
 /**
@@ -4673,15 +4672,12 @@ function SEED_MEMBERS(count, grievancePercent) {
     return;
   }
 
-  // Check if Config sheet has data - if not, seed it first
-  var jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
-  if (jobTitles.length === 0) {
-    ss.toast('Config empty - seeding config data first...', '🌱 Seeding', 2);
-    seedConfigData();
-  }
+  // Always ensure Config has data for all required columns
+  ss.toast('Ensuring Config data exists...', '🌱 Seeding', 2);
+  seedConfigData();  // seedConfigData now only populates EMPTY columns
 
   // Now get all config values (will have data from seedConfigData or user's existing data)
-  jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
+  var jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
   var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
   var supervisors = getConfigValues(configSheet, CONFIG_COLS.SUPERVISORS);
