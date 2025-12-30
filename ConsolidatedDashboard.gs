@@ -2872,6 +2872,35 @@ function showADHDControlPane() {
 }
 
 /**
+ * Hide gridlines on dashboard sheets for cleaner ADHD-friendly view
+ */
+function hideAllGridlines() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheets().forEach(function(sheet) {
+    var name = sheet.getName();
+    // Keep gridlines on data entry sheets, hide on dashboards
+    if (name !== SHEETS.CONFIG && name !== SHEETS.MEMBER_DIR && name !== SHEETS.GRIEVANCE_LOG) {
+      sheet.setHiddenGridlines(true);
+    }
+  });
+  ss.toast('Gridlines hidden on dashboards!', 'ADHD Setup', 3);
+}
+
+/**
+ * Setup ADHD-friendly defaults for the spreadsheet
+ */
+function setupADHDDefaults() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🎨 Setting up ADHD-friendly defaults...');
+  try {
+    hideAllGridlines();
+    ui.alert('🎉 ADHD-friendly setup complete!\n\n✅ Gridlines hidden on dashboards\n✅ Ready for focus!');
+  } catch (e) {
+    ui.alert('⚠️ Error: ' + e.message);
+  }
+}
+
+/**
  * Activate focus mode - highlights current row
  */
 function activateFocusMode() {
@@ -4176,9 +4205,14 @@ function setupEngagementCalcSheet() {
 }
 
 // ============================================================================
-// HIDDEN SHEET 6: _Steward_Contact_Calc (placeholder)
+// HIDDEN SHEET 6: _Steward_Contact_Calc
+// Source: Member Directory (Y-AA) → Aggregates steward contact tracking metrics
 // ============================================================================
 
+/**
+ * Setup the _Steward_Contact_Calc hidden sheet with self-healing formulas
+ * Tracks and aggregates steward contact data from Member Directory
+ */
 function setupStewardContactCalcSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.STEWARD_CONTACT_CALC);
@@ -4188,9 +4222,40 @@ function setupStewardContactCalcSheet() {
   }
 
   sheet.clear();
-  sheet.getRange('A1').setValue('Steward Contact Calc - Ready for future implementation');
+
+  // Headers for steward contact summary
+  var headers = ['Steward Name', 'Total Contacts', 'Contacts This Month', 'Contacts Last 7 Days', 'Last Contact Date', 'Avg Days Between Contacts'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters for formulas
+  var mContactStewardCol = getColumnLetter(MEMBER_COLS.CONTACT_STEWARD);
+  var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
+
+  // Column A: Unique steward names who have made contacts
+  sheet.getRange('A2').setFormula('=IFERROR(SORT(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + '<>""))),)');
+
+  // Column B: Total contacts per steward
+  sheet.getRange('B2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A)))');
+
+  // Column C: Contacts this month
+  sheet.getRange('C2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A,\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1))))');
+
+  // Column D: Contacts last 7 days
+  sheet.getRange('D2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A,\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&(TODAY()-7))))');
+
+  // Column E: Most recent contact date for this steward
+  sheet.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(TEXT(MAXIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A),"MM/dd/yyyy"),"-")))');
+
+  // Column F: Placeholder for avg days between contacts (complex calculation)
+  sheet.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","","-"))');
+
+  // Auto-resize columns
+  sheet.autoResizeColumns(1, headers.length);
+
   sheet.hideSheet();
-  Logger.log('_Steward_Contact_Calc sheet setup complete');
+  Logger.log('_Steward_Contact_Calc sheet setup complete with live formulas');
 }
 
 // ============================================================================
