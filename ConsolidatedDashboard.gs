@@ -710,6 +710,9 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
     .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
+    .addSeparator()
+    .addItem('📋 Create Menu Checklist', 'createMenuChecklist')
+    .addItem('📊 View Checklist Progress', 'showMenuChecklistProgress')
     .addToUi();
 
   // Demo Menu - only show if demo mode is not disabled

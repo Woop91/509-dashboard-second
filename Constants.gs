@@ -33,7 +33,9 @@ var SHEETS = {
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
   // Test Results
-  TEST_RESULTS: 'Test Results'
+  TEST_RESULTS: 'Test Results',
+  // Menu Checklist
+  MENU_CHECKLIST: 'Menu Checklist'
 };
 
 // ============================================================================
