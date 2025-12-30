@@ -1014,6 +1014,16 @@ function createMemberDirectory(ss) {
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
+  // Format date columns (dd-mm-yyyy)
+  var dateColumns = [
+    MEMBER_COLS.LAST_VIRTUAL_MTG,
+    MEMBER_COLS.LAST_INPERSON_MTG,
+    MEMBER_COLS.RECENT_CONTACT_DATE
+  ];
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+  });
+
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
 }
@@ -4851,9 +4861,9 @@ function SEED_MEMBERS(count, grievancePercent) {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, grievanceLastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync data
-  syncGrievanceToMemberDirectory();
+  // Sync data (FormulasToLog must run FIRST to populate calculated columns)
   syncGrievanceFormulasToLog();
+  syncGrievanceToMemberDirectory();
 
   // Sort grievances by status and resolution
   sortGrievanceLogByStatus();
@@ -4953,8 +4963,9 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed (Status = 'Closed', Resolution has the outcome)
-  var isClosed = (status === 'Closed');
+  // Determine if case is closed (includes Settled, Withdrawn, Denied, Won, Closed)
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+  var isClosed = closedStatuses.indexOf(status) !== -1;
 
   // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
