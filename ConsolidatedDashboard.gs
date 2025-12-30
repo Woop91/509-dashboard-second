@@ -729,7 +729,7 @@ function onOpen() {
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
         .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
         .addSeparator()
-        .addItem('🔄 Restore Config Dropdowns', 'seedConfigData'))
+        .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
       .addToUi();
   }
 
@@ -4666,6 +4666,26 @@ function seedConfigData() {
   if (seededAny) {
     SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
   }
+}
+
+/**
+ * Restore Config dropdowns AND re-apply dropdown validations to Member Directory and Grievance Log
+ * This is the full restore function for use after nuking or when dropdowns are missing
+ */
+function restoreConfigAndDropdowns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  ss.toast('Restoring Config values...', '🔄 Restoring', 2);
+
+  // First, seed the Config values
+  seedConfigData();
+
+  ss.toast('Applying dropdown validations...', '🔄 Restoring', 2);
+
+  // Then, re-apply dropdown validations to Member Directory and Grievance Log
+  setupDataValidations();
+
+  ss.toast('Config and dropdowns restored!', '✅ Success', 3);
 }
 
 /**

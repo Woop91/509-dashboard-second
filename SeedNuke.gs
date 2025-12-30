@@ -249,6 +249,26 @@ function seedConfigData() {
 }
 
 /**
+ * Restore Config dropdowns AND re-apply dropdown validations to Member Directory and Grievance Log
+ * This is the full restore function for use after nuking or when dropdowns are missing
+ */
+function restoreConfigAndDropdowns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  ss.toast('Restoring Config values...', '🔄 Restoring', 2);
+
+  // First, seed the Config values
+  seedConfigData();
+
+  ss.toast('Applying dropdown validations...', '🔄 Restoring', 2);
+
+  // Then, re-apply dropdown validations to Member Directory and Grievance Log
+  setupDataValidations();
+
+  ss.toast('Config and dropdowns restored!', '✅ Success', 3);
+}
+
+/**
  * Seed N members
  * @param {number} count - Number of members to seed (max 2000)
  */
