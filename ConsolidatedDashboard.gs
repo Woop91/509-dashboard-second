@@ -710,9 +710,6 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
     .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
-    .addSeparator()
-    .addItem('📋 Create Menu Checklist', 'createMenuChecklist')
-    .addItem('📊 View Checklist Progress', 'showMenuChecklistProgress')
     .addToUi();
 
   // Demo Menu - only show if demo mode is not disabled
@@ -2458,11 +2455,152 @@ function REPAIR_DASHBOARD() {
     // Also reapply data validations
     setupDataValidations();
 
+    // Create Menu Checklist sheet
+    createMenuChecklistSheet_();
+
     // Final message handled by repairAllHiddenSheets
   } catch (error) {
     Logger.log('Error in REPAIR_DASHBOARD: ' + error.message);
     ui.alert('❌ Error', 'Repair failed: ' + error.message, ui.ButtonSet.OK);
   }
+}
+
+/**
+ * Creates the Menu Checklist sheet with all menu items
+ * Called automatically during dashboard repair/creation
+ * @private
+ */
+function createMenuChecklistSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = SHEETS.MENU_CHECKLIST || 'Menu Checklist';
+
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  // Menu items data
+  var menuItems = [
+    // Dashboard Menu
+    ['👤 Dashboard', '', '📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard'],
+    ['👤 Dashboard', '', '🎯 Interactive Dashboard', 'showInteractiveDashboardTab'],
+    ['👤 Dashboard', '', '📋 View Active Grievances', 'viewActiveGrievances'],
+    ['👤 Dashboard', '', '📱 Mobile Dashboard', 'showMobileDashboard'],
+    ['👤 Dashboard', '', '📱 Get Mobile App URL', 'showWebAppUrl'],
+    ['👤 Dashboard', '', '⚡ Quick Actions', 'showQuickActionsMenu'],
+    ['👤 Dashboard', 'Grievance Tools', '➕ Start New Grievance', 'startNewGrievance'],
+    ['👤 Dashboard', 'Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched'],
+    ['👤 Dashboard', 'Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'],
+    ['👤 Dashboard', 'Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas'],
+    ['👤 Dashboard', 'Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown'],
+    ['👤 Dashboard', 'Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'],
+    // Search Menu
+    ['🔍 Search', '', '🔍 Search Members', 'searchMembers'],
+    // Sheet Manager Menu
+    ['📊 Sheet Manager', '', '📊 Rebuild Dashboard', 'rebuildDashboard'],
+    ['📊 Sheet Manager', '', '📈 Refresh Interactive Charts', 'refreshInteractiveCharts'],
+    ['📊 Sheet Manager', '', '🔄 Refresh All Formulas', 'refreshAllFormulas'],
+    ['📊 Sheet Manager', 'Google Drive', '📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance'],
+    ['📊 Sheet Manager', 'Google Drive', '📁 View Grievance Files', 'showGrievanceFiles'],
+    ['📊 Sheet Manager', 'Google Drive', '📁 Batch Create Folders', 'batchCreateGrievanceFolders'],
+    ['📊 Sheet Manager', 'Calendar', '📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar'],
+    ['📊 Sheet Manager', 'Calendar', '📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar'],
+    ['📊 Sheet Manager', 'Calendar', '🗑️ Clear Calendar Events', 'clearAllCalendarEvents'],
+    ['📊 Sheet Manager', 'Notifications', '⚙️ Notification Settings', 'showNotificationSettings'],
+    ['📊 Sheet Manager', 'Notifications', '🧪 Test Notifications', 'testDeadlineNotifications'],
+    // Tools Menu
+    ['🔧 Tools', 'ADHD & Accessibility', '♿ ADHD Control Panel', 'showADHDControlPanel'],
+    ['🔧 Tools', 'ADHD & Accessibility', '🎯 Focus Mode', 'activateFocusMode'],
+    ['🔧 Tools', 'ADHD & Accessibility', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes'],
+    ['🔧 Tools', 'ADHD & Accessibility', '📝 Quick Capture', 'showQuickCaptureNotepad'],
+    ['🔧 Tools', 'ADHD & Accessibility', '🍅 Pomodoro Timer', 'startPomodoroTimer'],
+    ['🔧 Tools', 'Theming', '🎨 Theme Manager', 'showThemeManager'],
+    ['🔧 Tools', 'Theming', '🌙 Toggle Dark Mode', 'quickToggleDarkMode'],
+    ['🔧 Tools', 'Theming', '🔄 Reset Theme', 'resetToDefaultTheme'],
+    ['🔧 Tools', 'Multi-Select', '📝 Open Editor', 'showMultiSelectDialog'],
+    ['🔧 Tools', 'Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger'],
+    ['🔧 Tools', 'Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger'],
+    ['🔧 Tools', 'Undo/Redo', '↩️ Undo Last Action', 'undoLastAction'],
+    ['🔧 Tools', 'Undo/Redo', '↪️ Redo Action', 'redoLastAction'],
+    ['🔧 Tools', 'Undo/Redo', '📋 View History', 'showUndoRedoPanel'],
+    ['🔧 Tools', 'Undo/Redo', '🗑️ Clear History', 'clearUndoHistory'],
+    ['🔧 Tools', 'Cache & Performance', '🗄️ Cache Status', 'showCacheStatusDashboard'],
+    ['🔧 Tools', 'Cache & Performance', '🔥 Warm Up Caches', 'warmUpCaches'],
+    ['🔧 Tools', 'Cache & Performance', '🗑️ Clear All Caches', 'invalidateAllCaches'],
+    ['🔧 Tools', 'Validation', '🔍 Run Bulk Validation', 'runBulkValidation'],
+    ['🔧 Tools', 'Validation', '⚙️ Validation Settings', 'showValidationSettings'],
+    ['🔧 Tools', 'Validation', '🧹 Clear Indicators', 'clearValidationIndicators'],
+    ['🔧 Tools', 'Validation', '⚡ Install Validation Trigger', 'installValidationTrigger'],
+    // Setup Menu
+    ['🏗️ Setup', '', '🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD'],
+    ['🏗️ Setup', '', '⚙️ Setup Data Validations', 'setupDataValidations'],
+    ['🏗️ Setup', '', '🎨 Setup ADHD Defaults', 'setupADHDDefaults'],
+    // Testing Menu
+    ['🧪 Testing', '', '🧪 Run All Tests', 'runAllTests'],
+    ['🧪 Testing', '', '⚡ Run Quick Tests', 'runQuickTests'],
+    ['🧪 Testing', '', '📊 View Test Results', 'viewTestResults'],
+    // Administrator Menu
+    ['⚙️ Administrator', '', '🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP'],
+    ['⚙️ Administrator', '', '🔍 Verify Hidden Sheets', 'verifyHiddenSheets'],
+    ['⚙️ Administrator', 'Setup & Triggers', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets'],
+    ['⚙️ Administrator', 'Setup & Triggers', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets'],
+    ['⚙️ Administrator', 'Setup & Triggers', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger'],
+    ['⚙️ Administrator', 'Setup & Triggers', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'],
+    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync All Data Now', 'syncAllData'],
+    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory'],
+    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog']
+  ];
+
+  // Build rows with header
+  var rows = [['✓', 'Menu', 'Submenu', 'Item', 'Function', 'Notes']];
+  for (var i = 0; i < menuItems.length; i++) {
+    rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], '']);
+  }
+
+  // Write all data
+  sheet.getRange(1, 1, rows.length, 6).setValues(rows);
+
+  // Format header
+  sheet.getRange(1, 1, 1, 6)
+    .setFontWeight('bold')
+    .setBackground(COLORS.PRIMARY_PURPLE || '#7C3AED')
+    .setFontColor(COLORS.WHITE || '#FFFFFF')
+    .setHorizontalAlignment('center');
+
+  // Add checkboxes
+  if (rows.length > 1) {
+    sheet.getRange(2, 1, rows.length - 1, 1).insertCheckboxes();
+  }
+
+  // Set column widths
+  sheet.setColumnWidth(1, 40);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 250);
+  sheet.setColumnWidth(5, 250);
+  sheet.setColumnWidth(6, 200);
+
+  // Freeze header
+  sheet.setFrozenRows(1);
+
+  // Alternating colors
+  for (var r = 2; r <= rows.length; r++) {
+    if (r % 2 === 0) {
+      sheet.getRange(r, 1, 1, 6).setBackground('#F9FAFB');
+    }
+  }
+
+  // Conditional formatting for checked items
+  var rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$A2=TRUE')
+    .setBackground('#E8F5E9')
+    .setRanges([sheet.getRange(2, 1, rows.length - 1, 6)])
+    .build();
+  sheet.setConditionalFormatRules([rule]);
+
+  return sheet;
 }
 
 // ============================================================================
