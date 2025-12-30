@@ -2865,6 +2865,11 @@ function showADHDControlPanel() {
   SpreadsheetApp.getUi().showModalDialog(html, 'ADHD Control Panel');
 }
 
+// Alias for showADHDControlPanel (handles typo without 'l')
+function showADHDControlPane() {
+  showADHDControlPanel();
+}
+
 /**
  * Activate focus mode - highlights current row
  */
