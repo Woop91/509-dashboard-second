@@ -2412,7 +2412,7 @@ function REPAIR_DASHBOARD() {
 // ============================================================================
 
 function searchMembers() {
-  SpreadsheetApp.getUi().alert('Search Members feature - Coming soon!');
+  showDesktopSearch();
 }
 
 function viewActiveGrievances() {
@@ -5167,8 +5167,9 @@ function seed100MembersWithGrievances() {
 // ============================================================================
 
 /**
- * Delete only seeded data (preserves manually entered data)
- * After completion, disables demo mode permanently and removes Demo menu
+ * Delete all seeded data from Member Directory and Grievance Log
+ * Uses pattern matching (M/G + 4 letters + 3 digits) to identify seeded IDs
+ * This is more reliable than Script Properties tracking which has size limits
  */
 function NUKE_SEEDED_DATA() {
   var ui = SpreadsheetApp.getUi();
@@ -5180,19 +5181,37 @@ function NUKE_SEEDED_DATA() {
     return;
   }
 
-  // Get counts of seeded data
-  var seededMemberIds = getSeededMemberIds();
-  var seededGrievanceIds = getSeededGrievanceIds();
-  var memberCount = Object.keys(seededMemberIds).length;
-  var grievanceCount = Object.keys(seededGrievanceIds).length;
+  // Pattern for seeded IDs: M/G + 4 uppercase letters + 3 digits (e.g., MJOSM123, GJOSM456)
+  var seededIdPattern = /^[MG][A-Z]{4}\d{3}$/;
+
+  // Count seeded data by pattern
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var memberCount = 0;
+  var grievanceCount = 0;
+
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberIds = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
+    memberIds.forEach(function(row) {
+      if (row[0] && seededIdPattern.test(String(row[0]))) memberCount++;
+    });
+  }
+
+  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+    var grievanceIds = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
+    grievanceIds.forEach(function(row) {
+      if (row[0] && seededIdPattern.test(String(row[0]))) grievanceCount++;
+    });
+  }
 
   var response = ui.alert(
     '☢️ NUKE SEEDED DATA',
-    '⚠️ This will permanently delete ONLY seeded/demo data:\n\n' +
-    '• ' + memberCount + ' seeded members\n' +
-    '• ' + grievanceCount + ' seeded grievances\n' +
+    '⚠️ This will permanently delete seeded/demo data:\n\n' +
+    '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
+    '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
     '• Config dropdown values\n\n' +
-    '✅ Manually entered data will be PRESERVED.\n\n' +
+    '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -5206,8 +5225,9 @@ function NUKE_SEEDED_DATA() {
   var response2 = ui.alert(
     '☢️ FINAL CONFIRMATION',
     'This will:\n' +
-    '1. Delete all seeded data\n' +
-    '2. Permanently disable the Demo menu\n\n' +
+    '1. Delete ' + memberCount + ' seeded members\n' +
+    '2. Delete ' + grievanceCount + ' seeded grievances\n' +
+    '3. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -5223,13 +5243,12 @@ function NUKE_SEEDED_DATA() {
     var deletedGrievances = 0;
 
     // Delete seeded grievances first (they reference members)
-    var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
     if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
       var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
       // Delete from bottom up to preserve row indices
       for (var g = grievanceData.length - 1; g >= 0; g--) {
-        var gId = grievanceData[g][0];
-        if (gId && seededGrievanceIds[gId]) {
+        var gId = String(grievanceData[g][0] || '');
+        if (seededIdPattern.test(gId)) {
           grievanceSheet.deleteRow(g + 2);
           deletedGrievances++;
         }
@@ -5237,13 +5256,12 @@ function NUKE_SEEDED_DATA() {
     }
 
     // Delete seeded members
-    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
     if (memberSheet && memberSheet.getLastRow() > 1) {
       var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
       // Delete from bottom up to preserve row indices
       for (var m = memberData.length - 1; m >= 0; m--) {
-        var mId = memberData[m][0];
-        if (mId && seededMemberIds[mId]) {
+        var mId = String(memberData[m][0] || '');
+        if (seededIdPattern.test(mId)) {
           memberSheet.deleteRow(m + 2);
           deletedMembers++;
         }
@@ -5252,6 +5270,11 @@ function NUKE_SEEDED_DATA() {
 
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
+
+    // Clear tracked IDs from Script Properties
+    var props = PropertiesService.getScriptProperties();
+    props.deleteProperty('SEEDED_MEMBER_IDS');
+    props.deleteProperty('SEEDED_GRIEVANCE_IDS');
 
     // Disable demo mode permanently
     disableDemoMode();

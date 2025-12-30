@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.0 (Enhanced Analytics Dashboard)
-**Last Updated:** 2025-12-18
+**Version:** 1.5.1 (Bidirectional Config Sync)
+**Last Updated:** 2025-12-30
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -45,7 +45,7 @@
 
 ### File Descriptions
 
-**Constants.gs** (~500 lines)
+**Constants.gs** (~600 lines)
 - `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
@@ -53,6 +53,19 @@
 - `CONFIG_COLS` - Config sheet column positions
 - `DEFAULT_CONFIG` - Default dropdown values
 - `MULTI_SELECT_COLS` - Configuration for multi-select columns
+- `JOB_METADATA_FIELDS` - Maps Member Directory fields to Config columns for bidirectional sync:
+  | Member Directory | Config Column |
+  |------------------|---------------|
+  | Job Title | Job Titles |
+  | Work Location | Office Locations |
+  | Unit | Units |
+  | Supervisor | Supervisors |
+  | Manager | Managers |
+  | Assigned Steward | Stewards |
+  | Committees | Steward Committees |
+  | Home Town | Home Towns |
+- `getJobMetadataField(label)` - Get field config by label
+- `getJobMetadataByMemberCol(col)` - Get field config by column number
 - `getMultiSelectConfig()` - Get multi-select config for a column
 - `generateNameBasedId(prefix, firstName, lastName, existingIds)` - Generate unique ID
   - **Format:** `PREFIX + first 2 chars of firstName + first 2 chars of lastName + 3 random digits`
@@ -121,6 +134,7 @@
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
+  - `syncNewValueToConfig(e)` - Bidirectional sync: adds new values from Member Directory to Config
   - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
 - Trigger & Repair Functions:
   - `onEditAutoSync()` - Auto-sync trigger handler
@@ -685,6 +699,47 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.1 (2025-12-30) - Bidirectional Config Sync & Bug Fixes
+
+**New Feature: Bidirectional Sync between Member Directory and Config**
+
+When users enter new values in Member Directory job metadata fields, those values are automatically added to the Config sheet dropdown lists. This works for both seeded data and manual user edits.
+
+**JOB_METADATA_FIELDS Mapping (8 fields):**
+
+| Member Directory Column | Config Column | Auto-Syncs |
+|------------------------|---------------|------------|
+| Job Title (D) | Job Titles (A) | ✓ |
+| Work Location (E) | Office Locations (B) | ✓ |
+| Unit (F) | Units (C) | ✓ |
+| Supervisor (L) | Supervisors (F) | ✓ |
+| Manager (M) | Managers (G) | ✓ |
+| Assigned Steward (P) | Stewards (H) | ✓ |
+| Committees (O) | Steward Committees (I) | ✓ |
+| Home Town (X) | Home Towns (AF) | ✓ |
+
+**Bug Fixes:**
+
+1. **Days to Deadline showing 0** - Fixed sync order: `syncGrievanceFormulasToLog()` now runs BEFORE `syncGrievanceToMemberDirectory()` so calculated values exist before being read
+2. **isClosed logic incomplete** - Fixed to include all closed statuses (Settled, Withdrawn, Denied, Won, Closed) instead of just 'Closed'
+3. **Date format consistency** - Applied `dd-mm-yyyy` format to ALL tabs including Member Directory, Dashboard displays, Mobile views, and Search results
+
+**Menu Changes:**
+
+- Removed 'CREATE 509 DASHBOARD' from Setup menu
+- Moved 'Search Members' to standalone '🔍 Search' menu for quick access
+- Added 'Restore Config Dropdowns' option to Nuke Data submenu
+
+**Code Changes:**
+
+- `Constants.gs`: Added `JOB_METADATA_FIELDS` array with 8 field mappings, added helper functions `getJobMetadataField()` and `getJobMetadataByMemberCol()`
+- `HiddenSheets.gs`: Added `syncNewValueToConfig()` function for bidirectional sync, simplified to use `getJobMetadataByMemberCol()` helper
+- `ConsolidatedDashboard.gs`: Fixed sync order in `SEED_MEMBERS()`, fixed `isClosed` logic in `generateSingleGrievanceRow()`
+- `Code.gs` / `ConsolidatedDashboard.gs`: Added dd-mm-yyyy format to Member Directory date columns, updated menu structure
+- `MobileQuickActions.gs`: Changed date format to dd-MM-yyyy
+
+---
 
 ### Version 1.5.0 (2025-12-18) - Enhanced Analytics Dashboard
 
