@@ -2639,7 +2639,7 @@ function showSmartDashboard() {
  */
 function showCacheStatusDashboard() {
   var cache = CacheService.getScriptCache();
-  var cacheKeys = ['memberData', 'grievanceData', 'configData'];
+  var cacheKeys = ['memberMeta', 'grievanceMeta', 'configData'];
   var status = [];
 
   cacheKeys.forEach(function(key) {
@@ -2681,7 +2681,7 @@ function showCacheStatusDashboard() {
  */
 function clearAllCaches() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['memberData', 'grievanceData', 'configData']);
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
   SpreadsheetApp.getActiveSpreadsheet().toast('All caches cleared!', '✅ Success', 3);
 }
 
@@ -3161,7 +3161,7 @@ function warmUpCaches() {
  */
 function invalidateAllCaches() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['memberData', 'grievanceData', 'configData']);
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
   SpreadsheetApp.getActiveSpreadsheet().toast('All caches invalidated!', 'Cache', 3);
 }
 
