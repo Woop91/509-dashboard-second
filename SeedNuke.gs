@@ -229,6 +229,14 @@ function seedConfigData() {
   sheet.getRange(dataStartRow, CONFIG_COLS.STEWARDS, stewards.length, 1)
     .setValues(stewards.map(function(v) { return [v]; }));
 
+  // Steward Committees (Column I)
+  var committees = [
+    'Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
+    'Political Action Committee', 'Membership Committee', 'Executive Board'
+  ];
+  sheet.getRange(dataStartRow, CONFIG_COLS.STEWARD_COMMITTEES, committees.length, 1)
+    .setValues(committees.map(function(v) { return [v]; }));
+
   // Home Towns (Column AF)
   var homeTowns = [
     'Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell', 'Brockton',
