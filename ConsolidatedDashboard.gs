@@ -1019,14 +1019,14 @@ function createMemberDirectory(ss) {
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
-  // Format date columns (dd-mm-yyyy)
+  // Format date columns (MM/dd/yyyy)
   var dateColumns = [
     MEMBER_COLS.LAST_VIRTUAL_MTG,
     MEMBER_COLS.LAST_INPERSON_MTG,
     MEMBER_COLS.RECENT_CONTACT_DATE
   ];
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
   // Auto-resize other columns
@@ -1078,7 +1078,7 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
   // Format Days Open (S) and Days to Deadline (U) as whole numbers
@@ -1472,7 +1472,7 @@ function createInteractiveDashboard(ss) {
     .setFontWeight('bold')
     .setFontSize(10);
   sheet.getRange('F8').setFormula('=SWITCH($E$6,"All Time",DATE(1900,1,1),"This Month",EOMONTH(TODAY(),-1)+1,"This Quarter",DATE(YEAR(TODAY()),FLOOR((MONTH(TODAY())-1)/3)*3+1,1),"This Year",DATE(YEAR(TODAY()),1,1),"Last 30 Days",TODAY()-30,"Last 90 Days",TODAY()-90,DATE(1900,1,1))')
-    .setNumberFormat('dd-mm-yyyy')
+    .setNumberFormat('MM/dd/yyyy')
     .setFontSize(10);
 
   sheet.getRange('A9:C9').setValues([['Metric Name', 'Value', 'Description']])
@@ -2640,6 +2640,87 @@ function startNewGrievance() {
 }
 
 /**
+ * Show mobile-friendly dashboard
+ */
+function showMobileDashboard() {
+  var stats = getMobileDashboardStats_();
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;padding:0;margin:0;background:#f5f5f5}.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:20px}.header h1{margin:0;font-size:24px}.container{padding:15px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center}.stat-value{font-size:32px;font-weight:bold;color:#1a73e8}.stat-label{font-size:13px;color:#666;text-transform:uppercase}.section-title{font-size:16px;font-weight:600;color:#333;margin:20px 0 12px;padding-left:5px}.action-btn{background:white;border:none;padding:16px;margin-bottom:10px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;text-align:left;display:flex;align-items:center;gap:15px;font-size:15px;cursor:pointer;min-height:60px}.action-btn:active{transform:scale(0.98)}.action-icon{font-size:24px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#e8f0fe;border-radius:10px}.action-label{font-weight:500}.action-desc{font-size:12px;color:#666}.fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;background:#1a73e8;color:white;border:none;border-radius:50%;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer}</style></head><body><div class="header"><h1>509 Dashboard</h1><div style="font-size:14px;opacity:0.9">Mobile View</div></div><div class="container"><div class="stats"><div class="stat-card"><div class="stat-value">' + stats.totalGrievances + '</div><div class="stat-label">Total</div></div><div class="stat-card"><div class="stat-value">' + stats.activeGrievances + '</div><div class="stat-label">Active</div></div><div class="stat-card"><div class="stat-value">' + stats.pendingGrievances + '</div><div class="stat-label">Pending</div></div><div class="stat-card"><div class="stat-value">' + stats.overdueGrievances + '</div><div class="stat-label">Overdue</div></div></div><div class="section-title">Quick Actions</div><button class="action-btn" onclick="google.script.run.viewActiveGrievances();google.script.host.close()"><div class="action-icon">List</div><div><div class="action-label">View Grievances</div><div class="action-desc">Browse all grievances</div></div></button><button class="action-btn" onclick="google.script.run.showDesktopSearch();google.script.host.close()"><div class="action-icon">Find</div><div><div class="action-label">Search</div><div class="action-desc">Find grievances or members</div></div></button></div><button class="fab" onclick="location.reload()">Refresh</button></body></html>'
+  ).setWidth(400).setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Mobile Dashboard');
+}
+
+/**
+ * Get dashboard stats for mobile view
+ */
+function getMobileDashboardStats_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) return { totalGrievances: 0, activeGrievances: 0, pendingGrievances: 0, overdueGrievances: 0 };
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.DAYS_TO_DEADLINE).getValues();
+  var stats = { totalGrievances: data.length, activeGrievances: 0, pendingGrievances: 0, overdueGrievances: 0 };
+  data.forEach(function(row) {
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var daysTo = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    if (status && status !== 'Resolved' && status !== 'Withdrawn' && status !== 'Closed') stats.activeGrievances++;
+    if (status === 'Pending Info') stats.pendingGrievances++;
+    if (daysTo !== null && daysTo !== '' && daysTo < 0 && status === 'Open') stats.overdueGrievances++;
+  });
+  return stats;
+}
+
+/**
+ * Show quick actions menu based on current selection
+ */
+function showQuickActionsMenu() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var name = sheet.getName();
+  var selection = sheet.getActiveRange();
+  if (!selection) { SpreadsheetApp.getUi().alert('Please select a row first.'); return; }
+  var row = selection.getRow();
+  if (row < 2) { SpreadsheetApp.getUi().alert('Please select a data row, not header.'); return; }
+  if (name === SHEETS.MEMBER_DIR) showMemberQuickActions_(row);
+  else if (name === SHEETS.GRIEVANCE_LOG) showGrievanceQuickActions_(row);
+  else SpreadsheetApp.getUi().alert('Quick Actions', 'Available for Member Directory and Grievance Log.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show quick actions for a member row
+ */
+function showMemberQuickActions_(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var memberId = data[MEMBER_COLS.MEMBER_ID - 1];
+  var name = data[MEMBER_COLS.FIRST_NAME - 1] + ' ' + data[MEMBER_COLS.LAST_NAME - 1];
+  var email = data[MEMBER_COLS.EMAIL - 1];
+  var hasOpen = data[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1];
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;display:flex;align-items:center;gap:10px}.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}.name{font-size:18px;font-weight:bold}.id{color:#666;font-size:14px}.status{margin-top:10px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}.open{background:#ffebee;color:#c62828}.none{background:#e8f5e9;color:#2e7d32}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#e8f4fd}.icon{font-size:24px}.title{font-weight:bold}.desc{font-size:12px;color:#666;margin-top:2px}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>Quick Actions</h2><div class="info"><div class="name">' + name + '</div><div class="id">' + memberId + ' | ' + (email || 'No email') + '</div><div class="status">' + (hasOpen === 'Yes' ? '<span class="badge open">Has Open Grievance</span>' : '<span class="badge none">No Open Grievances</span>') + '</div></div><div class="actions"><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + memberId + '\');alert(\'Member ID copied!\')"><span class="icon">Copy</span><span><div class="title">Copy Member ID</div><div class="desc">' + memberId + '</div></span></button></div><button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
+  ).setWidth(400).setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(html, '');
+}
+
+/**
+ * Show quick actions for a grievance row
+ */
+function showGrievanceQuickActions_(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var grievanceId = data[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+  var memberId = data[GRIEVANCE_COLS.MEMBER_ID - 1];
+  var name = data[GRIEVANCE_COLS.FIRST_NAME - 1] + ' ' + data[GRIEVANCE_COLS.LAST_NAME - 1];
+  var status = data[GRIEVANCE_COLS.STATUS - 1];
+  var step = data[GRIEVANCE_COLS.CURRENT_STEP - 1];
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8}.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}.name{font-size:18px;font-weight:bold}.id{color:#666;font-size:14px}.status{margin-top:10px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;margin-right:8px}.open{background:#fff3e0;color:#e65100}.closed{background:#e8f5e9;color:#2e7d32}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#e8f4fd}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>Quick Actions</h2><div class="info"><div class="name">' + name + '</div><div class="id">' + grievanceId + ' | Member: ' + memberId + '</div><div class="status"><span class="badge ' + (status === 'Open' ? 'open' : 'closed') + '">' + status + '</span><span class="badge">' + step + '</span></div></div><div class="actions"><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + grievanceId + '\');alert(\'Grievance ID copied!\')"><span>Copy Grievance ID: ' + grievanceId + '</span></button></div><button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
+  ).setWidth(400).setHeight(350);
+  SpreadsheetApp.getUi().showModalDialog(html, '');
+}
+
+/**
  * Recalculate all grievance deadlines and sync to Member Directory
  * Uses hidden sheet formulas for self-healing calculations
  */
@@ -3178,19 +3259,19 @@ function setupGrievanceFormulasSheet() {
     '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
   );
 
-  // Format date columns (dd-mm-yyyy)
-  sheet.getRange('E:E').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('F:F').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('G:G').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('H:H').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('I:I').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('L:L').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('M:M').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('N:N').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('O:O').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('P:P').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('Q:Q').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('S:S').setNumberFormat('dd-mm-yyyy');
+  // Format date columns (MM/dd/yyyy)
+  sheet.getRange('E:E').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('F:F').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('G:G').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('H:H').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('I:I').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('L:L').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('M:M').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('N:N').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('O:O').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('P:P').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('Q:Q').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('S:S').setNumberFormat('MM/dd/yyyy');
 
   // Hide the sheet
   sheet.hideSheet();
@@ -3373,19 +3454,19 @@ function syncGrievanceFormulasToLog() {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
       .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
 
-    // Format deadline columns as dates (dd-mm-yyyy)
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    // Format deadline columns as dates (MM/dd/yyyy)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
 
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
 
     // Format Days Open (S) and Days to Deadline (U) as whole numbers
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
