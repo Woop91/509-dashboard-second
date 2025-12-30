@@ -723,7 +723,7 @@ When users enter new values in Member Directory job metadata fields, those value
 
 1. **Days to Deadline showing 0** - Fixed sync order: `syncGrievanceFormulasToLog()` now runs BEFORE `syncGrievanceToMemberDirectory()` so calculated values exist before being read
 2. **isClosed logic incomplete** - Fixed to include all closed statuses (Settled, Withdrawn, Denied, Won, Closed) instead of just 'Closed'
-3. **Date format consistency** - Applied `dd-mm-yyyy` format to ALL tabs including Member Directory, Dashboard displays, Mobile views, and Search results
+3. **Date format consistency** - Applied `MM/dd/yyyy` format to ALL tabs including Member Directory, Dashboard displays, Mobile views, and Search results
 
 **Menu Changes:**
 
@@ -736,8 +736,8 @@ When users enter new values in Member Directory job metadata fields, those value
 - `Constants.gs`: Added `JOB_METADATA_FIELDS` array with 8 field mappings, added helper functions `getJobMetadataField()` and `getJobMetadataByMemberCol()`
 - `HiddenSheets.gs`: Added `syncNewValueToConfig()` function for bidirectional sync, simplified to use `getJobMetadataByMemberCol()` helper
 - `ConsolidatedDashboard.gs`: Fixed sync order in `SEED_MEMBERS()`, fixed `isClosed` logic in `generateSingleGrievanceRow()`
-- `Code.gs` / `ConsolidatedDashboard.gs`: Added dd-mm-yyyy format to Member Directory date columns, updated menu structure
-- `MobileQuickActions.gs`: Changed date format to dd-MM-yyyy
+- `Code.gs` / `ConsolidatedDashboard.gs`: Added MM/dd/yyyy format to Member Directory date columns, updated menu structure
+- `MobileQuickActions.gs`: Changed date format to MM/dd/yyyy
 
 ---
 

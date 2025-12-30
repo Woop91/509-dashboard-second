@@ -404,14 +404,14 @@ function createMemberDirectory(ss) {
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
-  // Format date columns (dd-mm-yyyy)
+  // Format date columns (MM/dd/yyyy)
   var dateColumns = [
     MEMBER_COLS.LAST_VIRTUAL_MTG,
     MEMBER_COLS.LAST_INPERSON_MTG,
     MEMBER_COLS.RECENT_CONTACT_DATE
   ];
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
   // Auto-resize other columns
@@ -463,7 +463,7 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
   // Format Days Open (S) and Days to Deadline (U) as whole numbers
@@ -1875,7 +1875,7 @@ function getDesktopSearchData(query, tab, filters) {
         var filedDateStr = '';
         if (dateFiled) {
           try {
-            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'dd-MM-yyyy');
+            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'MM/dd/yyyy');
           } catch(e) {
             filedDateStr = dateFiled.toString();
           }
