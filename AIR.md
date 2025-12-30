@@ -629,6 +629,28 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ---
 
+## Live Formula Architecture
+
+### Member Directory Live Columns
+
+The Member Directory grievance columns have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
+
+| Member Column | Header | Formula Type | Grievance Log Source Column |
+|---------------|--------|--------------|----------------------------|
+| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
+| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
+| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | ARRAYFORMULA + MINIFS | **`GRIEVANCE_COLS.DAYS_TO_DEADLINE`** |
+
+**Days to Deadline is LIVE-WIRED to Grievance Log's `GRIEVANCE_COLS.DAYS_TO_DEADLINE`** - changes in Grievance Log immediately reflect in Member Directory.
+
+Column letters are dynamically resolved using `getColumnLetter(GRIEVANCE_COLS.*)` so formulas automatically adapt if column positions change in Constants.gs.
+
+### Installing Live Formulas
+
+Run `setupLiveGrievanceFormulas()` to install/reinstall live formulas on existing Member Directory.
+
+---
+
 ## Hidden Sheet Architecture (Self-Healing)
 
 The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
@@ -637,7 +659,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
-| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open Grievance?, Status, Days to Deadline) |
+| `_Grievance_Calc` | Grievance Log | Member Directory | Backup calculations for AB-AD |
 | `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), S-U (Days Open, Next Action, Days to Deadline), X-AA (Contact) |
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
