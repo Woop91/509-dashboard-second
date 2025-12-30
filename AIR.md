@@ -631,17 +631,19 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Live Formula Architecture
 
-### Member Directory Live Columns (AB-AD)
+### Member Directory Live Columns
 
-The Member Directory columns AB-AD have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
+The Member Directory grievance columns have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
 
-| Column | Header | Formula Type | Source |
-|--------|--------|--------------|--------|
-| AB | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | Grievance Log!B:B (Member ID), E:E (Status) |
-| AC | Grievance Status | ARRAYFORMULA + COUNTIFS | Grievance Log!B:B, E:E |
-| AD | Days to Deadline | ARRAYFORMULA + MINIFS | **Grievance Log!U:U (Days to Deadline)** |
+| Member Column | Header | Formula Type | Grievance Log Source Column |
+|---------------|--------|--------------|----------------------------|
+| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
+| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
+| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | ARRAYFORMULA + MINIFS | **`GRIEVANCE_COLS.DAYS_TO_DEADLINE`** |
 
-**Days to Deadline is LIVE-WIRED to Grievance Log column U** - changes in Grievance Log immediately reflect in Member Directory.
+**Days to Deadline is LIVE-WIRED to Grievance Log's `GRIEVANCE_COLS.DAYS_TO_DEADLINE`** - changes in Grievance Log immediately reflect in Member Directory.
+
+Column letters are dynamically resolved using `getColumnLetter(GRIEVANCE_COLS.*)` so formulas automatically adapt if column positions change in Constants.gs.
 
 ### Installing Live Formulas
 
