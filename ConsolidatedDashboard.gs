@@ -144,8 +144,9 @@ var MEMBER_COLS = {
   NEXT_DEADLINE: 30,               // AD - Script-calculated (static value)
   START_GRIEVANCE: 31,             // AE - Checkbox to start grievance
 
-  // ALIAS - For backward compatibility
-  LOCATION: 5                      // Alias for WORK_LOCATION
+  // ALIASES - For backward compatibility
+  LOCATION: 5,                     // Alias for WORK_LOCATION
+  DAYS_TO_DEADLINE: 30             // Alias for NEXT_DEADLINE
 };
 
 // ============================================================================
@@ -2863,6 +2864,11 @@ function showADHDControlPanel() {
     '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>ADHD Control Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();google.script.host.close()">Toggle</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad();google.script.host.close()">Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">Start</button></div></div><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
   ).setWidth(450).setHeight(400);
   SpreadsheetApp.getUi().showModalDialog(html, 'ADHD Control Panel');
+}
+
+// Alias for showADHDControlPanel (handles typo without 'l')
+function showADHDControlPane() {
+  showADHDControlPanel();
 }
 
 /**
