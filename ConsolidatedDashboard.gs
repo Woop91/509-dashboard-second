@@ -1467,7 +1467,7 @@ function createInteractiveDashboard(ss) {
     .setFontWeight('bold')
     .setFontSize(10);
   sheet.getRange('F8').setFormula('=SWITCH($E$6,"All Time",DATE(1900,1,1),"This Month",EOMONTH(TODAY(),-1)+1,"This Quarter",DATE(YEAR(TODAY()),FLOOR((MONTH(TODAY())-1)/3)*3+1,1),"This Year",DATE(YEAR(TODAY()),1,1),"Last 30 Days",TODAY()-30,"Last 90 Days",TODAY()-90,DATE(1900,1,1))')
-    .setNumberFormat('MMM d, yyyy')
+    .setNumberFormat('dd-mm-yyyy')
     .setFontSize(10);
 
   sheet.getRange('A9:C9').setValues([['Metric Name', 'Value', 'Description']])

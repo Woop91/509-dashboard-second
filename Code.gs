@@ -1870,7 +1870,7 @@ function getDesktopSearchData(query, tab, filters) {
         var filedDateStr = '';
         if (dateFiled) {
           try {
-            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'MMM d, yyyy');
+            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'dd-MM-yyyy');
           } catch(e) {
             filedDateStr = dateFiled.toString();
           }
