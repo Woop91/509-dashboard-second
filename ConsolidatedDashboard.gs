@@ -1029,6 +1029,25 @@ function createMemberDirectory(ss) {
     sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
+  // Add LIVE FORMULAS for grievance data columns (AB-AD)
+  // These formulas directly reference Grievance Log for real-time updates
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);  // B
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);        // E
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);  // U
+
+  // Column AB: Has Open Grievance? (live formula)
+  var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
+  sheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
+
+  // Column AC: Grievance Status (live formula)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
+  sheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
+
+  // Column AD: Days to Deadline (LIVE-WIRED directly from Grievance Log column U)
+  // Uses MINIFS to get the most urgent deadline for open grievances
+  var daysToDeadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
+  sheet.getRange(2, MEMBER_COLS.DAYS_TO_DEADLINE).setFormula(daysToDeadlineFormula);
+
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
 }
@@ -2763,21 +2782,39 @@ function refreshMemberDirectoryFormulas() {
 
 /**
  * Setup live grievance links in Member Directory (AB-AD columns)
- * Uses hidden _Grievance_Calc sheet for self-healing capability
- * Formulas in hidden sheet, values synced to Member Directory
+ * Installs LIVE FORMULAS directly in Member Directory that reference Grievance Log
+ * Days to Deadline is LIVE-WIRED to Grievance Log column U
  */
 function setupLiveGrievanceFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Error: Member Directory not found.');
+    return;
+  }
 
   ss.toast('Setting up live grievance formulas...', '🔄 Setup', 3);
 
-  // Step 1: Rebuild the hidden _Grievance_Calc sheet with formulas
-  setupGrievanceCalcSheet();
+  // Get column letters for dynamic formulas
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);  // B
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);        // E
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);  // U
 
-  // Step 2: Sync values from hidden sheet to Member Directory
-  syncGrievanceToMemberDirectory();
+  // Column AB: Has Open Grievance? (live formula referencing Grievance Log)
+  var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
+  sheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
 
-  ss.toast('Live grievance formulas set up in hidden sheet!', '✅ Success', 3);
+  // Column AC: Grievance Status (live formula referencing Grievance Log)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
+  sheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
+
+  // Column AD: Days to Deadline (LIVE-WIRED directly to Grievance Log column U)
+  // Uses MINIFS to get the minimum Days to Deadline for open grievances only
+  var daysToDeadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
+  sheet.getRange(2, MEMBER_COLS.DAYS_TO_DEADLINE).setFormula(daysToDeadlineFormula);
+
+  ss.toast('Live formulas installed! Days to Deadline is now live-wired to Grievance Log.', '✅ Success', 3);
 }
 
 /**

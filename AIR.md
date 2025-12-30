@@ -629,6 +629,26 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ---
 
+## Live Formula Architecture
+
+### Member Directory Live Columns (AB-AD)
+
+The Member Directory columns AB-AD have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
+
+| Column | Header | Formula Type | Source |
+|--------|--------|--------------|--------|
+| AB | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | Grievance Log!B:B (Member ID), E:E (Status) |
+| AC | Grievance Status | ARRAYFORMULA + COUNTIFS | Grievance Log!B:B, E:E |
+| AD | Days to Deadline | ARRAYFORMULA + MINIFS | **Grievance Log!U:U (Days to Deadline)** |
+
+**Days to Deadline is LIVE-WIRED to Grievance Log column U** - changes in Grievance Log immediately reflect in Member Directory.
+
+### Installing Live Formulas
+
+Run `setupLiveGrievanceFormulas()` to install/reinstall live formulas on existing Member Directory.
+
+---
+
 ## Hidden Sheet Architecture (Self-Healing)
 
 The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
@@ -637,7 +657,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
-| `_Grievance_Calc` | Grievance Log | Member Directory | AB-AD (Has Open Grievance?, Status, Days to Deadline) |
+| `_Grievance_Calc` | Grievance Log | Member Directory | Backup calculations for AB-AD |
 | `_Grievance_Formulas` | Member Directory | Grievance Log | C-D (Name), H-P (Timeline), S-U (Days Open, Next Action, Days to Deadline), X-AA (Contact) |
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
