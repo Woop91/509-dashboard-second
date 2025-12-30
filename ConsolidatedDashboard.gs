@@ -4665,23 +4665,22 @@ function SEED_MEMBERS(count, grievancePercent) {
     return;
   }
 
-  // Get config values
+  // Check if Config sheet has data - if not, seed it first
   var jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
+  if (jobTitles.length === 0) {
+    ss.toast('Config empty - seeding config data first...', '🌱 Seeding', 2);
+    seedConfigData();
+  }
+
+  // Now get all config values (will have data from seedConfigData or user's existing data)
+  jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
   var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
   var supervisors = getConfigValues(configSheet, CONFIG_COLS.SUPERVISORS);
   var managers = getConfigValues(configSheet, CONFIG_COLS.MANAGERS);
   var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
   var homeTowns = getConfigValues(configSheet, CONFIG_COLS.HOME_TOWNS);
-
-  // If config is empty, use defaults
-  if (jobTitles.length === 0) jobTitles = ['Social Worker', 'Case Manager', 'Supervisor'];
-  if (locations.length === 0) locations = ['Boston Main Office', 'Worcester Regional'];
-  if (units.length === 0) units = ['Child Welfare', 'Adult Services'];
-  if (supervisors.length === 0) supervisors = ['Jane Supervisor'];
-  if (managers.length === 0) managers = ['John Manager'];
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-  if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
+  var committees = getConfigValues(configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
 
   // Grievance config
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
@@ -4780,7 +4779,7 @@ function SEED_MEMBERS(count, grievancePercent) {
       randomChoice(supervisors),
       randomChoice(managers),
       isSteward,
-      isSteward === 'Yes' ? 'Grievance Committee' : '',
+      isSteward === 'Yes' ? randomChoice(committees) : '',
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,
