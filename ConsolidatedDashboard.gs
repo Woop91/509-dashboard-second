@@ -630,7 +630,6 @@ function onOpen() {
   ui.createMenu('👤 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
     .addSeparator()
-    .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
@@ -643,6 +642,11 @@ function onOpen() {
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
       .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
       .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
+    .addToUi();
+
+  // Member Search Menu (standalone for quick access)
+  ui.createMenu('🔍 Search')
+    .addItem('🔍 Search Members', 'searchMembers')
     .addToUi();
 
   // Sheet Manager Menu
@@ -701,7 +705,6 @@ function onOpen() {
 
   // Setup Menu
   ui.createMenu('🏗️ Setup')
-    .addItem('🏗️ CREATE 509 DASHBOARD', 'CREATE_509_DASHBOARD')
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
@@ -724,7 +727,9 @@ function onOpen() {
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
-        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
+        .addSeparator()
+        .addItem('🔄 Restore Config Dropdowns', 'seedConfigData'))
       .addToUi();
   }
 
@@ -1013,6 +1018,16 @@ function createMemberDirectory(ss) {
 
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
+
+  // Format date columns (dd-mm-yyyy)
+  var dateColumns = [
+    MEMBER_COLS.LAST_VIRTUAL_MTG,
+    MEMBER_COLS.LAST_INPERSON_MTG,
+    MEMBER_COLS.RECENT_CONTACT_DATE
+  ];
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+  });
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -1457,7 +1472,7 @@ function createInteractiveDashboard(ss) {
     .setFontWeight('bold')
     .setFontSize(10);
   sheet.getRange('F8').setFormula('=SWITCH($E$6,"All Time",DATE(1900,1,1),"This Month",EOMONTH(TODAY(),-1)+1,"This Quarter",DATE(YEAR(TODAY()),FLOOR((MONTH(TODAY())-1)/3)*3+1,1),"This Year",DATE(YEAR(TODAY()),1,1),"Last 30 Days",TODAY()-30,"Last 90 Days",TODAY()-90,DATE(1900,1,1))')
-    .setNumberFormat('MMM d, yyyy')
+    .setNumberFormat('dd-mm-yyyy')
     .setFontSize(10);
 
   sheet.getRange('A9:C9').setValues([['Metric Name', 'Value', 'Description']])
@@ -4851,9 +4866,9 @@ function SEED_MEMBERS(count, grievancePercent) {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, grievanceLastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync data
-  syncGrievanceToMemberDirectory();
+  // Sync data (FormulasToLog must run FIRST to populate calculated columns)
   syncGrievanceFormulasToLog();
+  syncGrievanceToMemberDirectory();
 
   // Sort grievances by status and resolution
   sortGrievanceLogByStatus();
@@ -4953,8 +4968,9 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed (Status = 'Closed', Resolution has the outcome)
-  var isClosed = (status === 'Closed');
+  // Determine if case is closed (includes Settled, Withdrawn, Denied, Won, Closed)
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+  var isClosed = closedStatuses.indexOf(status) !== -1;
 
   // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
@@ -5274,6 +5290,7 @@ function NUKE_CONFIG_DROPDOWNS() {
     CONFIG_COLS.SUPERVISORS,
     CONFIG_COLS.MANAGERS,
     CONFIG_COLS.STEWARDS,
+    CONFIG_COLS.STEWARD_COMMITTEES,
     CONFIG_COLS.GRIEVANCE_COORDINATORS,
     CONFIG_COLS.HOME_TOWNS
   ];
@@ -5291,20 +5308,7 @@ function NUKE_CONFIG_DROPDOWNS() {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Get values from a Config column (excluding headers and empty cells)
- * Note: Row 1 = section headers, Row 2 = column headers, Row 3+ = data
- */
-function getConfigValues(configSheet, column) {
-  var lastRow = configSheet.getLastRow();
-  if (lastRow < 3) return [];
-
-  var values = configSheet.getRange(3, column, lastRow - 2, 1).getValues();
-  return values
-    .map(function(row) { return row[0]; })
-    .filter(function(v) { return v !== '' && v !== null; });
-}
+// Note: getConfigValues is defined earlier in this file (line ~2090)
 
 /**
  * Get random element from array

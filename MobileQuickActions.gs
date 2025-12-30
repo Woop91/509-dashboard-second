@@ -247,8 +247,8 @@ function getRecentGrievancesForMobile(limit) {
       memberName: row[GRIEVANCE_COLS.FIRST_NAME - 1] + ' ' + row[GRIEVANCE_COLS.LAST_NAME - 1],
       issueType: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1],
       status: row[GRIEVANCE_COLS.STATUS - 1],
-      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'MMM d, yyyy') : filed,
-      deadline: deadline instanceof Date ? Utilities.formatDate(deadline, Session.getScriptTimeZone(), 'MMM d, yyyy') : null,
+      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'dd-MM-yyyy') : filed,
+      deadline: deadline instanceof Date ? Utilities.formatDate(deadline, Session.getScriptTimeZone(), 'dd-MM-yyyy') : null,
       filedDateObj: filed
     };
   }).sort(function(a, b) {
@@ -955,7 +955,7 @@ function getInteractiveGrievanceData() {
       memberName: (row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || ''),
       status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
       issueType: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
-      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'MMM d, yyyy') : (filed || 'N/A')
+      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'dd-MM-yyyy') : (filed || 'N/A')
     };
   }).filter(function(g) { return g.id; });
 }

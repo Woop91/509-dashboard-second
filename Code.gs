@@ -22,7 +22,6 @@ function onOpen() {
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
     .addItem('🎯 Interactive Dashboard', 'showInteractiveDashboardTab')
     .addSeparator()
-    .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
@@ -32,6 +31,11 @@ function onOpen() {
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
       .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'))
+    .addToUi();
+
+  // Member Search Menu (standalone for quick access)
+  ui.createMenu('🔍 Search')
+    .addItem('🔍 Search Members', 'searchMembers')
     .addToUi();
 
   // Sheet Manager Menu
@@ -91,7 +95,6 @@ function onOpen() {
 
   // Setup Menu
   ui.createMenu('🏗️ Setup')
-    .addItem('🏗️ CREATE 509 DASHBOARD', 'CREATE_509_DASHBOARD')
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
@@ -114,7 +117,9 @@ function onOpen() {
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
-        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
+        .addSeparator()
+        .addItem('🔄 Restore Config Dropdowns', 'seedConfigData'))
       .addToUi();
   }
 
@@ -398,6 +403,16 @@ function createMemberDirectory(ss) {
 
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
+
+  // Format date columns (dd-mm-yyyy)
+  var dateColumns = [
+    MEMBER_COLS.LAST_VIRTUAL_MTG,
+    MEMBER_COLS.LAST_INPERSON_MTG,
+    MEMBER_COLS.RECENT_CONTACT_DATE
+  ];
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+  });
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -1860,7 +1875,7 @@ function getDesktopSearchData(query, tab, filters) {
         var filedDateStr = '';
         if (dateFiled) {
           try {
-            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'MMM d, yyyy');
+            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'dd-MM-yyyy');
           } catch(e) {
             filedDateStr = dateFiled.toString();
           }
