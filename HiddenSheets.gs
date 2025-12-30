@@ -1384,6 +1384,77 @@ function syncCostImpact() {
 // ============================================================================
 
 /**
+ * Sync new values from Member Directory to Config (bidirectional sync)
+ * When a user enters a new value in a job metadata field, add it to Config
+ * @param {Object} e - The edit event object
+ */
+function syncNewValueToConfig(e) {
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  if (sheet.getName() !== SHEETS.MEMBER_DIR) return;
+
+  var col = e.range.getColumn();
+  var newValue = e.range.getValue();
+
+  // Skip if empty or header row
+  if (!newValue || e.range.getRow() === 1) return;
+
+  // Check if this column is a job metadata field
+  var fieldConfig = null;
+  for (var i = 0; i < JOB_METADATA_FIELDS.length; i++) {
+    if (JOB_METADATA_FIELDS[i].memberCol === col) {
+      fieldConfig = JOB_METADATA_FIELDS[i];
+      break;
+    }
+  }
+
+  // Also check Committees and Home Town (not in JOB_METADATA_FIELDS)
+  if (!fieldConfig) {
+    if (col === MEMBER_COLS.COMMITTEES) {
+      fieldConfig = { configCol: CONFIG_COLS.STEWARD_COMMITTEES, configName: 'Steward Committees' };
+    } else if (col === MEMBER_COLS.HOME_TOWN) {
+      fieldConfig = { configCol: CONFIG_COLS.HOME_TOWNS, configName: 'Home Towns' };
+    }
+  }
+
+  if (!fieldConfig) return; // Not a synced column
+
+  // Get current Config values for this column
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+  if (!configSheet) return;
+
+  var existingValues = getConfigValues(configSheet, fieldConfig.configCol);
+
+  // Handle multi-value fields (comma-separated)
+  var valuesToCheck = newValue.toString().split(',').map(function(v) { return v.trim(); });
+
+  var valuesToAdd = [];
+  for (var j = 0; j < valuesToCheck.length; j++) {
+    var val = valuesToCheck[j];
+    if (val && existingValues.indexOf(val) === -1) {
+      valuesToAdd.push(val);
+    }
+  }
+
+  // Add new values to Config
+  if (valuesToAdd.length > 0) {
+    var lastRow = configSheet.getLastRow();
+    var dataStartRow = Math.max(lastRow + 1, 3); // Start at row 3 minimum
+
+    for (var k = 0; k < valuesToAdd.length; k++) {
+      configSheet.getRange(dataStartRow + k, fieldConfig.configCol).setValue(valuesToAdd[k]);
+    }
+
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Added "' + valuesToAdd.join(', ') + '" to ' + fieldConfig.configName,
+      '🔄 Config Updated', 3
+    );
+  }
+}
+
+/**
  * Master onEdit trigger - routes to appropriate sync function
  * Install this as an installable trigger
  */
@@ -1412,7 +1483,8 @@ function onEditAutoSync(e) {
       // Auto-sort by status priority (active cases first, then by deadline urgency)
       sortGrievanceLogByStatus();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
-      // Member Directory changed - sync to Grievance Log
+      // Member Directory changed - sync to Grievance Log and Config
+      syncNewValueToConfig(e);  // Bidirectional: add new values to Config
       syncGrievanceFormulasToLog();
       syncMemberToGrievanceLog();
     }
