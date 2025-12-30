@@ -3104,26 +3104,53 @@ function clearUndoHistory() {
 
 /**
  * Warm up caches
+ * Note: CacheService has a 100KB limit per item, so we cache metadata only
  */
 function warmUpCaches() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var cache = CacheService.getScriptCache();
+  var cached = 0;
 
-  // Cache member data
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  if (memberSheet && memberSheet.getLastRow() > 1) {
-    var memberData = memberSheet.getDataRange().getValues();
-    cache.put('memberData', JSON.stringify(memberData), 21600);
+  try {
+    // Cache member count and column info (small data)
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (memberSheet && memberSheet.getLastRow() > 1) {
+      var memberMeta = {
+        lastRow: memberSheet.getLastRow(),
+        lastCol: memberSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('memberMeta', JSON.stringify(memberMeta), 21600);
+      cached++;
+    }
+
+    // Cache grievance count and column info (small data)
+    var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+    if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+      var grievanceMeta = {
+        lastRow: grievanceSheet.getLastRow(),
+        lastCol: grievanceSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('grievanceMeta', JSON.stringify(grievanceMeta), 21600);
+      cached++;
+    }
+
+    // Cache config data (usually small enough)
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+    if (configSheet) {
+      var configData = configSheet.getDataRange().getValues();
+      var configStr = JSON.stringify(configData);
+      if (configStr.length < 100000) {  // Only cache if under 100KB
+        cache.put('configData', configStr, 21600);
+        cached++;
+      }
+    }
+
+    ss.toast('Cached ' + cached + ' items successfully!', 'Cache Warmup', 3);
+  } catch (e) {
+    ss.toast('Cache warmup partial: ' + e.message, 'Cache', 3);
   }
-
-  // Cache grievance data
-  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
-    var grievanceData = grievanceSheet.getDataRange().getValues();
-    cache.put('grievanceData', JSON.stringify(grievanceData), 21600);
-  }
-
-  ss.toast('Caches warmed up!', 'Cache', 3);
 }
 
 /**
