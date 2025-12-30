@@ -2872,6 +2872,35 @@ function showADHDControlPane() {
 }
 
 /**
+ * Hide gridlines on dashboard sheets for cleaner ADHD-friendly view
+ */
+function hideAllGridlines() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheets().forEach(function(sheet) {
+    var name = sheet.getName();
+    // Keep gridlines on data entry sheets, hide on dashboards
+    if (name !== SHEETS.CONFIG && name !== SHEETS.MEMBER_DIR && name !== SHEETS.GRIEVANCE_LOG) {
+      sheet.setHiddenGridlines(true);
+    }
+  });
+  ss.toast('Gridlines hidden on dashboards!', 'ADHD Setup', 3);
+}
+
+/**
+ * Setup ADHD-friendly defaults for the spreadsheet
+ */
+function setupADHDDefaults() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🎨 Setting up ADHD-friendly defaults...');
+  try {
+    hideAllGridlines();
+    ui.alert('🎉 ADHD-friendly setup complete!\n\n✅ Gridlines hidden on dashboards\n✅ Ready for focus!');
+  } catch (e) {
+    ui.alert('⚠️ Error: ' + e.message);
+  }
+}
+
+/**
  * Activate focus mode - highlights current row
  */
 function activateFocusMode() {
