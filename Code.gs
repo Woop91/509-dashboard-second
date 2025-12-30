@@ -1510,80 +1510,98 @@ function createMenuChecklistSheet_() {
     sheet = ss.insertSheet(sheetName);
   }
 
-  // Menu items data
+  // Menu items organized by optimal testing order
   var menuItems = [
-    // Dashboard Menu
-    ['👤 Dashboard', '', '📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard'],
-    ['👤 Dashboard', '', '🎯 Interactive Dashboard', 'showInteractiveDashboardTab'],
-    ['👤 Dashboard', '', '📋 View Active Grievances', 'viewActiveGrievances'],
-    ['👤 Dashboard', '', '📱 Mobile Dashboard', 'showMobileDashboard'],
-    ['👤 Dashboard', '', '📱 Get Mobile App URL', 'showWebAppUrl'],
-    ['👤 Dashboard', '', '⚡ Quick Actions', 'showQuickActionsMenu'],
-    ['👤 Dashboard', 'Grievance Tools', '➕ Start New Grievance', 'startNewGrievance'],
-    ['👤 Dashboard', 'Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched'],
-    ['👤 Dashboard', 'Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'],
-    ['👤 Dashboard', 'Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas'],
-    ['👤 Dashboard', 'Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown'],
-    ['👤 Dashboard', 'Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'],
-    // Search Menu
-    ['🔍 Search', '', '🔍 Search Members', 'searchMembers'],
-    // Sheet Manager Menu
-    ['📊 Sheet Manager', '', '📊 Rebuild Dashboard', 'rebuildDashboard'],
-    ['📊 Sheet Manager', '', '📈 Refresh Interactive Charts', 'refreshInteractiveCharts'],
-    ['📊 Sheet Manager', '', '🔄 Refresh All Formulas', 'refreshAllFormulas'],
-    ['📊 Sheet Manager', 'Google Drive', '📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance'],
-    ['📊 Sheet Manager', 'Google Drive', '📁 View Grievance Files', 'showGrievanceFiles'],
-    ['📊 Sheet Manager', 'Google Drive', '📁 Batch Create Folders', 'batchCreateGrievanceFolders'],
-    ['📊 Sheet Manager', 'Calendar', '📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar'],
-    ['📊 Sheet Manager', 'Calendar', '📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar'],
-    ['📊 Sheet Manager', 'Calendar', '🗑️ Clear Calendar Events', 'clearAllCalendarEvents'],
-    ['📊 Sheet Manager', 'Notifications', '⚙️ Notification Settings', 'showNotificationSettings'],
-    ['📊 Sheet Manager', 'Notifications', '🧪 Test Notifications', 'testDeadlineNotifications'],
-    // Tools Menu
-    ['🔧 Tools', 'ADHD & Accessibility', '♿ ADHD Control Panel', 'showADHDControlPanel'],
-    ['🔧 Tools', 'ADHD & Accessibility', '🎯 Focus Mode', 'activateFocusMode'],
-    ['🔧 Tools', 'ADHD & Accessibility', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes'],
-    ['🔧 Tools', 'ADHD & Accessibility', '📝 Quick Capture', 'showQuickCaptureNotepad'],
-    ['🔧 Tools', 'ADHD & Accessibility', '🍅 Pomodoro Timer', 'startPomodoroTimer'],
-    ['🔧 Tools', 'Theming', '🎨 Theme Manager', 'showThemeManager'],
-    ['🔧 Tools', 'Theming', '🌙 Toggle Dark Mode', 'quickToggleDarkMode'],
-    ['🔧 Tools', 'Theming', '🔄 Reset Theme', 'resetToDefaultTheme'],
-    ['🔧 Tools', 'Multi-Select', '📝 Open Editor', 'showMultiSelectDialog'],
-    ['🔧 Tools', 'Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger'],
-    ['🔧 Tools', 'Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger'],
-    ['🔧 Tools', 'Undo/Redo', '↩️ Undo Last Action', 'undoLastAction'],
-    ['🔧 Tools', 'Undo/Redo', '↪️ Redo Action', 'redoLastAction'],
-    ['🔧 Tools', 'Undo/Redo', '📋 View History', 'showUndoRedoPanel'],
-    ['🔧 Tools', 'Undo/Redo', '🗑️ Clear History', 'clearUndoHistory'],
-    ['🔧 Tools', 'Cache & Performance', '🗄️ Cache Status', 'showCacheStatusDashboard'],
-    ['🔧 Tools', 'Cache & Performance', '🔥 Warm Up Caches', 'warmUpCaches'],
-    ['🔧 Tools', 'Cache & Performance', '🗑️ Clear All Caches', 'invalidateAllCaches'],
-    ['🔧 Tools', 'Validation', '🔍 Run Bulk Validation', 'runBulkValidation'],
-    ['🔧 Tools', 'Validation', '⚙️ Validation Settings', 'showValidationSettings'],
-    ['🔧 Tools', 'Validation', '🧹 Clear Indicators', 'clearValidationIndicators'],
-    ['🔧 Tools', 'Validation', '⚡ Install Validation Trigger', 'installValidationTrigger'],
-    // Setup Menu
-    ['🏗️ Setup', '', '🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD'],
-    ['🏗️ Setup', '', '⚙️ Setup Data Validations', 'setupDataValidations'],
-    ['🏗️ Setup', '', '🎨 Setup ADHD Defaults', 'setupADHDDefaults'],
-    // Testing Menu
-    ['🧪 Testing', '', '🧪 Run All Tests', 'runAllTests'],
-    ['🧪 Testing', '', '⚡ Run Quick Tests', 'runQuickTests'],
-    ['🧪 Testing', '', '📊 View Test Results', 'viewTestResults'],
-    // Administrator Menu
-    ['⚙️ Administrator', '', '🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP'],
-    ['⚙️ Administrator', '', '🔍 Verify Hidden Sheets', 'verifyHiddenSheets'],
-    ['⚙️ Administrator', 'Setup & Triggers', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets'],
-    ['⚙️ Administrator', 'Setup & Triggers', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets'],
-    ['⚙️ Administrator', 'Setup & Triggers', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger'],
-    ['⚙️ Administrator', 'Setup & Triggers', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'],
-    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync All Data Now', 'syncAllData'],
-    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory'],
-    ['⚙️ Administrator', 'Manual Sync', '🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog']
+    // ═══ PHASE 1: Foundation & Setup (Test these first!) ═══
+    ['1️⃣ Foundation', '🏗️ Setup', '🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD'],
+    ['1️⃣ Foundation', '⚙️ Administrator', '🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP'],
+    ['1️⃣ Foundation', '⚙️ Administrator', '🔍 Verify Hidden Sheets', 'verifyHiddenSheets'],
+    ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets'],
+    ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets'],
+    ['1️⃣ Foundation', '🏗️ Setup', '⚙️ Setup Data Validations', 'setupDataValidations'],
+    ['1️⃣ Foundation', '🏗️ Setup', '🎨 Setup ADHD Defaults', 'setupADHDDefaults'],
+
+    // ═══ PHASE 2: Triggers & Data Sync ═══
+    ['2️⃣ Sync', '⚙️ Admin > Setup', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger'],
+    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync All Data Now', 'syncAllData'],
+    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory'],
+    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog'],
+    ['2️⃣ Sync', '⚙️ Admin > Setup', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'],
+
+    // ═══ PHASE 3: Core Dashboards ═══
+    ['3️⃣ Dashboards', '👤 Dashboard', '📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard'],
+    ['3️⃣ Dashboards', '👤 Dashboard', '🎯 Interactive Dashboard', 'showInteractiveDashboardTab'],
+    ['3️⃣ Dashboards', '👤 Dashboard', '📋 View Active Grievances', 'viewActiveGrievances'],
+    ['3️⃣ Dashboards', '👤 Dashboard', '📱 Mobile Dashboard', 'showMobileDashboard'],
+    ['3️⃣ Dashboards', '👤 Dashboard', '📱 Get Mobile App URL', 'showWebAppUrl'],
+    ['3️⃣ Dashboards', '👤 Dashboard', '⚡ Quick Actions', 'showQuickActionsMenu'],
+    ['3️⃣ Dashboards', '📊 Sheet Manager', '📊 Rebuild Dashboard', 'rebuildDashboard'],
+    ['3️⃣ Dashboards', '📊 Sheet Manager', '📈 Refresh Interactive Charts', 'refreshInteractiveCharts'],
+    ['3️⃣ Dashboards', '📊 Sheet Manager', '🔄 Refresh All Formulas', 'refreshAllFormulas'],
+
+    // ═══ PHASE 4: Search ═══
+    ['4️⃣ Search', '🔍 Search', '🔍 Search Members', 'searchMembers'],
+
+    // ═══ PHASE 5: Grievance Management ═══
+    ['5️⃣ Grievances', '👤 Grievance Tools', '➕ Start New Grievance', 'startNewGrievance'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'],
+
+    // ═══ PHASE 6: Google Drive ═══
+    ['6️⃣ Drive', '📊 Google Drive', '📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance'],
+    ['6️⃣ Drive', '📊 Google Drive', '📁 View Grievance Files', 'showGrievanceFiles'],
+    ['6️⃣ Drive', '📊 Google Drive', '📁 Batch Create Folders', 'batchCreateGrievanceFolders'],
+
+    // ═══ PHASE 7: Calendar ═══
+    ['7️⃣ Calendar', '📊 Calendar', '📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar'],
+    ['7️⃣ Calendar', '📊 Calendar', '📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar'],
+    ['7️⃣ Calendar', '📊 Calendar', '🗑️ Clear Calendar Events', 'clearAllCalendarEvents'],
+
+    // ═══ PHASE 8: Notifications ═══
+    ['8️⃣ Notify', '📊 Notifications', '⚙️ Notification Settings', 'showNotificationSettings'],
+    ['8️⃣ Notify', '📊 Notifications', '🧪 Test Notifications', 'testDeadlineNotifications'],
+
+    // ═══ PHASE 9: Accessibility & Theming ═══
+    ['9️⃣ Access', '🔧 ADHD', '♿ ADHD Control Panel', 'showADHDControlPanel'],
+    ['9️⃣ Access', '🔧 ADHD', '🎯 Focus Mode', 'activateFocusMode'],
+    ['9️⃣ Access', '🔧 ADHD', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes'],
+    ['9️⃣ Access', '🔧 ADHD', '📝 Quick Capture', 'showQuickCaptureNotepad'],
+    ['9️⃣ Access', '🔧 ADHD', '🍅 Pomodoro Timer', 'startPomodoroTimer'],
+    ['9️⃣ Access', '🔧 Theming', '🎨 Theme Manager', 'showThemeManager'],
+    ['9️⃣ Access', '🔧 Theming', '🌙 Toggle Dark Mode', 'quickToggleDarkMode'],
+    ['9️⃣ Access', '🔧 Theming', '🔄 Reset Theme', 'resetToDefaultTheme'],
+
+    // ═══ PHASE 10: Productivity Tools ═══
+    ['🔟 Tools', '🔧 Multi-Select', '📝 Open Editor', 'showMultiSelectDialog'],
+    ['🔟 Tools', '🔧 Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger'],
+    ['🔟 Tools', '🔧 Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger'],
+    ['🔟 Tools', '🔧 Undo/Redo', '↩️ Undo Last Action', 'undoLastAction'],
+    ['🔟 Tools', '🔧 Undo/Redo', '↪️ Redo Action', 'redoLastAction'],
+    ['🔟 Tools', '🔧 Undo/Redo', '📋 View History', 'showUndoRedoPanel'],
+    ['🔟 Tools', '🔧 Undo/Redo', '🗑️ Clear History', 'clearUndoHistory'],
+
+    // ═══ PHASE 11: Performance & Cache ═══
+    ['1️⃣1️⃣ Perf', '🔧 Cache', '🗄️ Cache Status', 'showCacheStatusDashboard'],
+    ['1️⃣1️⃣ Perf', '🔧 Cache', '🔥 Warm Up Caches', 'warmUpCaches'],
+    ['1️⃣1️⃣ Perf', '🔧 Cache', '🗑️ Clear All Caches', 'invalidateAllCaches'],
+
+    // ═══ PHASE 12: Validation ═══
+    ['1️⃣2️⃣ Valid', '🔧 Validation', '🔍 Run Bulk Validation', 'runBulkValidation'],
+    ['1️⃣2️⃣ Valid', '🔧 Validation', '⚙️ Validation Settings', 'showValidationSettings'],
+    ['1️⃣2️⃣ Valid', '🔧 Validation', '🧹 Clear Indicators', 'clearValidationIndicators'],
+    ['1️⃣2️⃣ Valid', '🔧 Validation', '⚡ Install Validation Trigger', 'installValidationTrigger'],
+
+    // ═══ PHASE 13: Testing (Run last to verify everything) ═══
+    ['1️⃣3️⃣ Test', '🧪 Testing', '🧪 Run All Tests', 'runAllTests'],
+    ['1️⃣3️⃣ Test', '🧪 Testing', '⚡ Run Quick Tests', 'runQuickTests'],
+    ['1️⃣3️⃣ Test', '🧪 Testing', '📊 View Test Results', 'viewTestResults']
   ];
 
   // Build rows with header
-  var rows = [['✓', 'Menu', 'Submenu', 'Item', 'Function', 'Notes']];
+  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Notes']];
   for (var i = 0; i < menuItems.length; i++) {
     rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], '']);
   }
