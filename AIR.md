@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.1 (Bidirectional Config Sync)
-**Last Updated:** 2025-12-30
+**Version:** 1.5.2 (Menu Checklist & Static Values Fix)
+**Last Updated:** 2025-12-31
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -27,26 +27,27 @@
 
 ## File Architecture
 
-### Project Structure (9 Files)
+### Project Structure (10 Files)
 
 ```
 509-dashboard/
 ├── Constants.gs           # Configuration constants (SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS)
 ├── Code.gs                # Main entry point, setup functions, sheet creation
+├── ConsolidatedDashboard.gs # Complete standalone version (all functionality in one file)
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
 ├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
-├── DriveCalendarEmail.gs  # Google Drive, Calendar, Email notifications
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
+├── WebApp.gs              # Web app deployment for mobile URL access
 └── AIR.md                 # This document
 ```
 
 ### File Descriptions
 
 **Constants.gs** (~600 lines)
-- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
+- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden + 2 optional + 2 auto-generated)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
@@ -79,11 +80,11 @@
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~900 lines)
-- `onOpen()` - Creates menu system
+**Code.gs** (~1600 lines)
+- `onOpen()` - Creates menu system (9 menus)
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
-- `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
+- `REPAIR_DASHBOARD()` - Repair hidden sheets, triggers, and auto-create Menu Checklist
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
 - `setDropdownValidation()` - Helper: apply single-select dropdown
@@ -98,9 +99,10 @@
 - `refreshAllFormulas()` - Refresh all formulas and sync
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
-- `searchMembers()` - Search members (stub)
-- `startNewGrievance()` - Start grievance (stub)
+- `searchMembers()` - Search members dialog
+- `startNewGrievance()` - Start grievance dialog
 - `viewActiveGrievances()` - Navigate to Grievance Log
+- `createMenuChecklistSheet_()` - Auto-create Menu Checklist with 61 items in 13 testing phases
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~500 lines)
@@ -162,27 +164,26 @@
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
 - `setupADHDDefaults()` - Initialize ADHD-friendly defaults
 
-**DriveCalendarEmail.gs** (~500 lines) - Google Drive, Calendar & Email
-- Google Drive:
-  - `createRootFolder()` - Create base folder for grievance files
-  - `createGrievanceFolder()` - Create folder for specific grievance
-  - `linkFolderToGrievance()` - Link folder ID to grievance row
-  - `setupDriveFolderForGrievance()` - Menu handler for folder creation
-  - `listFolderFiles()` - List files in a folder
-  - `showGrievanceFiles()` - Show files for selected grievance
-  - `batchCreateGrievanceFolders()` - Create folders for all grievances
-- Calendar:
-  - `syncDeadlinesToCalendar()` - Sync all deadlines to Google Calendar
-  - `checkCalendarEventExists()` - Check if event already exists
-  - `clearAllCalendarEvents()` - Remove all dashboard calendar events
-  - `showUpcomingDeadlinesFromCalendar()` - View upcoming deadlines
-- Email Notifications:
-  - `setupDailyDeadlineNotifications()` - Enable daily email reminders
-  - `disableDailyDeadlineNotifications()` - Disable notifications
-  - `checkDeadlinesAndNotify()` - Main notification check (runs daily)
-  - `sendDeadlineNotification()` - Send individual notification
-  - `showNotificationSettings()` - Notification configuration UI
-  - `testDeadlineNotifications()` - Test notification system
+**ConsolidatedDashboard.gs** (~2600 lines) - Complete Standalone Version
+- Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs in one file
+- Intended for users who want to deploy without multiple file dependencies
+- Mirrors all functions from the modular version
+- Includes `createMenuChecklistSheet_()` for auto-creating Menu Checklist on REPAIR_DASHBOARD
+
+**WebApp.gs** (~300 lines) - Web App Deployment for Mobile Access
+- `doGet(e)` - Web app entry point, serves mobile dashboard
+- `getWebAppDashboardHtml()` - Main dashboard HTML
+- `getWebAppSearchHtml()` - Search interface HTML
+- `getWebAppGrievanceListHtml()` - Grievance list HTML
+- `showWebAppUrl()` - Display the deployed web app URL
+- Enables direct mobile access via URL without opening the spreadsheet
+
+**Drive/Calendar/Notifications** (NOT IMPLEMENTED)
+The following features are referenced in the menu but NOT YET IMPLEMENTED:
+- **Google Drive Integration**: `setupDriveFolderForGrievance()`, `showGrievanceFiles()`, `batchCreateGrievanceFolders()`
+- **Calendar Sync**: `syncDeadlinesToCalendar()`, `showUpcomingDeadlinesFromCalendar()`, `clearAllCalendarEvents()`
+- **Email Notifications**: `showNotificationSettings()`, `testDeadlineNotifications()`
+- These menu items will show "Script function not found" errors until implemented
 
 **TestingValidation.gs** (~500 lines) - Testing Framework & Data Validation
 - Testing Framework:
@@ -377,7 +378,7 @@ var GRIEVANCE_COLS = {
 
 ---
 
-## Sheet Structure (5 Visible + 5 Hidden)
+## Sheet Structure (5+ Visible + 5 Hidden)
 
 ### Core Data Sheets
 
@@ -393,6 +394,20 @@ var GRIEVANCE_COLS = {
 |---|------------|------|---------|
 | 4 | 💼 Dashboard | View | Executive metrics dashboard with 9 analytics sections |
 | 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
+
+### Auto-Generated Sheets
+
+| # | Sheet Name | Type | Purpose |
+|---|------------|------|---------|
+| 6 | Menu Checklist | Reference | Checklist of all 61 menu items organized by testing phase (auto-created on REPAIR_DASHBOARD) |
+| 7 | Test Results | Output | Test framework results from runAllTests() |
+
+### Optional Source Sheets (not auto-created)
+
+| # | Sheet Name | Purpose |
+|---|------------|---------|
+| - | 📅 Meeting Attendance | Track member meeting attendance |
+| - | 🤝 Volunteer Hours | Track volunteer hour contributions |
 
 #### 💼 Dashboard - 9 Live Analytics Sections
 
@@ -501,49 +516,113 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 
 ```
 👤 Dashboard
-├── Search Members
-├── View Active Grievances
-└── Grievance Tools
-    ├── Start New Grievance
-    ├── Refresh Grievance Formulas
-    └── Refresh Member Directory Data
+├── 📊 Smart Dashboard (Auto-Detect)
+├── 🎯 Interactive Dashboard
+├── ────────────────
+├── 📋 View Active Grievances
+├── 📱 Mobile Dashboard
+├── 📱 Get Mobile App URL
+├── ⚡ Quick Actions
+├── ────────────────
+└── 📋 Grievance Tools
+    ├── ➕ Start New Grievance
+    ├── 🔄 Refresh Grievance Formulas
+    └── 🔄 Refresh Member Directory Data
+
+🔍 Search
+└── 🔍 Search Members
 
 📊 Sheet Manager
-├── Rebuild Dashboard
-└── Refresh All Formulas
+├── 📊 Rebuild Dashboard
+├── 📈 Refresh Interactive Charts
+├── 🔄 Refresh All Formulas
+├── ────────────────
+├── 📁 Google Drive (NOT IMPLEMENTED)
+│   ├── 📁 Setup Folder for Grievance
+│   ├── 📁 View Grievance Files
+│   └── 📁 Batch Create Folders
+├── 📅 Calendar (NOT IMPLEMENTED)
+│   ├── 📅 Sync Deadlines to Calendar
+│   ├── 📅 View Upcoming Deadlines
+│   └── 🗑️ Clear Calendar Events
+└── 📬 Notifications (NOT IMPLEMENTED)
+    ├── ⚙️ Notification Settings
+    └── 🧪 Test Notifications
 
 🔧 Tools
-├── ADHD & Accessibility (submenu)
-├── Theming (submenu)
-├── ☑️ Multi-Select (submenu)
+├── ♿ ADHD & Accessibility
+│   ├── ♿ ADHD Control Panel
+│   ├── 🎯 Focus Mode
+│   ├── 🔲 Toggle Zebra Stripes
+│   ├── 📝 Quick Capture
+│   └── 🍅 Pomodoro Timer
+├── 🎨 Theming
+│   ├── 🎨 Theme Manager
+│   ├── 🌙 Toggle Dark Mode
+│   └── 🔄 Reset Theme
+├── ────────────────
+├── ☑️ Multi-Select
 │   ├── 📝 Open Editor
 │   ├── ⚡ Enable Auto-Open
 │   └── 🚫 Disable Auto-Open
-├── Undo/Redo (submenu)
-├── Cache & Performance (submenu)
-└── Validation (submenu)
+├── ────────────────
+├── ↩️ Undo/Redo
+│   ├── ↩️ Undo Last Action
+│   ├── ↪️ Redo Action
+│   ├── 📋 View History
+│   └── 🗑️ Clear History
+├── 🗄️ Cache & Performance
+│   ├── 🗄️ Cache Status
+│   ├── 🔥 Warm Up Caches
+│   └── 🗑️ Clear All Caches
+├── ────────────────
+└── ✅ Validation
+    ├── 🔍 Run Bulk Validation
+    ├── ⚙️ Validation Settings
+    ├── 🧹 Clear Indicators
+    └── ⚡ Install Validation Trigger
 
 🏗️ Setup
-├── CREATE 509 DASHBOARD
-├── REPAIR DASHBOARD
-└── Setup Data Validations
+├── 🔧 REPAIR DASHBOARD
+├── ────────────────
+├── ⚙️ Setup Data Validations
+└── 🎨 Setup ADHD Defaults
 
-🎭 Demo
-├── Seed All Sample Data
-├── Seed Data (submenu)
-│   ├── Seed Config Dropdowns Only
-│   ├── Seed Members (Custom Count)
-│   ├── Seed Grievances (Custom Count)
-│   ├── Seed 50 Members
-│   └── Seed 25 Grievances
-└── Nuke Data (submenu)
-    ├── NUKE ALL DATA
-    └── Clear Config Dropdowns Only
+🎭 Demo (hidden if demo mode disabled)
+├── 🚀 Seed All Sample Data
+├── ────────────────
+├── 🌱 Seed Data
+│   ├── ⚙️ Seed Config Dropdowns Only
+│   ├── 👥 Seed Members (Custom Count)
+│   ├── 📋 Seed Grievances (Custom Count)
+│   ├── 👥 Seed 50 Members
+│   └── 📋 Seed 25 Grievances
+├── ────────────────
+└── 🗑️ Nuke Data
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
+
+🧪 Testing
+├── 🧪 Run All Tests
+├── ⚡ Run Quick Tests
+├── ────────────────
+└── 📊 View Test Results
 
 ⚙️ Administrator
-├── DIAGNOSE SETUP
-├── Verify Hidden Sheets
-└── Setup & Triggers (submenu)
+├── 🔍 DIAGNOSE SETUP
+├── 🔍 Verify Hidden Sheets
+├── ────────────────
+├── 🔧 Setup & Triggers
+│   ├── 🔧 Setup All Hidden Sheets
+│   ├── 🔧 Repair All Hidden Sheets
+│   ├── ⚡ Install Auto-Sync Trigger
+│   └── 🚫 Remove Auto-Sync Trigger
+├── ────────────────
+└── 🔄 Manual Sync
+    ├── 🔄 Sync All Data Now
+    ├── 🔄 Sync Grievance → Members
+    └── 🔄 Sync Members → Grievances
 ```
 
 ---
@@ -633,23 +712,21 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Live Formula Architecture
 
-### Member Directory Live Columns
+### Member Directory Grievance Columns (Static Values)
 
-The Member Directory grievance columns have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
+The Member Directory grievance columns (AB-AD) are populated with **STATIC VALUES** by the sync function - **NO FORMULAS in visible sheets**:
 
-| Member Column | Header | Formula Type | Grievance Log Source Column |
-|---------------|--------|--------------|----------------------------|
-| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
-| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
-| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | ARRAYFORMULA + MINIFS | **`GRIEVANCE_COLS.DAYS_TO_DEADLINE`** |
+| Member Column | Header | Source | Updated By |
+|---------------|--------|--------|------------|
+| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
+| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
+| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
 
-**Days to Deadline is LIVE-WIRED to Grievance Log's `GRIEVANCE_COLS.DAYS_TO_DEADLINE`** - changes in Grievance Log immediately reflect in Member Directory.
+**Architecture:** Formulas live in hidden `_Grievance_Calc` sheet. The sync function reads calculated values and writes them as static values to Member Directory. This prevents #REF! errors and keeps visible sheets formula-free.
 
-Column letters are dynamically resolved using `getColumnLetter(GRIEVANCE_COLS.*)` so formulas automatically adapt if column positions change in Constants.gs.
+### Syncing Grievance Data
 
-### Installing Live Formulas
-
-Run `setupLiveGrievanceFormulas()` to install/reinstall live formulas on existing Member Directory.
+Run `syncGrievanceToMemberDirectory()` or use **Administrator > Manual Sync > Sync Grievance → Members** to update columns AB-AD.
 
 ---
 
@@ -723,6 +800,37 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.2 (2025-12-31) - Menu Checklist & Static Values Fix
+
+**New Features:**
+
+1. **Menu Checklist Sheet**: Auto-created on REPAIR_DASHBOARD
+   - 61 menu items organized into 13 testing phases
+   - Includes Phase, Menu, Item, Function Name, and Tested? checkbox columns
+   - Optimal order for systematic testing of all dashboard functionality
+
+2. **WebApp.gs**: New file for mobile web app deployment
+   - Enables direct URL access to dashboard on mobile devices
+   - Three views: Dashboard, Search, Grievances
+
+**Bug Fixes:**
+
+1. **#REF! errors in Member Directory columns AB-AD**
+   - Root cause: ARRAYFORMULA was inserted directly into visible sheets
+   - Fix: Removed formula insertions, now uses `syncGrievanceToMemberDirectory()` with static values only
+   - Architecture: Formulas in hidden `_Grievance_Calc` sheet → sync function reads values → writes static values to visible sheet
+
+**Documentation Updates:**
+
+- Updated file list from 9 to 10 files (added WebApp.gs, ConsolidatedDashboard.gs)
+- Removed DriveCalendarEmail.gs reference (file doesn't exist)
+- Added "NOT IMPLEMENTED" notes for Drive, Calendar, Notification features
+- Updated Menu System documentation to match current menu structure
+- Added Testing menu documentation
+- Added auto-generated sheets (Menu Checklist, Test Results) to sheet structure
+
+---
 
 ### Version 1.5.1 (2025-12-30) - Bidirectional Config Sync & Bug Fixes
 
