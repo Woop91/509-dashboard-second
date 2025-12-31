@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.2 (Menu Checklist & Static Values Fix)
+**Version:** 1.5.3 (Drive/Calendar/Notifications Implemented)
 **Last Updated:** 2025-12-31
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -102,7 +102,7 @@
 - `searchMembers()` - Search members dialog
 - `startNewGrievance()` - Start grievance dialog
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- `createMenuChecklistSheet_()` - Auto-create Menu Checklist with 61 items in 13 testing phases
+- `createMenuChecklistSheet_()` - Auto-create Menu Checklist with 57 items in 13 testing phases
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~500 lines)
@@ -178,12 +178,21 @@
 - `showWebAppUrl()` - Display the deployed web app URL
 - Enables direct mobile access via URL without opening the spreadsheet
 
-**Drive/Calendar/Notifications** (NOT IMPLEMENTED)
-The following features are referenced in the menu but NOT YET IMPLEMENTED:
-- **Google Drive Integration**: `setupDriveFolderForGrievance()`, `showGrievanceFiles()`, `batchCreateGrievanceFolders()`
-- **Calendar Sync**: `syncDeadlinesToCalendar()`, `showUpcomingDeadlinesFromCalendar()`, `clearAllCalendarEvents()`
-- **Email Notifications**: `showNotificationSettings()`, `testDeadlineNotifications()`
-- These menu items will show "Script function not found" errors until implemented
+**Drive/Calendar/Notifications** (Code.gs & ConsolidatedDashboard.gs)
+- **Google Drive Integration**:
+  - `setupDriveFolderForGrievance()` - Create folder for selected grievance
+  - `showGrievanceFiles()` - View files in grievance folder
+  - `batchCreateGrievanceFolders()` - Create folders for all grievances
+  - `getOrCreateDashboardFolder_()` - Get/create root "509 Dashboard - Grievance Files" folder
+- **Calendar Sync**:
+  - `syncDeadlinesToCalendar()` - Create all-day events for upcoming deadlines
+  - `showUpcomingDeadlinesFromCalendar()` - Show next 7 days of events
+  - `clearAllCalendarEvents()` - Remove all grievance calendar events
+- **Email Notifications**:
+  - `showNotificationSettings()` - Enable/disable daily 8 AM deadline emails
+  - `testDeadlineNotifications()` - Send test email to verify setup
+  - `checkDeadlinesAndNotify_()` - Daily trigger function (notifies if due within 3 days)
+  - `installDailyTrigger_()`, `removeDailyTrigger_()` - Trigger management
 
 **TestingValidation.gs** (~500 lines) - Testing Framework & Data Validation
 - Testing Framework:
@@ -209,8 +218,8 @@ The following features are referenced in the menu but NOT YET IMPLEMENTED:
   - `installValidationTrigger()` - Real-time validation on edit
   - `onEditValidation()` - Validation trigger handler
 
-**PerformanceUndo.gs** (~500 lines) - Caching Layer & Undo/Redo
-- Caching:
+**PerformanceUndo.gs** (~500 lines) - Caching Layer
+- Caching (exposed in menu):
   - `getCachedData()` - Get data from cache or load
   - `setCachedData()` - Store data in cache
   - `invalidateCache()` - Clear specific cache
@@ -221,17 +230,8 @@ The following features are referenced in the menu but NOT YET IMPLEMENTED:
   - `showCacheStatusDashboard()` - Cache status UI
   - **Cache Keys**: `memberMeta`, `grievanceMeta`, `configData`
   - **Note**: CacheService has 100KB limit per item. Full data caching is avoided; only metadata (row/column counts, timestamps) is cached.
-- Undo/Redo:
-  - `getUndoHistory()`, `saveUndoHistory()` - History management
-  - `recordAction()` - Record an action for undo
-  - `recordCellEdit()`, `recordRowAddition()`, `recordRowDeletion()` - Specific action recording
-  - `undoLastAction()`, `redoLastAction()` - Undo/redo operations
-  - `undoToIndex()`, `redoToIndex()` - Jump to specific point
-  - `applyState()` - Apply state snapshot
-  - `clearUndoHistory()` - Clear all history
-  - `showUndoRedoPanel()` - Undo/redo UI
-  - `exportUndoHistoryToSheet()` - Export history to sheet
-  - `createGrievanceSnapshot()`, `restoreFromSnapshot()` - Full snapshot backup
+- Undo/Redo (NOT in menu - use Google Sheets built-in Ctrl+Z/Ctrl+Y):
+  - Functions exist but are not exposed in menu since Google Sheets has robust built-in undo/redo
 
 **MobileQuickActions.gs** (~600 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
@@ -399,7 +399,7 @@ var GRIEVANCE_COLS = {
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 6 | Menu Checklist | Reference | Checklist of all 61 menu items organized by testing phase (auto-created on REPAIR_DASHBOARD) |
+| 6 | Menu Checklist | Reference | Checklist of all 57 menu items organized by testing phase (auto-created on REPAIR_DASHBOARD) |
 | 7 | Test Results | Output | Test framework results from runAllTests() |
 
 ### Optional Source Sheets (not auto-created)
@@ -537,15 +537,15 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── 📈 Refresh Interactive Charts
 ├── 🔄 Refresh All Formulas
 ├── ────────────────
-├── 📁 Google Drive (NOT IMPLEMENTED)
+├── 📁 Google Drive
 │   ├── 📁 Setup Folder for Grievance
 │   ├── 📁 View Grievance Files
 │   └── 📁 Batch Create Folders
-├── 📅 Calendar (NOT IMPLEMENTED)
+├── 📅 Calendar
 │   ├── 📅 Sync Deadlines to Calendar
 │   ├── 📅 View Upcoming Deadlines
 │   └── 🗑️ Clear Calendar Events
-└── 📬 Notifications (NOT IMPLEMENTED)
+└── 📬 Notifications
     ├── ⚙️ Notification Settings
     └── 🧪 Test Notifications
 
@@ -566,11 +566,6 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 │   ├── ⚡ Enable Auto-Open
 │   └── 🚫 Disable Auto-Open
 ├── ────────────────
-├── ↩️ Undo/Redo
-│   ├── ↩️ Undo Last Action
-│   ├── ↪️ Redo Action
-│   ├── 📋 View History
-│   └── 🗑️ Clear History
 ├── 🗄️ Cache & Performance
 │   ├── 🗄️ Cache Status
 │   ├── 🔥 Warm Up Caches
@@ -801,12 +796,49 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
+### Version 1.5.3 (2025-12-31) - Drive/Calendar/Notifications Implemented
+
+**New Features:**
+
+1. **Google Drive Integration** (3 functions):
+   - `setupDriveFolderForGrievance()` - Creates folder for selected grievance
+   - `showGrievanceFiles()` - Lists files in grievance folder
+   - `batchCreateGrievanceFolders()` - Batch creates folders for all grievances
+   - Root folder: "509 Dashboard - Grievance Files"
+
+2. **Calendar Integration** (3 functions):
+   - `syncDeadlinesToCalendar()` - Creates all-day events for upcoming deadlines
+   - `showUpcomingDeadlinesFromCalendar()` - Shows next 7 days of grievance events
+   - `clearAllCalendarEvents()` - Removes all grievance-related calendar events
+
+3. **Email Notifications** (2 functions):
+   - `showNotificationSettings()` - Enable/disable daily deadline reminders at 8 AM
+   - `testDeadlineNotifications()` - Send test email to verify setup
+   - Daily trigger notifies when grievances are due within 3 days
+
+4. **Navigation Functions** (3 functions):
+   - `showInteractiveDashboardTab()` - Navigate to Interactive Dashboard
+   - `refreshInteractiveCharts()` - Refresh Interactive Dashboard data
+   - `showWebAppUrl()` - Show instructions for mobile web app setup
+
+**Fixes:**
+
+1. **installMultiSelectTrigger** - Changed to show manual setup instructions (onSelectionChange triggers can't be created programmatically)
+
+2. **Removed Undo/Redo from menu** - Was only showing help text stubs; use Google Sheets built-in Ctrl+Z/Ctrl+Y
+
+**Menu Changes:**
+- Menu Checklist now has **57 items** (removed 4 Undo/Redo items)
+- Drive/Calendar/Notifications now fully functional
+
+---
+
 ### Version 1.5.2 (2025-12-31) - Menu Checklist & Static Values Fix
 
 **New Features:**
 
 1. **Menu Checklist Sheet**: Auto-created on REPAIR_DASHBOARD
-   - 61 menu items organized into 13 testing phases
+   - 57 menu items organized into 13 testing phases
    - Includes Phase, Menu, Item, Function Name, and Tested? checkbox columns
    - Optimal order for systematic testing of all dashboard functionality
 
@@ -825,7 +857,6 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 - Updated file list from 9 to 10 files (added WebApp.gs, ConsolidatedDashboard.gs)
 - Removed DriveCalendarEmail.gs reference (file doesn't exist)
-- Added "NOT IMPLEMENTED" notes for Drive, Calendar, Notification features
 - Updated Menu System documentation to match current menu structure
 - Added Testing menu documentation
 - Added auto-generated sheets (Menu Checklist, Test Results) to sheet structure
