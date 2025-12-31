@@ -633,23 +633,21 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Live Formula Architecture
 
-### Member Directory Live Columns
+### Member Directory Grievance Columns (Static Values)
 
-The Member Directory grievance columns have **LIVE FORMULAS** that directly reference the Grievance Log for real-time updates:
+The Member Directory grievance columns (AB-AD) are populated with **STATIC VALUES** by the sync function - **NO FORMULAS in visible sheets**:
 
-| Member Column | Header | Formula Type | Grievance Log Source Column |
-|---------------|--------|--------------|----------------------------|
-| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
-| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | ARRAYFORMULA + COUNTIFS | `GRIEVANCE_COLS.MEMBER_ID`, `GRIEVANCE_COLS.STATUS` |
-| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | ARRAYFORMULA + MINIFS | **`GRIEVANCE_COLS.DAYS_TO_DEADLINE`** |
+| Member Column | Header | Source | Updated By |
+|---------------|--------|--------|------------|
+| `MEMBER_COLS.HAS_OPEN_GRIEVANCE` | Has Open Grievance? | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
+| `MEMBER_COLS.GRIEVANCE_STATUS` | Grievance Status | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
+| `MEMBER_COLS.DAYS_TO_DEADLINE` | Days to Deadline | `_Grievance_Calc` hidden sheet | `syncGrievanceToMemberDirectory()` |
 
-**Days to Deadline is LIVE-WIRED to Grievance Log's `GRIEVANCE_COLS.DAYS_TO_DEADLINE`** - changes in Grievance Log immediately reflect in Member Directory.
+**Architecture:** Formulas live in hidden `_Grievance_Calc` sheet. The sync function reads calculated values and writes them as static values to Member Directory. This prevents #REF! errors and keeps visible sheets formula-free.
 
-Column letters are dynamically resolved using `getColumnLetter(GRIEVANCE_COLS.*)` so formulas automatically adapt if column positions change in Constants.gs.
+### Syncing Grievance Data
 
-### Installing Live Formulas
-
-Run `setupLiveGrievanceFormulas()` to install/reinstall live formulas on existing Member Directory.
+Run `syncGrievanceToMemberDirectory()` or use **Administrator > Manual Sync > Sync Grievance → Members** to update columns AB-AD.
 
 ---
 
