@@ -76,11 +76,6 @@ function onOpen() {
       .addItem('⚡ Enable Auto-Open', 'installMultiSelectTrigger')
       .addItem('🚫 Disable Auto-Open', 'removeMultiSelectTrigger'))
     .addSeparator()
-    .addSubMenu(ui.createMenu('↩️ Undo/Redo')
-      .addItem('↩️ Undo Last Action', 'undoLastAction')
-      .addItem('↪️ Redo Action', 'redoLastAction')
-      .addItem('📋 View History', 'showUndoRedoPanel')
-      .addItem('🗑️ Clear History', 'clearUndoHistory'))
     .addSubMenu(ui.createMenu('🗄️ Cache & Performance')
       .addItem('🗄️ Cache Status', 'showCacheStatusDashboard')
       .addItem('🔥 Warm Up Caches', 'warmUpCaches')
@@ -1292,27 +1287,22 @@ function onSelectionChangeMultiSelect(e) {
  * Run this once to enable auto-open on cell selection
  */
 function installMultiSelectTrigger() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
 
-  // Remove existing triggers to avoid duplicates
-  var triggers = ScriptApp.getUserTriggers(ss);
-  triggers.forEach(function(trigger) {
-    if (trigger.getHandlerFunction() === 'onSelectionChangeMultiSelect') {
-      ScriptApp.deleteTrigger(trigger);
-    }
-  });
-
-  // Create new trigger
-  ScriptApp.newTrigger('onSelectionChangeMultiSelect')
-    .forSpreadsheet(ss)
-    .onSelectionChange()
-    .create();
-
-  SpreadsheetApp.getUi().alert(
-    '✅ Multi-Select Auto-Open Enabled!\n\n' +
-    'Now when you click on a multi-select cell (Office Days, Preferred Comm, etc.), ' +
-    'the selection dialog will automatically appear.'
-  );
+  // Note: onSelectionChange triggers cannot be created programmatically
+  // User must set this up manually in Apps Script editor
+  ui.alert('☑️ Multi-Select Auto-Open Setup',
+    'To enable auto-open for multi-select cells:\n\n' +
+    '1. Go to Extensions → Apps Script\n' +
+    '2. Click the clock icon (Triggers) in the left sidebar\n' +
+    '3. Click "+ Add Trigger"\n' +
+    '4. Choose function: onSelectionChangeMultiSelect\n' +
+    '5. Select event type: "On change" or "On edit"\n' +
+    '6. Click Save\n\n' +
+    'Alternatively, use the manual method:\n' +
+    '• Select a multi-select cell\n' +
+    '• Go to Tools → Multi-Select → Open Editor',
+    ui.ButtonSet.OK);
 }
 
 /**
@@ -1563,10 +1553,6 @@ function createMenuChecklistSheet_() {
     ['🔟 Tools', '🔧 Multi-Select', '📝 Open Editor', 'showMultiSelectDialog'],
     ['🔟 Tools', '🔧 Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger'],
     ['🔟 Tools', '🔧 Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger'],
-    ['🔟 Tools', '🔧 Undo/Redo', '↩️ Undo Last Action', 'undoLastAction'],
-    ['🔟 Tools', '🔧 Undo/Redo', '↪️ Redo Action', 'redoLastAction'],
-    ['🔟 Tools', '🔧 Undo/Redo', '📋 View History', 'showUndoRedoPanel'],
-    ['🔟 Tools', '🔧 Undo/Redo', '🗑️ Clear History', 'clearUndoHistory'],
 
     // ═══ PHASE 11: Performance & Cache ═══
     ['1️⃣1️⃣ Perf', '🔧 Cache', '🗄️ Cache Status', 'showCacheStatusDashboard'],
@@ -2224,5 +2210,557 @@ function viewTestResults() {
     ss.setActiveSheet(sheet);
   } else {
     SpreadsheetApp.getUi().alert('No test results yet. Run tests first using 🧪 Testing menu.');
+  }
+}
+
+// ============================================================================
+// NAVIGATION FUNCTIONS (Menu Items)
+// ============================================================================
+
+/**
+ * Navigate to the Interactive Dashboard sheet
+ */
+function showInteractiveDashboardTab() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+    ss.toast('Viewing Interactive Dashboard', '🎯 Interactive', 2);
+  } else {
+    SpreadsheetApp.getUi().alert('Interactive Dashboard not found. Run REPAIR DASHBOARD to create it.');
+  }
+}
+
+/**
+ * Refresh Interactive Dashboard charts and data
+ */
+function refreshInteractiveCharts() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Refreshing Interactive Dashboard...', '📈 Refresh', 2);
+
+  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Interactive Dashboard not found. Run REPAIR DASHBOARD to create it.');
+    return;
+  }
+
+  // Force recalculation by flushing
+  SpreadsheetApp.flush();
+
+  // Navigate to it
+  ss.setActiveSheet(sheet);
+  ss.toast('Interactive Dashboard refreshed!', '✅ Done', 2);
+}
+
+/**
+ * Show the Web App URL for mobile access
+ */
+function showWebAppUrl() {
+  var ui = SpreadsheetApp.getUi();
+  var scriptId = ScriptApp.getScriptId();
+
+  ui.alert('📱 Mobile App URL',
+    'To get your mobile dashboard URL:\n\n' +
+    '1. Go to Extensions → Apps Script\n' +
+    '2. Click "Deploy" → "Manage deployments"\n' +
+    '3. Create a new deployment as "Web app"\n' +
+    '4. Set access to your organization\n' +
+    '5. Copy the Web app URL\n\n' +
+    'Script ID: ' + scriptId + '\n\n' +
+    'Bookmark the URL on your mobile device for quick access!',
+    ui.ButtonSet.OK);
+}
+
+// ============================================================================
+// GOOGLE DRIVE INTEGRATION
+// ============================================================================
+
+/**
+ * Create a Google Drive folder for the selected grievance
+ */
+function setupDriveFolderForGrievance() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Must be on Grievance Log
+  if (sheet.getName() !== SHEETS.GRIEVANCE_LOG) {
+    ui.alert('📁 Setup Folder', 'Please select a row in the Grievance Log first.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var row = sheet.getActiveRange().getRow();
+  if (row < 2) {
+    ui.alert('📁 Setup Folder', 'Please select a grievance row (not the header).', ui.ButtonSet.OK);
+    return;
+  }
+
+  var grievanceId = sheet.getRange(row, GRIEVANCE_COLS.GRIEVANCE_ID).getValue();
+  var memberId = sheet.getRange(row, GRIEVANCE_COLS.MEMBER_ID).getValue();
+
+  if (!grievanceId) {
+    ui.alert('📁 Setup Folder', 'This row has no Grievance ID.', ui.ButtonSet.OK);
+    return;
+  }
+
+  ss.toast('Creating Drive folder for ' + grievanceId + '...', '📁 Drive', 3);
+
+  try {
+    // Get or create root folder
+    var rootFolder = getOrCreateDashboardFolder_();
+
+    // Create grievance folder
+    var folderName = grievanceId + ' - ' + (memberId || 'Unknown');
+    var folders = rootFolder.getFoldersByName(folderName);
+    var folder;
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+      ss.toast('Folder already exists!', '📁 Drive', 2);
+    } else {
+      folder = rootFolder.createFolder(folderName);
+      ss.toast('Folder created!', '✅ Success', 2);
+    }
+
+    // Save folder ID and URL to grievance row
+    sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_ID).setValue(folder.getId());
+    sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_URL).setValue(folder.getUrl());
+
+    // Open folder in new tab
+    var html = HtmlService.createHtmlOutput(
+      '<script>window.open("' + folder.getUrl() + '", "_blank");google.script.host.close();</script>'
+    ).setWidth(1).setHeight(1);
+    ui.showModalDialog(html, 'Opening folder...');
+
+  } catch (e) {
+    ui.alert('❌ Error', 'Failed to create folder: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Get or create the root 509 Dashboard folder in Drive
+ */
+function getOrCreateDashboardFolder_() {
+  var folderName = '509 Dashboard - Grievance Files';
+  var folders = DriveApp.getFoldersByName(folderName);
+
+  if (folders.hasNext()) {
+    return folders.next();
+  }
+
+  return DriveApp.createFolder(folderName);
+}
+
+/**
+ * Show files in the selected grievance's folder
+ */
+function showGrievanceFiles() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var ui = SpreadsheetApp.getUi();
+
+  if (sheet.getName() !== SHEETS.GRIEVANCE_LOG) {
+    ui.alert('📁 View Files', 'Please select a row in the Grievance Log first.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var row = sheet.getActiveRange().getRow();
+  if (row < 2) {
+    ui.alert('📁 View Files', 'Please select a grievance row (not the header).', ui.ButtonSet.OK);
+    return;
+  }
+
+  var folderId = sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_ID).getValue();
+  var folderUrl = sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_URL).getValue();
+  var grievanceId = sheet.getRange(row, GRIEVANCE_COLS.GRIEVANCE_ID).getValue();
+
+  if (!folderId) {
+    var response = ui.alert('📁 No Folder',
+      'No folder exists for ' + grievanceId + '.\n\nWould you like to create one?',
+      ui.ButtonSet.YES_NO);
+    if (response === ui.Button.YES) {
+      setupDriveFolderForGrievance();
+    }
+    return;
+  }
+
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var files = folder.getFiles();
+    var fileList = [];
+
+    while (files.hasNext()) {
+      var file = files.next();
+      fileList.push('• ' + file.getName());
+    }
+
+    if (fileList.length === 0) {
+      var response = ui.alert('📁 ' + grievanceId + ' Files',
+        'Folder is empty.\n\nWould you like to open the folder to add files?',
+        ui.ButtonSet.YES_NO);
+      if (response === ui.Button.YES) {
+        var html = HtmlService.createHtmlOutput(
+          '<script>window.open("' + folderUrl + '", "_blank");google.script.host.close();</script>'
+        ).setWidth(1).setHeight(1);
+        ui.showModalDialog(html, 'Opening folder...');
+      }
+    } else {
+      var response = ui.alert('📁 ' + grievanceId + ' Files (' + fileList.length + ')',
+        fileList.join('\n') + '\n\nOpen folder in Drive?',
+        ui.ButtonSet.YES_NO);
+      if (response === ui.Button.YES) {
+        var html = HtmlService.createHtmlOutput(
+          '<script>window.open("' + folderUrl + '", "_blank");google.script.host.close();</script>'
+        ).setWidth(1).setHeight(1);
+        ui.showModalDialog(html, 'Opening folder...');
+      }
+    }
+  } catch (e) {
+    ui.alert('❌ Error', 'Could not access folder: ' + e.message + '\n\nThe folder may have been deleted.', ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Batch create folders for all grievances without folders
+ */
+function batchCreateGrievanceFolders() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    ui.alert('❌ Error', 'Grievance Log not found.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var response = ui.alert('📁 Batch Create Folders',
+    'This will create Google Drive folders for all grievances that don\'t have one.\n\nContinue?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  var data = sheet.getDataRange().getValues();
+  var rootFolder = getOrCreateDashboardFolder_();
+  var created = 0;
+  var skipped = 0;
+
+  ss.toast('Creating folders...', '📁 Batch', -1);
+
+  for (var i = 1; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var memberId = data[i][GRIEVANCE_COLS.MEMBER_ID - 1];
+    var existingFolderId = data[i][GRIEVANCE_COLS.DRIVE_FOLDER_ID - 1];
+
+    if (!grievanceId) continue;
+
+    if (existingFolderId) {
+      skipped++;
+      continue;
+    }
+
+    var folderName = grievanceId + ' - ' + (memberId || 'Unknown');
+    var folder = rootFolder.createFolder(folderName);
+
+    sheet.getRange(i + 1, GRIEVANCE_COLS.DRIVE_FOLDER_ID).setValue(folder.getId());
+    sheet.getRange(i + 1, GRIEVANCE_COLS.DRIVE_FOLDER_URL).setValue(folder.getUrl());
+    created++;
+
+    if (created % 5 === 0) {
+      ss.toast('Created ' + created + ' folders...', '📁 Batch', 2);
+    }
+  }
+
+  ss.toast('Done! Created ' + created + ', skipped ' + skipped, '✅ Complete', 5);
+  ui.alert('📁 Batch Complete',
+    'Created: ' + created + ' new folders\n' +
+    'Skipped: ' + skipped + ' (already had folders)\n\n' +
+    'Root folder: ' + rootFolder.getUrl(),
+    ui.ButtonSet.OK);
+}
+
+// ============================================================================
+// GOOGLE CALENDAR INTEGRATION
+// ============================================================================
+
+/**
+ * Sync grievance deadlines to Google Calendar
+ */
+function syncDeadlinesToCalendar() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    ui.alert('❌ Error', 'Grievance Log not found.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var response = ui.alert('📅 Sync to Calendar',
+    'This will create calendar events for upcoming grievance deadlines.\n\n' +
+    'Events will be created in your primary Google Calendar.\n\nContinue?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  ss.toast('Syncing deadlines to calendar...', '📅 Calendar', -1);
+
+  var data = sheet.getDataRange().getValues();
+  var calendar = CalendarApp.getDefaultCalendar();
+  var created = 0;
+  var skipped = 0;
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (var i = 1; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var status = data[i][GRIEVANCE_COLS.STATUS - 1];
+    var nextActionDue = data[i][GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+    var currentStep = data[i][GRIEVANCE_COLS.CURRENT_STEP - 1];
+
+    // Skip closed grievances
+    if (!grievanceId || !nextActionDue) {
+      skipped++;
+      continue;
+    }
+
+    var closedStatuses = ['Closed', 'Settled', 'Won', 'Denied', 'Withdrawn'];
+    if (closedStatuses.indexOf(status) !== -1) {
+      skipped++;
+      continue;
+    }
+
+    var dueDate = new Date(nextActionDue);
+    if (isNaN(dueDate.getTime()) || dueDate < today) {
+      skipped++;
+      continue;
+    }
+
+    // Check if event already exists
+    var eventTitle = '⚠️ ' + grievanceId + ' - ' + currentStep + ' Due';
+    var existingEvents = calendar.getEventsForDay(dueDate, {search: grievanceId});
+
+    if (existingEvents.length > 0) {
+      skipped++;
+      continue;
+    }
+
+    // Create all-day event
+    calendar.createAllDayEvent(eventTitle, dueDate, {
+      description: 'Grievance: ' + grievanceId + '\nStatus: ' + status + '\nStep: ' + currentStep + '\n\nCreated by 509 Dashboard'
+    });
+    created++;
+  }
+
+  ss.toast('Done! Created ' + created + ' events', '✅ Complete', 5);
+  ui.alert('📅 Sync Complete',
+    'Created: ' + created + ' calendar events\n' +
+    'Skipped: ' + skipped + ' (closed, past, or already exists)',
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Show upcoming deadlines from calendar
+ */
+function showUpcomingDeadlinesFromCalendar() {
+  var ui = SpreadsheetApp.getUi();
+  var calendar = CalendarApp.getDefaultCalendar();
+
+  var today = new Date();
+  var nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  var events = calendar.getEvents(today, nextWeek, {search: 'Grievance'});
+
+  if (events.length === 0) {
+    ui.alert('📅 Upcoming Deadlines',
+      'No grievance deadlines in the next 7 days!\n\n' +
+      'Use "Sync Deadlines to Calendar" to add deadline events.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var eventList = events.map(function(e) {
+    var date = Utilities.formatDate(e.getStartTime(), Session.getScriptTimeZone(), 'MM/dd');
+    return '• ' + date + ': ' + e.getTitle();
+  });
+
+  ui.alert('📅 Upcoming Deadlines (Next 7 Days)',
+    eventList.join('\n'),
+    ui.ButtonSet.OK);
+}
+
+/**
+ * Clear all 509 Dashboard calendar events
+ */
+function clearAllCalendarEvents() {
+  var ui = SpreadsheetApp.getUi();
+
+  var response = ui.alert('🗑️ Clear Calendar Events',
+    'This will delete ALL calendar events containing "Grievance" from the past 6 months to 1 year ahead.\n\n' +
+    'This cannot be undone. Continue?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.toast('Removing calendar events...', '🗑️ Calendar', -1);
+
+  var calendar = CalendarApp.getDefaultCalendar();
+  var sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000);
+  var oneYearAhead = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
+  var events = calendar.getEvents(sixMonthsAgo, oneYearAhead, {search: 'Grievance'});
+  var deleted = 0;
+
+  for (var i = 0; i < events.length; i++) {
+    events[i].deleteEvent();
+    deleted++;
+  }
+
+  ss.toast('Deleted ' + deleted + ' events', '✅ Complete', 3);
+  ui.alert('🗑️ Events Cleared', 'Deleted ' + deleted + ' grievance calendar events.', ui.ButtonSet.OK);
+}
+
+// ============================================================================
+// EMAIL NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Show notification settings dialog
+ */
+function showNotificationSettings() {
+  var ui = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+  var enabled = props.getProperty('notifications_enabled') === 'true';
+  var email = props.getProperty('notification_email') || Session.getEffectiveUser().getEmail();
+
+  var response = ui.alert('📬 Notification Settings',
+    'Daily deadline notifications: ' + (enabled ? 'ENABLED ✅' : 'DISABLED ❌') + '\n' +
+    'Email: ' + email + '\n\n' +
+    'Notifications are sent daily at 8 AM for grievances due within 3 days.\n\n' +
+    'Would you like to ' + (enabled ? 'DISABLE' : 'ENABLE') + ' notifications?',
+    ui.ButtonSet.YES_NO);
+
+  if (response === ui.Button.YES) {
+    if (enabled) {
+      // Disable
+      props.setProperty('notifications_enabled', 'false');
+      removeDailyTrigger_();
+      ui.alert('📬 Notifications Disabled', 'Daily deadline notifications have been turned off.', ui.ButtonSet.OK);
+    } else {
+      // Enable
+      props.setProperty('notifications_enabled', 'true');
+      props.setProperty('notification_email', email);
+      installDailyTrigger_();
+      ui.alert('📬 Notifications Enabled',
+        'Daily notifications enabled!\n\n' +
+        'You will receive an email at 8 AM when grievances are due within 3 days.\n\n' +
+        'Email: ' + email, ui.ButtonSet.OK);
+    }
+  }
+}
+
+/**
+ * Install daily trigger for notifications
+ */
+function installDailyTrigger_() {
+  // Remove existing triggers
+  removeDailyTrigger_();
+
+  // Create new daily trigger at 8 AM
+  ScriptApp.newTrigger('checkDeadlinesAndNotify_')
+    .timeBased()
+    .atHour(8)
+    .everyDays(1)
+    .create();
+}
+
+/**
+ * Remove daily notification trigger
+ */
+function removeDailyTrigger_() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'checkDeadlinesAndNotify_') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+}
+
+/**
+ * Check deadlines and send notification email (called by trigger)
+ */
+function checkDeadlinesAndNotify_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('notifications_enabled') !== 'true') return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet) return;
+
+  var email = props.getProperty('notification_email');
+  if (!email) return;
+
+  var data = sheet.getDataRange().getValues();
+  var today = new Date();
+  var threeDaysAhead = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+  var urgent = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var status = data[i][GRIEVANCE_COLS.STATUS - 1];
+    var daysToDeadline = data[i][GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var currentStep = data[i][GRIEVANCE_COLS.CURRENT_STEP - 1];
+
+    var closedStatuses = ['Closed', 'Settled', 'Won', 'Denied', 'Withdrawn'];
+    if (closedStatuses.indexOf(status) !== -1) continue;
+
+    if (daysToDeadline !== '' && daysToDeadline <= 3) {
+      urgent.push({
+        id: grievanceId,
+        step: currentStep,
+        days: daysToDeadline
+      });
+    }
+  }
+
+  if (urgent.length === 0) return;
+
+  var subject = '⚠️ 509 Dashboard: ' + urgent.length + ' Grievance Deadline(s) Approaching';
+  var body = 'The following grievances have deadlines within 3 days:\n\n';
+
+  for (var j = 0; j < urgent.length; j++) {
+    var g = urgent[j];
+    body += '• ' + g.id + ' (' + g.step + ') - ' +
+      (g.days <= 0 ? 'OVERDUE!' : g.days + ' day(s) remaining') + '\n';
+  }
+
+  body += '\n\nView your dashboard: ' + ss.getUrl();
+
+  MailApp.sendEmail(email, subject, body);
+}
+
+/**
+ * Test the notification system
+ */
+function testDeadlineNotifications() {
+  var ui = SpreadsheetApp.getUi();
+  var email = Session.getEffectiveUser().getEmail();
+
+  var response = ui.alert('🧪 Test Notifications',
+    'This will send a test notification email to:\n' + email + '\n\nSend test email?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  try {
+    MailApp.sendEmail(email,
+      '🧪 509 Dashboard Test Notification',
+      'This is a test notification from your 509 Dashboard.\n\n' +
+      'If you received this email, notifications are working correctly!\n\n' +
+      'Dashboard: ' + SpreadsheetApp.getActiveSpreadsheet().getUrl()
+    );
+    ui.alert('✅ Test Sent', 'Test email sent to ' + email + '\n\nCheck your inbox!', ui.ButtonSet.OK);
+  } catch (e) {
+    ui.alert('❌ Error', 'Failed to send test email: ' + e.message, ui.ButtonSet.OK);
   }
 }
