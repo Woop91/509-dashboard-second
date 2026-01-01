@@ -30,7 +30,11 @@ function onOpen() {
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
-      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'))
+      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
+      .addSeparator()
+      .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
+      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+      .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
     .addToUi();
 
   // Member Search Menu (standalone for quick access)
@@ -2762,5 +2766,112 @@ function testDeadlineNotifications() {
     ui.alert('✅ Test Sent', 'Test email sent to ' + email + '\n\nCheck your inbox!', ui.ButtonSet.OK);
   } catch (e) {
     ui.alert('❌ Error', 'Failed to send test email: ' + e.message, ui.ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// GRIEVANCE TOOLS - ADDITIONAL FUNCTIONS
+// ============================================================================
+
+/**
+ * Setup Live Grievance Links - Syncs grievance data to Member Directory
+ * Uses static values (no formulas) to avoid #REF! errors
+ */
+function setupLiveGrievanceFormulas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Error: Member Directory not found.');
+    return;
+  }
+
+  ss.toast('Syncing grievance data to Member Directory...', '🔄 Sync', 3);
+
+  // Use sync function to populate with static values (no formulas)
+  syncGrievanceToMemberDirectory();
+
+  ss.toast('Grievance data synced! Columns AB-AD updated with static values.', '✅ Success', 3);
+}
+
+/**
+ * Setup Member ID dropdown in Grievance Log
+ * Creates data validation that references Member Directory Member IDs
+ */
+function setupGrievanceMemberDropdown() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!memberSheet || !grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  ss.toast('Setting up Member ID dropdown...', '🔄 Setup', 3);
+
+  // Get column letter for Member ID in Member Directory
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+
+  // Create data validation rule that references Member Directory Member IDs
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(memberSheet.getRange(mMemberIdCol + '2:' + mMemberIdCol), true)
+    .setAllowInvalid(true)  // Allow manual entry too
+    .build();
+
+  // Apply to Member ID column in Grievance Log (column B, rows 2-1000)
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).setDataValidation(rule);
+
+  ss.toast('Member ID dropdown set up!', '✅ Success', 3);
+}
+
+/**
+ * Fix existing "Overdue" text in Days to Deadline column
+ * Converts text back to negative numbers for proper counting
+ */
+function fixOverdueTextToNumbers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log not found.');
+    return;
+  }
+
+  ss.toast('Fixing overdue data...', '🔧 Fix', 3);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  var daysCol = GRIEVANCE_COLS.DAYS_TO_DEADLINE;
+  var nextActionCol = GRIEVANCE_COLS.NEXT_ACTION_DUE;
+
+  var daysData = sheet.getRange(2, daysCol, lastRow - 1, 1).getValues();
+  var nextActionData = sheet.getRange(2, nextActionCol, lastRow - 1, 1).getValues();
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var updates = [];
+  var fixCount = 0;
+
+  for (var i = 0; i < daysData.length; i++) {
+    var currentValue = daysData[i][0];
+    var nextAction = nextActionData[i][0];
+
+    if (currentValue === 'Overdue' && nextAction instanceof Date) {
+      var days = Math.floor((nextAction - today) / (1000 * 60 * 60 * 24));
+      updates.push([days]);
+      fixCount++;
+    } else {
+      updates.push([currentValue]);
+    }
+  }
+
+  if (fixCount > 0) {
+    sheet.getRange(2, daysCol, updates.length, 1).setValues(updates);
+    ss.toast('Fixed ' + fixCount + ' overdue entries!', '✅ Success', 3);
+  } else {
+    ss.toast('No "Overdue" text found to fix.', '✅ All Good', 3);
   }
 }

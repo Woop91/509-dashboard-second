@@ -527,7 +527,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 └── 📋 Grievance Tools
     ├── ➕ Start New Grievance
     ├── 🔄 Refresh Grievance Formulas
-    └── 🔄 Refresh Member Directory Data
+    ├── 🔄 Refresh Member Directory Data
+    ├── ────────────────
+    ├── 🔗 Setup Live Grievance Links
+    ├── 👤 Setup Member ID Dropdown
+    └── 🔧 Fix Overdue Text Data
 
 🔍 Search
 └── 🔍 Search Members

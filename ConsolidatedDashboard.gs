@@ -718,11 +718,11 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🌱 Seed Data')
         .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
         .addSeparator()
-        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
-        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
+        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
+        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
         .addSeparator()
-        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
-        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances'))
+        .addItem('👥 Seed 50 Members', 'seed50Members')
+        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
@@ -6068,17 +6068,174 @@ function SEED_MEMBERS_ADVANCED_DIALOG() {
 }
 
 /**
- * Seed 50 members with 30% grievances (shortcut)
+ * Seed 50 members shortcut (no auto-grievances, matching Code.gs/SeedNuke.gs)
  */
 function seed50Members() {
-  SEED_MEMBERS(50, 30);
+  SEED_MEMBERS(50, 0);
 }
 
 /**
- * Seed 100 members with 50% grievances (shortcut)
+ * Seed 25 grievances shortcut
  */
-function seed100MembersWithGrievances() {
-  SEED_MEMBERS(100, 50);
+function seed25Grievances() {
+  SEED_GRIEVANCES(25);
+}
+
+/**
+ * Prompt for grievance count to seed
+ */
+function SEED_GRIEVANCES_DIALOG() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.prompt(
+    'Seed Grievances',
+    'How many grievances to seed? (max 300)',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (response.getSelectedButton() === ui.Button.OK) {
+    var count = parseInt(response.getResponseText(), 10);
+    if (isNaN(count) || count < 1) {
+      ui.alert('Please enter a valid number.');
+      return;
+    }
+    SEED_GRIEVANCES(count);
+  }
+}
+
+/**
+ * Seed grievances for existing members
+ * Creates grievances linked to random existing members
+ */
+function SEED_GRIEVANCES(count) {
+  count = Math.min(count || 25, 300);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!grievanceSheet || !memberSheet || !configSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  // Get members
+  var memberData = memberSheet.getDataRange().getValues();
+  if (memberData.length < 2) {
+    SpreadsheetApp.getUi().alert('Error: No members found. Please seed members first.');
+    return;
+  }
+
+  ss.toast('Seeding ' + count + ' grievances...', 'Seeding', 3);
+
+  var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
+  var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
+  var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
+  var articles = DEFAULT_CONFIG.ARTICLES;
+  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled', 'Denied', 'Withdrawn'];
+
+  // Get config values for stewards
+  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
+  if (stewards.length === 0) stewards = ['Steward'];
+
+  var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
+
+  // Build set of existing grievance IDs
+  var existingGrievanceIds = {};
+  if (startRow > 2) {
+    var existingData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingGrievanceIds[existingData[e][0]] = true;
+      }
+    }
+  }
+
+  var rows = [];
+  var seededIds = [];
+  var batchSize = 25;
+  var today = new Date();
+
+  // Create shuffled list of member indices (excluding header row)
+  var memberIndices = [];
+  for (var m = 1; m < memberData.length; m++) {
+    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) {
+      memberIndices.push(m);
+    }
+  }
+  var shuffledMembers = shuffleArray(memberIndices);
+  var memberIndex = 0;
+
+  for (var i = 0; i < count; i++) {
+    // Use shuffled members - cycle through if more grievances than members
+    if (memberIndex >= shuffledMembers.length) {
+      shuffledMembers = shuffleArray(memberIndices);
+      memberIndex = 0;
+    }
+    var memberRow = memberData[shuffledMembers[memberIndex]];
+    memberIndex++;
+
+    var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
+    if (!memberId) continue;
+
+    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1] || '';
+    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1] || '';
+    var memberUnit = memberRow[MEMBER_COLS.UNIT - 1] || '';
+    var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
+    var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
+
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
+    existingGrievanceIds[grievanceId] = true;
+    seededIds.push(grievanceId);
+
+    var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
+    var status = randomChoice(statuses);
+    var step = randomChoice(steps);
+    var resolution = (status === 'Closed' || status === 'Settled' || status === 'Denied' || status === 'Won')
+      ? randomChoice(resolutions) : '';
+
+    var row = generateSingleGrievanceRow(
+      grievanceId,
+      memberId,
+      firstName,
+      lastName,
+      status,
+      step,
+      incidentDate,
+      randomChoice(articles),
+      randomChoice(categories),
+      memberEmail,
+      memberUnit,
+      memberLocation,
+      memberSteward,
+      resolution
+    );
+
+    rows.push(row);
+
+    // Write in batches
+    if (rows.length >= batchSize || i === count - 1) {
+      grievanceSheet.getRange(startRow, 1, rows.length, 34).setValues(rows);
+      startRow += rows.length;
+      rows = [];
+      Utilities.sleep(100);
+    }
+  }
+
+  // Re-apply checkboxes to Message Alert column
+  var lastRow = grievanceSheet.getLastRow();
+  if (lastRow >= 2) {
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
+  }
+
+  // Sync data from hidden formulas sheet
+  syncGrievanceFormulasToLog();
+
+  // Track seeded IDs
+  trackSeededGrievanceIdsBatch(seededIds);
+
+  ss.toast(count + ' grievances seeded!', 'Success', 3);
 }
 
 // ============================================================================
