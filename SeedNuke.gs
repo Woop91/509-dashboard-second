@@ -548,6 +548,13 @@ function SEED_GRIEVANCES(count) {
       memberIndices.push(m);
     }
   }
+
+  // Check if we found any valid members
+  if (memberIndices.length === 0) {
+    SpreadsheetApp.getUi().alert('Error: No members with valid Member IDs found. Please seed members first.');
+    return;
+  }
+
   var shuffledMembers = shuffleArray(memberIndices);
   var memberIndex = 0;
 
