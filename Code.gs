@@ -3,6 +3,10 @@
  *
  * Core setup functions, menu system, and sheet creation.
  *
+ * ⚠️ WARNING: DO NOT DEPLOY THIS FILE DIRECTLY
+ * This is a source file used to generate ConsolidatedDashboard.gs.
+ * Deploy ONLY ConsolidatedDashboard.gs to avoid function conflicts.
+ *
  * @version 1.0.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */

@@ -18,7 +18,11 @@
 
 ## Quick Start
 
-1. Deploy the 10 `.gs` files to Google Apps Script (or just ConsolidatedDashboard.gs)
+> ⚠️ **IMPORTANT: Deploy ONLY `ConsolidatedDashboard.gs`**
+> The modular `.gs` files are source files used to generate ConsolidatedDashboard.gs.
+> Deploying multiple files will cause function conflicts and trigger errors.
+
+1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
 2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
