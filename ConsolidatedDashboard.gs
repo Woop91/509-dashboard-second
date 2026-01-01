@@ -630,9 +630,11 @@ function onOpen() {
   // Main Dashboard Menu
   ui.createMenu('👤 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
+    .addItem('🎯 Interactive Dashboard', 'showInteractiveDashboardTab')
     .addSeparator()
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
+    .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
     .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addSeparator()
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
@@ -653,6 +655,7 @@ function onOpen() {
   // Sheet Manager Menu
   ui.createMenu('📊 Sheet Manager')
     .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
+    .addItem('📈 Refresh Interactive Charts', 'refreshInteractiveCharts')
     .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
     .addSeparator()
     .addSubMenu(ui.createMenu('📁 Google Drive')
