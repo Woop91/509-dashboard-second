@@ -4,6 +4,10 @@
  * Self-healing hidden calculation sheets with auto-sync triggers.
  * Provides automatic cross-sheet data population.
  *
+ * ⚠️ WARNING: DO NOT DEPLOY THIS FILE DIRECTLY
+ * This is a source file used to generate ConsolidatedDashboard.gs.
+ * Deploy ONLY ConsolidatedDashboard.gs to avoid function conflicts.
+ *
  * @version 1.0.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
@@ -397,9 +401,24 @@ function syncGrievanceFormulasToLog() {
   var metricsUpdates = [];        // Columns S, T, U (Days Open, Next Action Due, Days to Deadline)
   var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
 
+  // Track data quality issues
+  var orphanedGrievances = [];    // Grievances with non-existent Member IDs
+  var missingMemberIds = [];      // Grievances with no Member ID
+
   for (var j = 1; j < grievanceData.length; j++) {
     var row = grievanceData[j];
     var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || ('Row ' + (j + 1));
+
+    // Track data quality issues
+    if (!memberId) {
+      missingMemberIds.push(grievanceId);
+      Logger.log('WARNING: Grievance ' + grievanceId + ' has no Member ID');
+    } else if (!memberLookup[memberId]) {
+      orphanedGrievances.push(grievanceId + ' (Member ID: ' + memberId + ')');
+      Logger.log('WARNING: Grievance ' + grievanceId + ' references non-existent Member ID: ' + memberId);
+    }
+
     var memberInfo = memberLookup[memberId] || {};
 
     // Names (C-D) - from Member Directory
@@ -544,6 +563,25 @@ function syncGrievanceFormulasToLog() {
   }
 
   Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+
+  // Show warnings to user if data quality issues found
+  var warnings = [];
+  if (missingMemberIds.length > 0) {
+    warnings.push(missingMemberIds.length + ' grievance(s) have no Member ID');
+    Logger.log('Missing Member IDs: ' + missingMemberIds.join(', '));
+  }
+  if (orphanedGrievances.length > 0) {
+    warnings.push(orphanedGrievances.length + ' grievance(s) reference non-existent members');
+    Logger.log('Orphaned grievances: ' + orphanedGrievances.join(', '));
+  }
+
+  if (warnings.length > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      '⚠️ Data issues found:\n' + warnings.join('\n') + '\n\nCheck Logs for details.',
+      '⚠️ Sync Warning',
+      10
+    );
+  }
 }
 
 /**

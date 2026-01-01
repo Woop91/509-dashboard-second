@@ -718,11 +718,13 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🌱 Seed Data')
         .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
         .addSeparator()
-        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
+        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
         .addSeparator()
-        .addItem('👥 Seed 50 Members', 'seed50Members')
-        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
+        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
+        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances')
+        .addSeparator()
+        .addItem('📋 Seed Grievances Only (existing members)', 'SEED_GRIEVANCES_DIALOG'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
@@ -3877,9 +3879,24 @@ function syncGrievanceFormulasToLog() {
   var metricsUpdates = [];        // Columns S, T, U (Days Open, Next Action Due, Days to Deadline)
   var contactUpdates = [];        // Columns X, Y, Z, AA (Email, Unit, Location, Steward)
 
+  // Track data quality issues
+  var orphanedGrievances = [];    // Grievances with non-existent Member IDs
+  var missingMemberIds = [];      // Grievances with no Member ID
+
   for (var j = 1; j < grievanceData.length; j++) {
     var row = grievanceData[j];
     var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || ('Row ' + (j + 1));
+
+    // Track data quality issues
+    if (!memberId) {
+      missingMemberIds.push(grievanceId);
+      Logger.log('WARNING: Grievance ' + grievanceId + ' has no Member ID');
+    } else if (!memberLookup[memberId]) {
+      orphanedGrievances.push(grievanceId + ' (Member ID: ' + memberId + ')');
+      Logger.log('WARNING: Grievance ' + grievanceId + ' references non-existent Member ID: ' + memberId);
+    }
+
     var memberInfo = memberLookup[memberId] || {};
 
     // Names (C-D) - from Member Directory
@@ -4024,6 +4041,25 @@ function syncGrievanceFormulasToLog() {
   }
 
   Logger.log('Synced grievance formulas to ' + nameUpdates.length + ' grievances');
+
+  // Show warnings to user if data quality issues found
+  var warnings = [];
+  if (missingMemberIds.length > 0) {
+    warnings.push(missingMemberIds.length + ' grievance(s) have no Member ID');
+    Logger.log('Missing Member IDs: ' + missingMemberIds.join(', '));
+  }
+  if (orphanedGrievances.length > 0) {
+    warnings.push(orphanedGrievances.length + ' grievance(s) reference non-existent members');
+    Logger.log('Orphaned grievances: ' + orphanedGrievances.join(', '));
+  }
+
+  if (warnings.length > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      '⚠️ Data issues found:\n' + warnings.join('\n') + '\n\nCheck Logs for details.',
+      '⚠️ Sync Warning',
+      10
+    );
+  }
 }
 
 /**
@@ -6068,14 +6104,21 @@ function SEED_MEMBERS_ADVANCED_DIALOG() {
 }
 
 /**
- * Seed 50 members shortcut (no auto-grievances, matching Code.gs/SeedNuke.gs)
+ * Seed 50 members with 30% grievances (shortcut)
  */
 function seed50Members() {
-  SEED_MEMBERS(50, 0);
+  SEED_MEMBERS(50, 30);
 }
 
 /**
- * Seed 25 grievances shortcut
+ * Seed 100 members with 50% grievances (shortcut)
+ */
+function seed100MembersWithGrievances() {
+  SEED_MEMBERS(100, 50);
+}
+
+/**
+ * Seed 25 grievances for existing members (shortcut)
  */
 function seed25Grievances() {
   SEED_GRIEVANCES(25);

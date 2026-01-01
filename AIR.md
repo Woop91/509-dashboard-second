@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.3 (Drive/Calendar/Notifications Implemented)
-**Last Updated:** 2025-12-31
+**Version:** 1.5.4 (Unified Seeding & AIR Sync)
+**Last Updated:** 2026-01-01
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -18,7 +18,11 @@
 
 ## Quick Start
 
-1. Deploy the 9 `.gs` files to Google Apps Script
+> ⚠️ **IMPORTANT: Deploy ONLY `ConsolidatedDashboard.gs`**
+> The modular `.gs` files are source files used to generate ConsolidatedDashboard.gs.
+> Deploying multiple files will cause function conflicts and trigger errors.
+
+1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
 2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
@@ -80,7 +84,7 @@
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~1600 lines)
+**Code.gs** (~2900 lines)
 - `onOpen()` - Creates menu system (9 menus)
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
@@ -105,15 +109,17 @@
 - `createMenuChecklistSheet_()` - Auto-create Menu Checklist with 57 items in 13 testing phases
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
-**SeedNuke.gs** (~500 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 25 grievances
+**SeedNuke.gs** (~1200 lines)
+- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 15 grievances (30%)
 - `seedConfigData()` - Populate Config dropdowns
-- `SEED_MEMBERS(count)` - Seed N members (max 2000)
-- `SEED_GRIEVANCES(count)` - Seed N grievances (max 300)
-- `SEED_MEMBERS_DIALOG()` - Prompt for member count
-- `SEED_GRIEVANCES_DIALOG()` - Prompt for grievance count
-- `seed50Members()` - Shortcut: seed 50 members
-- `seed25Grievances()` - Shortcut: seed 25 grievances
+- `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (default 30%)
+- `SEED_GRIEVANCES(count)` - Seed N grievances for existing members (max 300)
+- `SEED_MEMBERS_DIALOG()` - Prompt for count (30% grievances auto-created)
+- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for count AND grievance percentage
+- `SEED_GRIEVANCES_DIALOG()` - Prompt for grievance count (existing members)
+- `seed50Members()` - Shortcut: 50 members with 30% grievances
+- `seed100MembersWithGrievances()` - Shortcut: 100 members with 50% grievances
+- `seed25Grievances()` - Shortcut: seed 25 grievances for existing members
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
 - `NUKE_ALL_DATA()` - Clear all data with confirmation
@@ -123,7 +129,7 @@
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~1500 lines)
+**HiddenSheets.gs** (~1800 lines)
 - `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
 - Hidden Sheet Setup Functions (5 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -148,7 +154,7 @@
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
-**ADHDFeatures.gs** (~400 lines) - ADHD Accessibility & Theming
+**ADHDFeatures.gs** (~260 lines) - ADHD Accessibility & Theming
 - `showADHDControlPanel()` - Main ADHD settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
 - `applyADHDSettings()` - Apply visual settings
@@ -164,13 +170,18 @@
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
 - `setupADHDDefaults()` - Initialize ADHD-friendly defaults
 
-**ConsolidatedDashboard.gs** (~2600 lines) - Complete Standalone Version
-- Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs in one file
+**ConsolidatedDashboard.gs** (~7000 lines) - Complete Standalone Version
+- Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs, etc. in one file
 - Intended for users who want to deploy without multiple file dependencies
-- Mirrors all functions from the modular version
+- **Enhanced Seeding**: `SEED_MEMBERS(count, grievancePercent)` - combined member + grievance seeding
+  - `SEED_MEMBERS_DIALOG()` - Prompt for count (30% grievances auto-created)
+  - `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for count AND grievance percentage
+  - `seed50Members()` - 50 members with 30% grievances
+  - `seed100MembersWithGrievances()` - 100 members with 50% grievances
+  - `SEED_GRIEVANCES(count)` - Seed grievances for existing members only
 - Includes `createMenuChecklistSheet_()` for auto-creating Menu Checklist on REPAIR_DASHBOARD
 
-**WebApp.gs** (~300 lines) - Web App Deployment for Mobile Access
+**WebApp.gs** (~500 lines) - Web App Deployment for Mobile Access
 - `doGet(e)` - Web app entry point, serves mobile dashboard
 - `getWebAppDashboardHtml()` - Main dashboard HTML
 - `getWebAppSearchHtml()` - Search interface HTML
@@ -218,7 +229,7 @@
   - `installValidationTrigger()` - Real-time validation on edit
   - `onEditValidation()` - Validation trigger handler
 
-**PerformanceUndo.gs** (~500 lines) - Caching Layer
+**PerformanceUndo.gs** (~300 lines) - Caching Layer
 - Caching (exposed in menu):
   - `getCachedData()` - Get data from cache or load
   - `setCachedData()` - Store data in cache
@@ -233,7 +244,7 @@
 - Undo/Redo (NOT in menu - use Google Sheets built-in Ctrl+Z/Ctrl+Y):
   - Functions exist but are not exposed in menu since Google Sheets has robust built-in undo/redo
 
-**MobileQuickActions.gs** (~600 lines) - Mobile Interface & Quick Actions
+**MobileQuickActions.gs** (~1100 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
   - `showMobileDashboard()` - Touch-optimized dashboard
   - `getMobileDashboardStats()` - Dashboard statistics
@@ -592,10 +603,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── ────────────────
 ├── 🌱 Seed Data
 │   ├── ⚙️ Seed Config Dropdowns Only
-│   ├── 👥 Seed Members (Custom Count)
-│   ├── 📋 Seed Grievances (Custom Count)
-│   ├── 👥 Seed 50 Members
-│   └── 📋 Seed 25 Grievances
+│   ├── 👥 Seed Members & Grievances (Custom)
+│   ├── 👥 Seed Members (Advanced - Set % Grievances)
+│   ├── 👥 Seed 50 Members (30% Grievances)
+│   ├── 👥 Seed 100 Members (50% Grievances)
+│   └── 📋 Seed Grievances Only (existing members)
 ├── ────────────────
 └── 🗑️ Nuke Data
     ├── ☢️ NUKE SEEDED DATA
@@ -799,6 +811,46 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.4 (2026-01-01) - Unified Seeding & AIR Sync
+
+**Unified Seeding Architecture:**
+
+All seeding now uses combined member + grievance approach across all files:
+
+- `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances (default 30%)
+- `SEED_MEMBERS_DIALOG()` - Prompts for count, auto-creates 30% grievances
+- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompts for both count AND grievance percentage
+- `seed50Members()` - 50 members with 30% grievances (~15 grievances)
+- `seed100MembersWithGrievances()` - 100 members with 50% grievances (~50 grievances)
+- `SEED_GRIEVANCES_DIALOG()` - Seeds grievances for existing members only
+
+**Demo Menu Updated:**
+
+```
+🎭 Demo > 🌱 Seed Data
+├── ⚙️ Seed Config Dropdowns Only
+├── 👥 Seed Members & Grievances (Custom)
+├── 👥 Seed Members (Advanced - Set % Grievances)
+├── 👥 Seed 50 Members (30% Grievances)
+├── 👥 Seed 100 Members (50% Grievances)
+└── 📋 Seed Grievances Only (existing members)
+```
+
+**Parity Achieved:**
+
+- Code.gs, SeedNuke.gs, and ConsolidatedDashboard.gs now have identical seeding functionality
+- All three files use the same Demo menu structure
+- ConsolidatedDashboard.gs remains a complete standalone copy
+
+**AIR.md Updates:**
+
+- Updated all file line counts to current values
+- Fixed Quick Start to show 10 .gs files
+- Documented unified seeding architecture
+- Date format confirmed as MM/dd/yyyy
+
+---
 
 ### Version 1.5.3 (2025-12-31) - Drive/Calendar/Notifications Implemented
 
