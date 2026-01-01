@@ -718,11 +718,13 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🌱 Seed Data')
         .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
         .addSeparator()
-        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
+        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
         .addSeparator()
-        .addItem('👥 Seed 50 Members', 'seed50Members')
-        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
+        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
+        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances')
+        .addSeparator()
+        .addItem('📋 Seed Grievances Only (existing members)', 'SEED_GRIEVANCES_DIALOG'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
@@ -6068,14 +6070,21 @@ function SEED_MEMBERS_ADVANCED_DIALOG() {
 }
 
 /**
- * Seed 50 members shortcut (no auto-grievances, matching Code.gs/SeedNuke.gs)
+ * Seed 50 members with 30% grievances (shortcut)
  */
 function seed50Members() {
-  SEED_MEMBERS(50, 0);
+  SEED_MEMBERS(50, 30);
 }
 
 /**
- * Seed 25 grievances shortcut
+ * Seed 100 members with 50% grievances (shortcut)
+ */
+function seed100MembersWithGrievances() {
+  SEED_MEMBERS(100, 50);
+}
+
+/**
+ * Seed 25 grievances for existing members (shortcut)
  */
 function seed25Grievances() {
   SEED_GRIEVANCES(25);

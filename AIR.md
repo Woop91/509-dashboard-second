@@ -164,10 +164,15 @@
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
 - `setupADHDDefaults()` - Initialize ADHD-friendly defaults
 
-**ConsolidatedDashboard.gs** (~2600 lines) - Complete Standalone Version
-- Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs in one file
+**ConsolidatedDashboard.gs** (~7000 lines) - Complete Standalone Version
+- Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs, etc. in one file
 - Intended for users who want to deploy without multiple file dependencies
-- Mirrors all functions from the modular version
+- **Enhanced Seeding**: `SEED_MEMBERS(count, grievancePercent)` - combined member + grievance seeding
+  - `SEED_MEMBERS_DIALOG()` - Prompt for count (30% grievances auto-created)
+  - `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for count AND grievance percentage
+  - `seed50Members()` - 50 members with 30% grievances
+  - `seed100MembersWithGrievances()` - 100 members with 50% grievances
+  - `SEED_GRIEVANCES(count)` - Seed grievances for existing members only
 - Includes `createMenuChecklistSheet_()` for auto-creating Menu Checklist on REPAIR_DASHBOARD
 
 **WebApp.gs** (~300 lines) - Web App Deployment for Mobile Access
@@ -592,10 +597,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── ────────────────
 ├── 🌱 Seed Data
 │   ├── ⚙️ Seed Config Dropdowns Only
-│   ├── 👥 Seed Members (Custom Count)
-│   ├── 📋 Seed Grievances (Custom Count)
-│   ├── 👥 Seed 50 Members
-│   └── 📋 Seed 25 Grievances
+│   ├── 👥 Seed Members & Grievances (Custom)
+│   ├── 👥 Seed Members (Advanced - Set % Grievances)
+│   ├── 👥 Seed 50 Members (30% Grievances)
+│   ├── 👥 Seed 100 Members (50% Grievances)
+│   └── 📋 Seed Grievances Only (existing members)
 ├── ────────────────
 └── 🗑️ Nuke Data
     ├── ☢️ NUKE SEEDED DATA
