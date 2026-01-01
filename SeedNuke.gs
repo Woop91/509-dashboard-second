@@ -269,11 +269,13 @@ function restoreConfigAndDropdowns() {
 }
 
 /**
- * Seed N members
+ * Seed sample members with optional grievances
  * @param {number} count - Number of members to seed (max 2000)
+ * @param {number} grievancePercent - Percentage of members to give grievances (0-100, default 30)
  */
-function SEED_MEMBERS(count) {
+function SEED_MEMBERS(count, grievancePercent) {
   count = Math.min(count || 50, 2000);
+  grievancePercent = (grievancePercent !== undefined) ? grievancePercent : 30; // Default 30% get grievances
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
@@ -425,7 +427,14 @@ function SEED_MEMBERS(count) {
   // Track seeded IDs for later cleanup (nuke only removes seeded data)
   trackSeededMemberIdsBatch(seededIds);
 
-  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
+  // Seed grievances if percentage > 0
+  var grievanceCount = Math.floor(count * grievancePercent / 100);
+  if (grievanceCount > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded! Now seeding ' + grievanceCount + ' grievances...', '✅ Members Done', 2);
+    SEED_GRIEVANCES(grievanceCount);
+  } else {
+    SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
+  }
 }
 
 /**
@@ -884,13 +893,13 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
 // ============================================================================
 
 /**
- * Show dialog to seed custom number of members
+ * Show dialog to seed custom number of members (30% get grievances by default)
  */
 function SEED_MEMBERS_DIALOG() {
   var ui = SpreadsheetApp.getUi();
   var response = ui.prompt(
-    '👥 Seed Members',
-    'How many members to seed? (max 2000)',
+    '👥 Seed Members & Grievances',
+    'How many members to seed? (30% will get grievances)\nMax 2000:',
     ui.ButtonSet.OK_CANCEL
   );
 
@@ -900,8 +909,43 @@ function SEED_MEMBERS_DIALOG() {
       ui.alert('Please enter a valid number.');
       return;
     }
-    SEED_MEMBERS(count);
+    SEED_MEMBERS(count, 30);
   }
+}
+
+/**
+ * Show dialog to seed custom number of members with custom grievance percentage
+ */
+function SEED_MEMBERS_ADVANCED_DIALOG() {
+  var ui = SpreadsheetApp.getUi();
+
+  var countResponse = ui.prompt(
+    '👥 Seed Members (Step 1/2)',
+    'How many members to seed? (max 2000)',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (countResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var count = parseInt(countResponse.getResponseText(), 10);
+  if (isNaN(count) || count < 1) {
+    ui.alert('Please enter a valid number.');
+    return;
+  }
+
+  var percentResponse = ui.prompt(
+    '📋 Grievance Percentage (Step 2/2)',
+    'What percentage of members should have grievances? (0-100)\nDefault: 30',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (percentResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var percent = parseInt(percentResponse.getResponseText(), 10);
+  if (isNaN(percent)) percent = 30;
+  percent = Math.max(0, Math.min(100, percent));
+
+  SEED_MEMBERS(count, percent);
 }
 
 /**
@@ -926,14 +970,21 @@ function SEED_GRIEVANCES_DIALOG() {
 }
 
 /**
- * Seed 50 members shortcut
+ * Seed 50 members with 30% grievances (shortcut)
  */
 function seed50Members() {
-  SEED_MEMBERS(50);
+  SEED_MEMBERS(50, 30);
 }
 
 /**
- * Seed 25 grievances shortcut
+ * Seed 100 members with 50% grievances (shortcut)
+ */
+function seed100MembersWithGrievances() {
+  SEED_MEMBERS(100, 50);
+}
+
+/**
+ * Seed 25 grievances for existing members (shortcut)
  */
 function seed25Grievances() {
   SEED_GRIEVANCES(25);
