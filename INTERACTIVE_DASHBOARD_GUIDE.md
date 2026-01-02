@@ -2,7 +2,26 @@
 
 ## Overview
 
-The **Interactive Dashboard** is a powerful, user-customizable analytics tool that lets you:
+There are **two** Interactive Dashboard options available:
+
+### 1. 🎯 Modal Popup Dashboard (⚠️ PROTECTED)
+
+**Menu:** `👤 Dashboard > 🎯 Interactive Dashboard`
+
+A **popup modal dialog** with a tabbed interface featuring:
+- **Overview Tab** - Quick stats and metrics at a glance
+- **Members Tab** - Searchable member directory with filtering
+- **Grievances Tab** - Status-filtered grievance list
+- **Analytics Tab** - Bar charts for status distribution and categories
+
+> ⚠️ **PROTECTED CODE:** This feature is user-approved and should not be modified.
+> See AIR.md "Protected Code" section for details.
+
+### 2. 📊 Sheet-Based Dashboard
+
+**Tab:** `🎯 Interactive` (spreadsheet tab)
+
+A **customizable spreadsheet tab** that lets you:
 - ✅ Select which metrics to display
 - ✅ Choose chart types (Pie, Donut, Bar, Line, Column, Area)
 - ✅ Compare multiple metrics side-by-side
@@ -11,6 +30,25 @@ The **Interactive Dashboard** is a powerful, user-customizable analytics tool th
 - ✅ Access real-time data visualization
 
 ---
+
+## 🎯 Modal Popup Dashboard (Protected)
+
+Access via: `👤 Dashboard > 🎯 Interactive Dashboard`
+
+This opens a popup with 4 tabs:
+
+| Tab | Features |
+|-----|----------|
+| **Overview** | Total members, stewards, grievance counts, win rate |
+| **Members** | Searchable list, click to view details |
+| **Grievances** | Status filter buttons, search, click for details |
+| **Analytics** | Bar charts, location/unit breakdowns, resolution stats |
+
+**Mobile-Friendly:** Touch-optimized with responsive design.
+
+---
+
+## 📊 Sheet-Based Dashboard Guide
 
 ## 🚀 Quick Start
 
