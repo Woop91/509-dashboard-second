@@ -45,18 +45,16 @@ const path = require('path');
  *   - Constants.gs
  *
  * Level 1 (Depends on Constants only):
- *   - SecurityUtils.gs
- *   - TestConfig.gs
- *   - HTMLTemplates.gs
- *   - I18n.gs
+ *   - Code.gs
+ *   - HiddenSheets.gs
+ *   - ADHDFeatures.gs
+ *   - PerformanceUndo.gs
+ *   - SeedNuke.gs
+ *   - WebApp.gs
+ *   - TestingValidation.gs
  *
- * Level 2 (Depends on Level 0-1):
- *   - Code.gs (Depends: Constants, SecurityUtils)
- *   - DataArchiving.gs (Depends: Constants, SecurityUtils, HTMLTemplates)
- *
- * Level 3+ (Depends on Level 0-2):
- *   - All feature modules (Depends: Constants, SecurityUtils, Code.gs)
- *   - Test modules (Depends: Constants, TestConfig)
+ * Level 2 (Depends on Constants + Code):
+ *   - MobileQuickActions.gs (Depends: Constants, Code.gs)
  */
 
 // Module order matters - dependencies must come first
@@ -94,16 +92,16 @@ function validateModuleDependencies() {
   const moduleSet = new Set(ALL_MODULES);
   const warnings = [];
 
-  // Define known dependencies
+  // Define known dependencies (only for modules that exist)
   const dependencies = {
-    'HTMLTemplates.gs': ['Constants.gs'],
-    'I18n.gs': ['Constants.gs'],
-    'TestConfig.gs': ['Constants.gs'],
     'Code.gs': ['Constants.gs'],
-    'DataArchiving.gs': ['Constants.gs', 'HTMLTemplates.gs'],
-    'TestFramework.gs': ['Constants.gs', 'TestConfig.gs'],
-    'Code.test.gs': ['TestFramework.gs', 'Code.gs'],
-    'Integration.test.gs': ['TestFramework.gs']
+    'HiddenSheets.gs': ['Constants.gs'],
+    'ADHDFeatures.gs': ['Constants.gs'],
+    'MobileQuickActions.gs': ['Constants.gs', 'Code.gs'],
+    'PerformanceUndo.gs': ['Constants.gs'],
+    'SeedNuke.gs': ['Constants.gs'],
+    'WebApp.gs': ['Constants.gs'],
+    'TestingValidation.gs': ['Constants.gs']
   };
 
   // Check each module's dependencies
