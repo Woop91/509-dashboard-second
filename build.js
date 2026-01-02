@@ -96,12 +96,11 @@ function validateModuleDependencies() {
 
   // Define known dependencies
   const dependencies = {
-    'SecurityUtils.gs': ['Constants.gs'],
     'HTMLTemplates.gs': ['Constants.gs'],
     'I18n.gs': ['Constants.gs'],
     'TestConfig.gs': ['Constants.gs'],
-    'Code.gs': ['Constants.gs', 'SecurityUtils.gs'],
-    'DataArchiving.gs': ['Constants.gs', 'SecurityUtils.gs', 'HTMLTemplates.gs'],
+    'Code.gs': ['Constants.gs'],
+    'DataArchiving.gs': ['Constants.gs', 'HTMLTemplates.gs'],
     'TestFramework.gs': ['Constants.gs', 'TestConfig.gs'],
     'Code.test.gs': ['TestFramework.gs', 'Code.gs'],
     'Integration.test.gs': ['TestFramework.gs']
