@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.4 (Unified Seeding & AIR Sync)
-**Last Updated:** 2026-01-01
+**Version:** 1.5.5 (Enhanced Customization & Data Quality)
+**Last Updated:** 2026-01-02
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -129,7 +129,7 @@
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~1800 lines)
+**HiddenSheets.gs** (~2000 lines)
 - `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
 - Hidden Sheet Setup Functions (5 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -138,7 +138,7 @@
   - `setupStewardContactCalcSheet()` - Steward contact tracking
   - `setupDashboardCalcSheet()` - Dashboard summary metrics (15 key metrics)
 - Sync Functions:
-  - `syncAllData()` - Sync all cross-sheet data
+  - `syncAllData()` - Sync all cross-sheet data with data quality validation
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
@@ -146,19 +146,26 @@
   - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
 - Trigger & Repair Functions:
   - `onEditAutoSync()` - Auto-sync trigger handler
-  - `installAutoSyncTrigger()` - Install the onEdit trigger
+  - `installAutoSyncTrigger()` - Interactive dialog with sync frequency and sheet options
+  - `installAutoSyncTriggerWithOptions(options)` - Install with specific options
+  - `getAutoSyncOptions()` - Get current auto-sync configuration
+  - `installAutoSyncTriggerQuick()` - Quick install with default settings
   - `removeAutoSyncTrigger()` - Remove the onEdit trigger
   - `repairAllHiddenSheets()` - Self-healing repair function
   - `repairGrievanceCheckboxes()` - Re-apply checkboxes to Grievance Log AC column
   - `repairMemberCheckboxes()` - Re-apply checkboxes to Member Directory AE column
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
+- Data Quality Functions:
+  - `checkDataQuality()` - Validate data integrity (missing member IDs, orphan grievances)
+  - `fixDataQualityIssues()` - Auto-fix common data quality issues
+  - `showGrievancesWithMissingMemberIds()` - Navigate to and highlight grievances missing member IDs
 
-**ADHDFeatures.gs** (~260 lines) - ADHD Accessibility & Theming
+**ADHDFeatures.gs** (~350 lines) - ADHD Accessibility & Theming
 - `showADHDControlPanel()` - Main ADHD settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
 - `applyADHDSettings()` - Apply visual settings
-- `activateFocusMode()`, `deactivateFocusMode()` - Focus mode (hide non-essential sheets)
+- `activateFocusMode()`, `deactivateFocusMode()` - Focus mode (hide non-essential sheets, shows comprehensive documentation)
 - `toggleZebraStripes()`, `applyZebraStripes()`, `removeZebraStripes()` - Row banding
 - `toggleGridlinesADHD()`, `hideAllGridlines()`, `showAllGridlines()` - Gridline control
 - `toggleReducedMotion()` - Animation preferences
@@ -168,7 +175,9 @@
 - `showThemeManager()` - Theme selection UI
 - `applyTheme()`, `applyThemeToSheet()`, `previewTheme()` - Theme application
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
-- `setupADHDDefaults()` - Initialize ADHD-friendly defaults
+- `setupADHDDefaults()` - Interactive dialog with customizable options (gridlines, zebra, font size, focus mode)
+- `applyADHDDefaultsWithOptions(options)` - Apply ADHD defaults with specific options
+- `undoADHDDefaults()` - Revert ADHD-friendly settings to defaults
 
 **ConsolidatedDashboard.gs** (~7000 lines) - Complete Standalone Version
 - Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs, etc. in one file
@@ -191,14 +200,15 @@
 
 **Drive/Calendar/Notifications** (Code.gs & ConsolidatedDashboard.gs)
 - **Google Drive Integration**:
-  - `setupDriveFolderForGrievance()` - Create folder for selected grievance
-  - `showGrievanceFiles()` - View files in grievance folder
-  - `batchCreateGrievanceFolders()` - Create folders for all grievances
+  - `setupDriveFolderForGrievance()` - Create folder for selected grievance (shows row selection message if no row selected)
+  - `showGrievanceFiles()` - View files in grievance folder (shows row selection message if no row selected)
+  - `batchCreateGrievanceFolders()` - Create folders for all grievances (shows confirmation dialog)
   - `getOrCreateDashboardFolder_()` - Get/create root "509 Dashboard - Grievance Files" folder
 - **Calendar Sync**:
-  - `syncDeadlinesToCalendar()` - Create all-day events for upcoming deadlines
-  - `showUpcomingDeadlinesFromCalendar()` - Show next 7 days of events
+  - `syncDeadlinesToCalendar()` - Create all-day events with rate limiting (100ms throttle, batched processing)
+  - `showUpcomingDeadlinesFromCalendar()` - Show next 7 days with member names (e.g., "Step I Due (John Smith)")
   - `clearAllCalendarEvents()` - Remove all grievance calendar events
+  - `buildGrievanceMemberLookup()` - Helper function for member name lookup
 - **Email Notifications**:
   - `showNotificationSettings()` - Enable/disable daily 8 AM deadline emails
   - `testDeadlineNotifications()` - Send test email to verify setup
@@ -244,7 +254,7 @@
 - Undo/Redo (NOT in menu - use Google Sheets built-in Ctrl+Z/Ctrl+Y):
   - Functions exist but are not exposed in menu since Google Sheets has robust built-in undo/redo
 
-**MobileQuickActions.gs** (~1100 lines) - Mobile Interface & Quick Actions
+**MobileQuickActions.gs** (~1200 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
   - `showMobileDashboard()` - Touch-optimized dashboard
   - `getMobileDashboardStats()` - Dashboard statistics
@@ -254,7 +264,7 @@
   - `getMobileSearchData()` - Search handler
   - `showMyAssignedGrievances()` - View user's assigned cases
 - Quick Actions:
-  - `showQuickActionsMenu()` - Context-aware quick actions
+  - `showQuickActionsMenu()` - Context-aware quick actions with detailed help (explains supported sheets and available actions)
   - `showMemberQuickActions()` - Quick actions for member row
   - `showGrievanceQuickActions()` - Quick actions for grievance row
   - `quickUpdateGrievanceStatus()` - One-click status update
@@ -596,7 +606,8 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── 🔧 REPAIR DASHBOARD
 ├── ────────────────
 ├── ⚙️ Setup Data Validations
-└── 🎨 Setup ADHD Defaults
+├── 🎨 Setup ADHD Defaults
+└── ↩️ Undo ADHD Defaults
 
 🎭 Demo (hidden if demo mode disabled)
 ├── 🚀 Seed All Sample Data
@@ -629,6 +640,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 │   ├── 🔧 Repair All Hidden Sheets
 │   ├── ⚡ Install Auto-Sync Trigger
 │   └── 🚫 Remove Auto-Sync Trigger
+├── ────────────────
+├── 🩺 Data Quality
+│   ├── 🔍 Check Data Quality
+│   ├── 🔧 Fix Missing Member IDs
+│   └── 📋 Show Grievances Missing IDs
 ├── ────────────────
 └── 🔄 Manual Sync
     ├── 🔄 Sync All Data Now
@@ -811,6 +827,64 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.5 (2026-01-02) - Enhanced Customization & Data Quality
+
+**ADHDFeatures.gs Enhancements:**
+
+- `setupADHDDefaults()` - Now shows interactive dialog with customizable options:
+  - Checkbox options for gridlines, zebra stripes, font size, and focus mode
+  - Users can select which features to apply
+- `applyADHDDefaultsWithOptions(options)` - New function to apply specific ADHD settings
+- `undoADHDDefaults()` - New function to revert ADHD-friendly settings to defaults
+- `activateFocusMode()` - Enhanced with comprehensive documentation explaining what it does
+
+**HiddenSheets.gs Enhancements:**
+
+- `installAutoSyncTrigger()` - Now shows interactive dialog with customization options:
+  - Sync frequency selection (Instant, 5 min, 15 min, Manual only)
+  - Sheet selection (sync Grievance Log, Member Directory, or both)
+- `installAutoSyncTriggerWithOptions(options)` - New function to install with specific options
+- `getAutoSyncOptions()` - New function to get current auto-sync configuration
+- `installAutoSyncTriggerQuick()` - New function for quick install with default settings
+- `syncAllData()` - Now includes data quality validation and shows warnings for issues
+
+**Data Quality System (New):**
+
+- `checkDataQuality()` - Validates data integrity (missing member IDs, orphan grievances)
+- `fixDataQualityIssues()` - Auto-fix common data quality issues
+- `showGrievancesWithMissingMemberIds()` - Navigate to and highlight grievances without member IDs
+- Added "🩺 Data Quality" submenu to Administrator menu
+
+**Calendar Integration Improvements:**
+
+- `syncDeadlinesToCalendar()` - Added rate limiting (100ms throttle between events)
+  - Batch processing for large datasets
+  - Graceful handling of API rate limit errors
+- `showUpcomingDeadlinesFromCalendar()` - Now shows member names with each deadline
+  - Format: "• 01/15: Grievance GR-001 - Step I Due (John Smith)"
+- `buildGrievanceMemberLookup()` - New helper function for member name lookup
+
+**MobileQuickActions.gs Enhancements:**
+
+- `showQuickActionsMenu()` - Enhanced with detailed help when no row is selected
+  - Explains which sheets support quick actions (Member Directory, Grievance Log)
+  - Lists available actions for each sheet type
+
+**Menu Updates:**
+
+- Added "↩️ Undo ADHD Defaults" to Setup menu
+- Added "🩺 Data Quality" submenu to Administrator menu with:
+  - Check Data Quality
+  - Fix Missing Member IDs
+  - Show Grievances Missing IDs
+
+**Build System:**
+
+- Fixed build.js to only include existing modules (was listing 80+ non-existent files)
+- CORE_MODULES now correctly lists the 9 actual .gs files
+
+---
 
 ### Version 1.5.4 (2026-01-01) - Unified Seeding & AIR Sync
 
