@@ -2447,26 +2447,6 @@ function unfreezeAllColumns() {
 // TESTING FUNCTIONS
 // ============================================================================
 
-/**
- * Run all tests (stub - TestingValidation.gs not included)
- */
-function runAllTests() {
-  SpreadsheetApp.getUi().alert('🧪 Run All Tests',
-    'Test framework not yet implemented.\n\n' +
-    'To add tests, create TestingValidation.gs with test functions.',
-    SpreadsheetApp.getUi().ButtonSet.OK);
-}
-
-/**
- * Run quick tests (stub - TestingValidation.gs not included)
- */
-function runQuickTests() {
-  SpreadsheetApp.getUi().alert('⚡ Run Quick Tests',
-    'Test framework not yet implemented.\n\n' +
-    'To add tests, create TestingValidation.gs with test functions.',
-    SpreadsheetApp.getUi().ButtonSet.OK);
-}
-
 function viewTestResults() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.TEST_RESULTS);
@@ -2480,20 +2460,6 @@ function viewTestResults() {
 // ============================================================================
 // NAVIGATION FUNCTIONS (Menu Items)
 // ============================================================================
-
-/**
- * Navigate to the Interactive Dashboard sheet
- */
-function showInteractiveDashboardTab() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE);
-  if (sheet) {
-    ss.setActiveSheet(sheet);
-    ss.toast('Viewing Interactive Dashboard', '🎯 Interactive', 2);
-  } else {
-    SpreadsheetApp.getUi().alert('Interactive Dashboard not found. Run REPAIR DASHBOARD to create it.');
-  }
-}
 
 /**
  * Refresh Interactive Dashboard charts and data
@@ -2514,25 +2480,6 @@ function refreshInteractiveCharts() {
   // Navigate to it
   ss.setActiveSheet(sheet);
   ss.toast('Interactive Dashboard refreshed!', '✅ Done', 2);
-}
-
-/**
- * Show the Web App URL for mobile access
- */
-function showWebAppUrl() {
-  var ui = SpreadsheetApp.getUi();
-  var scriptId = ScriptApp.getScriptId();
-
-  ui.alert('📱 Mobile App URL',
-    'To get your mobile dashboard URL:\n\n' +
-    '1. Go to Extensions → Apps Script\n' +
-    '2. Click "Deploy" → "Manage deployments"\n' +
-    '3. Create a new deployment as "Web app"\n' +
-    '4. Set access to your organization\n' +
-    '5. Copy the Web app URL\n\n' +
-    'Script ID: ' + scriptId + '\n\n' +
-    'Bookmark the URL on your mobile device for quick access!',
-    ui.ButtonSet.OK);
 }
 
 // ============================================================================
