@@ -29,6 +29,39 @@
 
 ---
 
+## ⚠️ Protected Code - DO NOT MODIFY
+
+The following code sections are **USER APPROVED** and should **NOT be modified or removed**:
+
+### Interactive Dashboard Modal Popup
+
+**Location:** `ConsolidatedDashboard.gs` (lines 7536-8160) and `MobileQuickActions.gs` (lines 540-1164)
+
+**Protected Functions:**
+| Function | Purpose |
+|----------|---------|
+| `showInteractiveDashboardTab()` | Opens the modal dialog popup |
+| `getInteractiveDashboardHtml()` | Returns the HTML/CSS/JS for the tabbed UI |
+| `getInteractiveOverviewData()` | Fetches overview statistics |
+| `getInteractiveMemberData()` | Fetches member list data |
+| `getInteractiveGrievanceData()` | Fetches grievance list data |
+| `getInteractiveAnalyticsData()` | Fetches analytics/charts data |
+
+**Features:**
+- 4 Tabs: Overview, Members, Grievances, Analytics
+- Live search and status filtering
+- Mobile-responsive design with touch targets
+- Bar charts for status distribution and categories
+
+**Menu Location:** `👤 Dashboard > 🎯 Interactive Dashboard`
+
+**Added:** December 29, 2025 (commit c75c1cc)
+
+> ⚠️ **WARNING:** This code is marked with visual protection banners in the source files.
+> Do not modify these functions without explicit user approval.
+
+---
+
 ## File Architecture
 
 ### Project Structure (10 Files)
@@ -965,8 +998,8 @@ All seeding now uses combined member + grievance approach across all files:
    - Daily trigger notifies when grievances are due within 3 days
 
 4. **Navigation Functions** (3 functions):
-   - `showInteractiveDashboardTab()` - Navigate to Interactive Dashboard
-   - `refreshInteractiveCharts()` - Refresh Interactive Dashboard data
+   - `showInteractiveDashboardTab()` - ⚠️ **PROTECTED** - Opens Interactive Dashboard modal popup with 4 tabs
+   - `refreshInteractiveCharts()` - Refresh Interactive Dashboard sheet data
    - `showWebAppUrl()` - Show instructions for mobile web app setup
 
 **Fixes:**

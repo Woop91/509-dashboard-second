@@ -168,7 +168,7 @@ Dashboard (Real-time metrics and visualizations)
 
 ### Advanced Features
 ✅ **Three-Tier Menu System** - Role-based menu organization (User, Manager, Admin)
-✅ **Interactive Dashboard** - Real-time metrics with visual analytics
+✅ **Interactive Dashboard** - Real-time metrics with visual analytics ⚠️ *PROTECTED*
 ✅ **Google Drive Integration** - Auto-create folders for grievances, file management
 ✅ **Gmail Integration** - Email templates, communications log, bulk notifications
 ✅ **Calendar Integration** - Sync deadlines, deadline reminders
