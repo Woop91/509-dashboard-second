@@ -65,95 +65,22 @@ const CORE_MODULES = [
   // ===== LEVEL 0: CORE INFRASTRUCTURE (NO DEPENDENCIES) =====
   'Constants.gs',  // [CORE] Provides: SHEETS, MEMBER_COLS, COLORS, ERROR_MESSAGES, etc.
 
-  // ===== LEVEL 1: DEPENDS ON CONSTANTS ONLY =====
-  'SecurityUtils.gs',   // [DEPENDS: Constants] Provides: sanitizeHTML, requireRole, isAdmin
-  'HTMLTemplates.gs',   // [DEPENDS: Constants] Provides: createHTMLPage, createButton, etc.
-  'I18n.gs',           // [DEPENDS: Constants] Provides: t(), getUserLanguage, translations
-  'TestConfig.gs',     // [DEPENDS: Constants] Provides: TEST_CONFIG, getTestSpreadsheet
+  // ===== LEVEL 1: MAIN SETUP & UTILITIES =====
+  'Code.gs',           // [DEPENDS: Constants] Provides: CREATE_509_DASHBOARD, onOpen
 
-  // ===== LEVEL 2: MAIN SETUP & UTILITIES =====
-  'Code.gs',           // [DEPENDS: Constants, SecurityUtils] Provides: CREATE_509_DASHBOARD, onOpen
-  'DataArchiving.gs',  // [DEPENDS: Constants, SecurityUtils, HTMLTemplates] Provides: archiveOldGrievances
-
-  // ===== LEVEL 3: FEATURE MODULES (ALPHABETICAL) =====
-  // All feature modules depend on: Constants, SecurityUtils, Code.gs
-  'ADHDEnhancements.gs',
-  'AdminGrievanceMessages.gs',
-  'AdvancedExport.gs',
-  'AdvancedVisualization.gs',
-  'AuditLoggingRBAC.gs',          // Audit logging and role-based access control
-  'AutoRefresh.gs',
-  'BenchmarkTools.gs',
-  'EnhancedADHDFeatures.gs',
-  'EnhancedHelp.gs',              // Enhanced help system
-  'AutomatedNotifications.gs',
-  'AutomatedReports.gs',
-  'BatchGrievanceRecalc.gs',
-  'BatchOperations.gs',
-  'CalendarIntegration.gs',
-  'ColumnToggles.gs',
-  'ContextSensitiveHelp.gs',        // Context-sensitive help system
-  'CoordinatorNotification.gs',      // Feature 95: Coordinator notification system
-  'CustomReportBuilder.gs',
-  'DarkModeThemes.gs',
-  'DashboardFixes.gs',            // Dashboard fix utilities and analytics population
-  'DataBackupRecovery.gs',
-  'DataCachingLayer.gs',
-  'DataIntegrityEnhancements.gs',
-  'DataPagination.gs',
-  'DistributedLocks.gs',
-  'EmailUnsubscribeSystem.gs',     // Email opt-out/unsubscribe system
-  'EnhancedErrorHandling.gs',
-  'EnhancedValidation.gs',         // Email/phone validation system
-  'FAQKnowledgeBase.gs',
-  'GettingStartedAndFAQ.gs',
-  'GmailIntegration.gs',
-  'GoogleDriveIntegration.gs',
-  'GracefulDegradation.gs',
-  'GrievanceFloatToggle.gs',
-  'GrievanceWorkflow.gs',
-  'HiddenSheets.gs',
-  'IdempotentOperations.gs',
-  'IncrementalBackupSystem.gs',
-  'InteractiveDashboard.gs',
-  'InteractiveTutorial.gs',         // Interactive onboarding tutorials
-  'KeyboardShortcuts.gs',
-  'LazyLoadCharts.gs',
-  'MemberDirectoryDropdowns.gs',
-  'MemberDirectoryGoogleFormLink.gs',
-  'MemberSearch.gs',
-  'MobileOptimization.gs',
-  'NotificationCenter.gs',
-  'OperationsAnalytics.gs',       // Merged analytics dashboard (Trends, Location, Type, Member Engagement, Cost Impact)
-  'OptimizedDashboardRebuild.gs',
-  'PerformanceAndBackup.gs',      // Performance monitoring and backup features
-  'PerformanceMonitoring.gs',
-  'Phase6Integration.gs',
-  'PIIProtection.gs',               // PII protection and GDPR compliance
-  'PredictiveAnalytics.gs',
-  'QuickActionsMenu.gs',            // Right-click context menu
-  'QuickFilters.gs',
-  'ReleaseNotes.gs',                // Release notes and version tracking
-  'ReorganizedMenu.gs',
-  'RootCauseAnalysis.gs',
-  'SecurityAndAdmin.gs',          // Security and admin functions
-  'SecurityService.gs',           // Advanced security service layer
-  'SeedNuke.gs',
-  'SessionManagement.gs',           // Session management and user tracking
-  'SmartAutoAssignment.gs',
-  'TransactionRollback.gs',
-  'UIFeatures.gs',                // UI-specific features
-  'UndoRedoSystem.gs',
-  'UnifiedOperationsMonitor.gs',
-  'UtilityService.gs',
-  'WorkflowStateMachine.gs'
+  // ===== LEVEL 2: FEATURE MODULES =====
+  'HiddenSheets.gs',       // Hidden sheet architecture for self-healing calculations
+  'ADHDFeatures.gs',       // ADHD accessibility and theming features
+  'MobileQuickActions.gs', // Mobile-optimized interface with device detection
+  'PerformanceUndo.gs',    // Performance caching and undo/redo system
+  'SeedNuke.gs',           // Demo mode seeding and clearing
+  'WebApp.gs',             // Web app deployment for mobile access
+  'TestingValidation.gs'   // Unit/integration testing framework
 ];
 
 // TEST_MODULES - Test modules (excluded in production builds)
 const TEST_MODULES = [
-  'TestFramework.gs',     // [DEPENDS: Constants, TestConfig] Provides: runAllTests, Assert
-  'Code.test.gs',         // [DEPENDS: TestFramework, Code.gs] Unit tests
-  'Integration.test.gs'   // [DEPENDS: TestFramework, All modules] Integration tests
+  // No separate test modules currently - tests are in TestingValidation.gs
 ];
 
 /**

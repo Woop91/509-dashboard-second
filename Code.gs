@@ -117,6 +117,7 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
     .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
+    .addItem('↩️ Undo ADHD Defaults', 'undoADHDDefaults')
     .addToUi();
 
   // Demo Menu - only show if demo mode is not disabled
@@ -175,6 +176,9 @@ function onOpen() {
       .addItem('🚫 Disable Audit Tracking', 'removeAuditTrigger')
       .addSeparator()
       .addItem('🗑️ Clear Old Entries (30+ days)', 'clearOldAuditEntries'))
+    .addSubMenu(ui.createMenu('🩺 Data Quality')
+      .addItem('🔍 Check Data Quality', 'fixDataQualityIssues')
+      .addItem('📋 View Missing Member IDs', 'showGrievancesWithMissingMemberIds'))
     .addToUi();
 }
 
@@ -2743,7 +2747,7 @@ function batchCreateGrievanceFolders() {
 // ============================================================================
 
 /**
- * Sync grievance deadlines to Google Calendar
+ * Sync grievance deadlines to Google Calendar with rate limit handling
  */
 function syncDeadlinesToCalendar() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -2755,97 +2759,208 @@ function syncDeadlinesToCalendar() {
     return;
   }
 
-  var response = ui.alert('📅 Sync to Calendar',
-    'This will create calendar events for upcoming grievance deadlines.\n\n' +
-    'Events will be created in your primary Google Calendar.\n\nContinue?',
-    ui.ButtonSet.YES_NO);
-
-  if (response !== ui.Button.YES) return;
-
-  ss.toast('Syncing deadlines to calendar...', '📅 Calendar', -1);
-
   var data = sheet.getDataRange().getValues();
-  var calendar = CalendarApp.getDefaultCalendar();
-  var created = 0;
-  var skipped = 0;
+  var eventsToCreate = [];
   var today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // First pass: count events to create
   for (var i = 1; i < data.length; i++) {
     var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
     var status = data[i][GRIEVANCE_COLS.STATUS - 1];
     var nextActionDue = data[i][GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
     var currentStep = data[i][GRIEVANCE_COLS.CURRENT_STEP - 1];
 
-    // Skip closed grievances
-    if (!grievanceId || !nextActionDue) {
-      skipped++;
-      continue;
-    }
+    if (!grievanceId || !nextActionDue) continue;
 
     var closedStatuses = ['Closed', 'Settled', 'Won', 'Denied', 'Withdrawn'];
-    if (closedStatuses.indexOf(status) !== -1) {
-      skipped++;
-      continue;
-    }
+    if (closedStatuses.indexOf(status) !== -1) continue;
 
     var dueDate = new Date(nextActionDue);
-    if (isNaN(dueDate.getTime()) || dueDate < today) {
-      skipped++;
-      continue;
-    }
+    if (isNaN(dueDate.getTime()) || dueDate < today) continue;
 
-    // Check if event already exists
-    var eventTitle = '⚠️ ' + grievanceId + ' - ' + currentStep + ' Due';
-    var existingEvents = calendar.getEventsForDay(dueDate, {search: grievanceId});
-
-    if (existingEvents.length > 0) {
-      skipped++;
-      continue;
-    }
-
-    // Create all-day event
-    calendar.createAllDayEvent(eventTitle, dueDate, {
-      description: 'Grievance: ' + grievanceId + '\nStatus: ' + status + '\nStep: ' + currentStep + '\n\nCreated by 509 Dashboard'
+    eventsToCreate.push({
+      grievanceId: grievanceId,
+      status: status,
+      currentStep: currentStep,
+      dueDate: dueDate
     });
-    created++;
   }
 
-  ss.toast('Done! Created ' + created + ' events', '✅ Complete', 5);
-  ui.alert('📅 Sync Complete',
-    'Created: ' + created + ' calendar events\n' +
-    'Skipped: ' + skipped + ' (closed, past, or already exists)',
-    ui.ButtonSet.OK);
-}
+  // Warn if too many events
+  if (eventsToCreate.length > 50) {
+    var response = ui.alert('⚠️ Large Sync Warning',
+      'You are about to create up to ' + eventsToCreate.length + ' calendar events.\n\n' +
+      'Creating too many events in a short time may trigger Google\'s rate limits.\n\n' +
+      'Recommended: Sync in batches of 50 or less.\n\n' +
+      'Continue with first 50 events only?',
+      ui.ButtonSet.YES_NO);
 
-/**
- * Show upcoming deadlines from calendar
- */
-function showUpcomingDeadlinesFromCalendar() {
-  var ui = SpreadsheetApp.getUi();
-  var calendar = CalendarApp.getDefaultCalendar();
+    if (response !== ui.Button.YES) return;
+    eventsToCreate = eventsToCreate.slice(0, 50);
+  } else {
+    var response = ui.alert('📅 Sync to Calendar',
+      'This will create calendar events for ' + eventsToCreate.length + ' upcoming grievance deadlines.\n\n' +
+      'Events will be created in your primary Google Calendar.\n\nContinue?',
+      ui.ButtonSet.YES_NO);
 
-  var today = new Date();
-  var nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+    if (response !== ui.Button.YES) return;
+  }
 
-  var events = calendar.getEvents(today, nextWeek, {search: 'Grievance'});
+  ss.toast('Syncing deadlines to calendar...', '📅 Calendar', -1);
 
-  if (events.length === 0) {
-    ui.alert('📅 Upcoming Deadlines',
-      'No grievance deadlines in the next 7 days!\n\n' +
-      'Use "Sync Deadlines to Calendar" to add deadline events.',
+  var calendar;
+  try {
+    calendar = CalendarApp.getDefaultCalendar();
+  } catch (error) {
+    ui.alert('❌ Calendar Error',
+      'Could not access your calendar.\n\n' +
+      'Error: ' + error.message + '\n\n' +
+      'Make sure you have authorized calendar access.',
       ui.ButtonSet.OK);
     return;
   }
 
-  var eventList = events.map(function(e) {
-    var date = Utilities.formatDate(e.getStartTime(), Session.getScriptTimeZone(), 'MM/dd');
-    return '• ' + date + ': ' + e.getTitle();
+  var created = 0;
+  var skipped = 0;
+  var rateLimited = false;
+
+  for (var j = 0; j < eventsToCreate.length; j++) {
+    var event = eventsToCreate[j];
+
+    try {
+      // Check if event already exists
+      var eventTitle = '⚠️ ' + event.grievanceId + ' - ' + event.currentStep + ' Due';
+      var existingEvents = calendar.getEventsForDay(event.dueDate, {search: event.grievanceId});
+
+      if (existingEvents.length > 0) {
+        skipped++;
+        continue;
+      }
+
+      // Create all-day event
+      calendar.createAllDayEvent(eventTitle, event.dueDate, {
+        description: 'Grievance: ' + event.grievanceId + '\nStatus: ' + event.status + '\nStep: ' + event.currentStep + '\n\nCreated by 509 Dashboard'
+      });
+      created++;
+
+      // Throttle to avoid rate limits (1 per 100ms)
+      if (j < eventsToCreate.length - 1) {
+        Utilities.sleep(100);
+      }
+
+    } catch (error) {
+      if (error.message.indexOf('too many') !== -1 ||
+          error.message.indexOf('rate') !== -1 ||
+          error.message.indexOf('quota') !== -1) {
+        rateLimited = true;
+        Logger.log('Rate limit hit at event ' + (j + 1));
+        break;
+      }
+      Logger.log('Error creating event for ' + event.grievanceId + ': ' + error.message);
+      skipped++;
+    }
+  }
+
+  ss.toast('Done! Created ' + created + ' events', '✅ Complete', 5);
+
+  if (rateLimited) {
+    ui.alert('⚠️ Rate Limit Reached',
+      'Google Calendar rate limit was reached.\n\n' +
+      'Created: ' + created + ' events before limit\n' +
+      'Remaining: ' + (eventsToCreate.length - j) + ' events not synced\n\n' +
+      'Please wait 1-2 minutes and try again to sync remaining events.',
+      ui.ButtonSet.OK);
+  } else {
+    ui.alert('📅 Sync Complete',
+      'Created: ' + created + ' calendar events\n' +
+      'Skipped: ' + skipped + ' (already exists or error)\n' +
+      'Total processed: ' + eventsToCreate.length,
+      ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Show upcoming deadlines from calendar with member names
+ */
+function showUpcomingDeadlinesFromCalendar() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    var calendar = CalendarApp.getDefaultCalendar();
+    var today = new Date();
+    var nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    var events = calendar.getEvents(today, nextWeek, {search: 'Grievance'});
+
+    if (events.length === 0) {
+      ui.alert('📅 Upcoming Deadlines',
+        'No grievance deadlines in the next 7 days!\n\n' +
+        'Use "Sync Deadlines to Calendar" to add deadline events.',
+        ui.ButtonSet.OK);
+      return;
+    }
+
+    // Build a lookup of grievance IDs to member names
+    var memberLookup = buildGrievanceMemberLookup();
+
+    var eventList = events.map(function(e) {
+      var date = Utilities.formatDate(e.getStartTime(), Session.getScriptTimeZone(), 'MM/dd');
+      var title = e.getTitle();
+
+      // Extract grievance ID from title (format: "Grievance GR-XXXX: Step X Due")
+      var match = title.match(/Grievance\s+(GR-\d+)/i);
+      var memberInfo = '';
+
+      if (match && match[1] && memberLookup[match[1]]) {
+        memberInfo = ' (' + memberLookup[match[1]] + ')';
+      }
+
+      return '• ' + date + ': ' + title + memberInfo;
+    });
+
+    ui.alert('📅 Upcoming Deadlines (Next 7 Days)',
+      'Events with member names:\n\n' + eventList.join('\n'),
+      ui.ButtonSet.OK);
+
+  } catch (error) {
+    if (error.message.indexOf('too many') !== -1 || error.message.indexOf('rate') !== -1) {
+      ui.alert('⚠️ Calendar Rate Limit',
+        'Google Calendar is temporarily limiting requests.\n\n' +
+        'Please wait a few minutes and try again.\n\n' +
+        'Tip: Avoid running calendar operations repeatedly in quick succession.',
+        ui.ButtonSet.OK);
+    } else {
+      ui.alert('❌ Calendar Error', error.message, ui.ButtonSet.OK);
+    }
+  }
+}
+
+/**
+ * Build a lookup map of grievance IDs to member names
+ * @return {Object} Map of grievanceId -> "First Last"
+ */
+function buildGrievanceMemberLookup() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var lookup = {};
+
+  if (!sheet || sheet.getLastRow() <= 1) return lookup;
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.LAST_NAME).getValues();
+
+  data.forEach(function(row) {
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var firstName = row[GRIEVANCE_COLS.FIRST_NAME - 1] || '';
+    var lastName = row[GRIEVANCE_COLS.LAST_NAME - 1] || '';
+
+    if (grievanceId) {
+      lookup[grievanceId] = (firstName + ' ' + lastName).trim() || 'Unknown';
+    }
   });
 
-  ui.alert('📅 Upcoming Deadlines (Next 7 Days)',
-    eventList.join('\n'),
-    ui.ButtonSet.OK);
+  return lookup;
 }
 
 /**
