@@ -1,14 +1,54 @@
-# 🚨 Seed Nuke Feature - Exit Demo Mode
+# 🚨 Seed & Nuke Features
 
 ## Overview
 
-The **Seed Nuke** feature allows you to remove all test/seeded data from your dashboard and transition from demo mode to production mode. This is a one-way operation that prepares your dashboard for real-world use with actual member and grievance data.
+The **Demo Menu** provides two key features:
+
+1. **Seed All Sample Data** - Seeds 1,000 members + 300 grievances + auto-installs the sync trigger
+2. **Nuke Seeded Data** - Removes all test/seeded data and transitions to production mode
+
+After seeding, Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) **automatically update** when you edit the Grievance Log.
+
+### Simplified Demo Menu
+
+```
+🎭 Demo
+├── 🚀 Seed All Sample Data
+├── ────────────────
+└── 🗑️ Nuke Data
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
+```
 
 ---
 
-## ⚠️ What Does "Nuke Seed Data" Do?
+## 🚀 Seed All Sample Data
 
-When you execute the **Nuke Seed Data** function, the system will:
+When you run **Seed All Sample Data**, the system will:
+
+1. **Seed Config dropdowns** - Job Titles, Locations, Units, Supervisors, etc.
+2. **Seed 1,000 members** - Unique member records with contact info
+3. **Seed 300 grievances** - Randomly distributed (some members may have multiple)
+4. **Install auto-sync trigger** - Enables live updates between sheets
+
+### Live Wiring
+
+After seeding, the auto-sync trigger provides **live updates**:
+
+| When You Edit... | These Columns Auto-Update |
+|------------------|---------------------------|
+| Grievance Log Status | Member Directory: Has Open Grievance? |
+| Grievance Log Status/Step | Member Directory: Grievance Status |
+| Grievance Log Dates | Member Directory: Days to Deadline |
+
+Updates happen within 1-3 seconds of editing.
+
+---
+
+## ⚠️ What Does "Nuke Seeded Data" Do?
+
+When you execute the **Nuke Seeded Data** function, the system will:
 
 ### Data Removal
 1. **Remove ALL Members**: Delete all test members from Member Directory
@@ -83,9 +123,9 @@ Before nuking seed data, make sure you:
 
 ### Step 1: Access the Nuke Function
 
-**Menu**: `509 Tools > 📊 Data Management > 🚨 Nuke Seed Data (Exit Demo Mode)`
+**Menu**: `🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA`
 
-*Note: This menu item only appears if seed data hasn't been nuked yet.*
+*Note: The Demo menu only appears if demo mode hasn't been disabled yet.*
 
 ### Step 2: Confirm the Action
 
@@ -353,16 +393,22 @@ If the Apps Script API is not enabled:
 
 ## 🎯 Quick Reference
 
-### Menu Location (Before Nuke)
+### Menu Locations
 ```
-509 Tools > 📊 Data Management > 🚨 Nuke Seed Data (Exit Demo Mode)
+🎭 Demo > 🚀 Seed All Sample Data     (Seeds 1,000 members + 300 grievances)
+🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA
 ```
 
-### What Gets Deleted
-- ❌ All members from Member Directory
-- ❌ All grievances from Grievance Log
-- ❌ All steward workload data
-- ❌ Config demo data (job titles, locations, units, supervisors, managers, stewards, coordinators, home towns, office addresses)
+### What Gets Seeded
+- ✅ 1,000 sample members
+- ✅ 300 sample grievances (randomly distributed)
+- ✅ Config dropdowns (Job Titles, Locations, etc.)
+- ✅ Auto-sync trigger for live updates
+
+### What Gets Nuked
+- ❌ All seeded members (ID pattern: M****###)
+- ❌ All seeded grievances (ID pattern: G****###)
+- ❌ Config demo data (job titles, locations, units, supervisors, managers, stewards, coordinators, home towns)
 
 ### What Gets Preserved
 - ✅ Headers and structure
@@ -404,5 +450,5 @@ Your dashboard is **production-ready**! 🚀
 
 ---
 
-**Last Updated**: 2025-12-09
-**Version**: 3.28
+**Last Updated**: 2026-01-02
+**Version**: 3.29
