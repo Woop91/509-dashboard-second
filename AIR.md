@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.5 (Enhanced Customization & Data Quality)
+**Version:** 1.5.6 (View Controls, Steward Alerts & Audit Logging)
 **Last Updated:** 2026-01-02
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -827,6 +827,37 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.6 (2026-01-02) - View Controls, Steward Alerts & Audit Logging
+
+**View Menu (New):**
+
+- `simplifyTimelineView()` - Hide intermediate step columns (H, J-Q) to reduce visual clutter
+- `showFullTimelineView()` - Restore all timeline columns
+- `setupTimelineColumnGroups()` - Create collapsible column groups for steps
+- `applyStepHighlighting()` - Conditional formatting: gray for inactive steps, orange/red for urgent deadlines
+- `freezeKeyColumns()` / `unfreezeAllColumns()` - Column freezing controls
+
+**Per-Steward Email Alerts (New):**
+
+- `sendStewardDeadlineAlerts()` - Daily digest grouped by steward with overdue/urgent/upcoming categories
+- `sendStewardAlertsNow()` - Manual trigger to send alerts immediately
+- `configureAlertSettings()` - Configure alert window (1-30 days) and enable/disable per-steward mode
+
+**Audit Logging for Multi-Steward Accountability (New):**
+
+- `setupAuditLogSheet()` - Creates hidden `_Audit_Log` sheet
+- `logAuditEvent()` - Logs changes with timestamp, user email, field, old/new values
+- `onEditAudit()` - Trigger to automatically log edits to Member Directory and Grievance Log
+- `installAuditTrigger()` / `removeAuditTrigger()` - Enable/disable audit tracking
+- `viewAuditLog()` - View and sort audit entries
+- `clearOldAuditEntries()` - Clean entries older than 30 days
+- `getAuditHistory(recordId)` - Get change history for a specific record
+
+**Code Quality:**
+
+- Removed duplicate function definitions across modules
+- Regenerated ConsolidatedDashboard.gs via build.js for clean build
 
 ### Version 1.5.5 (2026-01-02) - Enhanced Customization & Data Quality
 
