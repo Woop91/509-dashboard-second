@@ -46,6 +46,18 @@ function onOpen() {
     .addItem('🔍 Search Members', 'searchMembers')
     .addToUi();
 
+  // View Menu - Timeline and display controls
+  ui.createMenu('👁️ View')
+    .addItem('📅 Simplify Timeline (Hide Steps)', 'simplifyTimelineView')
+    .addItem('📅 Show Full Timeline', 'showFullTimelineView')
+    .addSeparator()
+    .addItem('🎨 Apply Step Highlighting', 'applyStepHighlighting')
+    .addItem('🔲 Setup Column Groups', 'setupTimelineColumnGroups')
+    .addSeparator()
+    .addItem('❄️ Freeze Key Columns', 'freezeKeyColumns')
+    .addItem('🔓 Unfreeze All Columns', 'unfreezeAllColumns')
+    .addToUi();
+
   // Sheet Manager Menu
   ui.createMenu('📊 Sheet Manager')
     .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
@@ -2192,6 +2204,232 @@ function refreshAllFormulas() {
   // Use the full refresh from HiddenSheets.gs
   refreshAllHiddenFormulas();
 }
+
+// ============================================================================
+// VIEW CONTROLS - Timeline Simplification
+// ============================================================================
+
+/**
+ * Simplify the Grievance Log timeline view
+ * Hides Step II and Step III columns, keeping only essential dates
+ * Shows: Incident Date, Date Filed, Date Closed, Days Open, Next Action Due, Days to Deadline
+ */
+function simplifyTimelineView() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  ss.toast('Simplifying timeline view...', '👁️ View', 2);
+
+  // Hide Step I detail columns (J-K): Step I Due, Step I Rcvd
+  sheet.hideColumns(GRIEVANCE_COLS.STEP1_DUE, 2);
+
+  // Hide Step II columns (L-O): Appeal Due, Appeal Filed, Due, Rcvd
+  sheet.hideColumns(GRIEVANCE_COLS.STEP2_APPEAL_DUE, 4);
+
+  // Hide Step III columns (P-Q): Appeal Due, Appeal Filed
+  sheet.hideColumns(GRIEVANCE_COLS.STEP3_APPEAL_DUE, 2);
+
+  // Hide Filing Deadline (H) - auto-calculated, less important once filed
+  sheet.hideColumns(GRIEVANCE_COLS.FILING_DEADLINE, 1);
+
+  ss.toast('Timeline simplified! Showing only key dates: Incident, Filed, Closed, Next Due', '✅ Done', 3);
+}
+
+/**
+ * Show the full timeline view
+ * Unhides all date columns
+ */
+function showFullTimelineView() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  ss.toast('Showing full timeline...', '👁️ View', 2);
+
+  // Show all timeline columns (H through Q)
+  sheet.showColumns(GRIEVANCE_COLS.FILING_DEADLINE, 10); // H through Q
+
+  ss.toast('Full timeline view restored!', '✅ Done', 3);
+}
+
+/**
+ * Setup column groups for the timeline
+ * Creates expandable/collapsible groups for Step II and Step III
+ */
+function setupTimelineColumnGroups() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  ss.toast('Setting up column groups...', '👁️ View', 2);
+
+  // Group Step I columns (J-K)
+  var step1Range = sheet.getRange(1, GRIEVANCE_COLS.STEP1_DUE, 1, 2);
+  sheet.getColumnGroup(GRIEVANCE_COLS.STEP1_DUE, 1);
+
+  // Group Step II columns (L-O)
+  sheet.setColumnGroupControlPosition(SpreadsheetApp.GroupControlTogglePosition.AFTER);
+  var step2Group = sheet.getRange(1, GRIEVANCE_COLS.STEP2_APPEAL_DUE, 1, 4);
+  sheet.setColumnGroupControlPosition(SpreadsheetApp.GroupControlTogglePosition.AFTER);
+
+  // Group Step III columns (P-Q)
+  var step3Group = sheet.getRange(1, GRIEVANCE_COLS.STEP3_APPEAL_DUE, 1, 2);
+
+  // Create the groups
+  try {
+    sheet.getRange(1, GRIEVANCE_COLS.STEP1_DUE, sheet.getMaxRows(), 2).shiftColumnGroupDepth(1);
+    sheet.getRange(1, GRIEVANCE_COLS.STEP2_APPEAL_DUE, sheet.getMaxRows(), 4).shiftColumnGroupDepth(1);
+    sheet.getRange(1, GRIEVANCE_COLS.STEP3_APPEAL_DUE, sheet.getMaxRows(), 2).shiftColumnGroupDepth(1);
+
+    // Collapse Step II and III by default (Step I usually visible)
+    sheet.collapseAllColumnGroups();
+
+    ss.toast('Column groups created! Click +/- to expand/collapse step details', '✅ Done', 5);
+  } catch (e) {
+    Logger.log('Column group error: ' + e.toString());
+    ss.toast('Column groups may already exist or require manual setup', '⚠️ Note', 3);
+  }
+}
+
+/**
+ * Apply conditional formatting to highlight the current step's dates
+ * Grays out dates for steps not yet reached
+ */
+function applyStepHighlighting() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  ss.toast('Applying step highlighting...', '🎨 Format', 3);
+
+  var lastRow = Math.max(sheet.getLastRow(), 2);
+  var rules = sheet.getConditionalFormatRules();
+
+  // Colors
+  var grayText = SpreadsheetApp.newColor().setRgbColor('#9e9e9e').build();
+  var greenBg = SpreadsheetApp.newColor().setRgbColor('#e8f5e9').build();
+  var currentStepCol = GRIEVANCE_COLS.CURRENT_STEP; // Column F
+
+  // Rule 1: Gray out Step I columns (J-K) if current step is Informal
+  var step1Range = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, lastRow - 1, 2);
+  var rule1 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Informal"')
+    .setFontColor('#9e9e9e')
+    .setRanges([step1Range])
+    .build();
+
+  // Rule 2: Gray out Step II columns (L-O) if current step is Informal or Step I
+  var step2Range = sheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, lastRow - 1, 4);
+  var rule2 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($F2="Informal",$F2="Step I")')
+    .setFontColor('#9e9e9e')
+    .setRanges([step2Range])
+    .build();
+
+  // Rule 3: Gray out Step III columns (P-Q) if not at Step III or beyond
+  var step3Range = sheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, lastRow - 1, 2);
+  var rule3 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($F2="Informal",$F2="Step I",$F2="Step II")')
+    .setFontColor('#9e9e9e')
+    .setRanges([step3Range])
+    .build();
+
+  // Rule 4: Highlight Next Action Due (T) in green if within 7 days
+  var nextDueRange = sheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, lastRow - 1, 1);
+  var rule4 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($T2<>"",($T2-TODAY())<=7,($T2-TODAY())>=0)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([nextDueRange])
+    .build();
+
+  // Rule 5: Red highlight if overdue
+  var rule5 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($T2<>"",$T2<TODAY())')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([nextDueRange])
+    .build();
+
+  // Rule 6: Highlight Days to Deadline (U) if overdue
+  var daysDeadlineRange = sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, lastRow - 1, 1);
+  var rule6 = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Overdue')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Add new rules (keep existing rules)
+  rules.push(rule1, rule2, rule3, rule4, rule5, rule6);
+  sheet.setConditionalFormatRules(rules);
+
+  ss.toast('Step highlighting applied! Inactive steps grayed, urgent dates highlighted', '✅ Done', 5);
+}
+
+/**
+ * Freeze key columns for easier scrolling
+ * Freezes A-F (Identity & Status) so they're always visible
+ */
+function freezeKeyColumns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  // Freeze first 6 columns (A-F: ID, Member ID, Name, Status, Step)
+  sheet.setFrozenColumns(6);
+  // Freeze header row
+  sheet.setFrozenRows(1);
+
+  ss.toast('Frozen columns A-F and header row. Scroll right to see timeline.', '❄️ Frozen', 3);
+}
+
+/**
+ * Unfreeze all columns
+ */
+function unfreezeAllColumns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log sheet not found.');
+    return;
+  }
+
+  sheet.setFrozenColumns(0);
+  // Keep header row frozen
+  sheet.setFrozenRows(1);
+
+  ss.toast('Columns unfrozen. Header row still frozen.', '🔓 Unfrozen', 3);
+}
+
+// ============================================================================
+// TESTING FUNCTIONS
+// ============================================================================
 
 /**
  * Run all tests (stub - TestingValidation.gs not included)
