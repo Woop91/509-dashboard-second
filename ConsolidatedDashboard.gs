@@ -63,7 +63,9 @@ var SHEETS = {
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
   // Test Results
-  TEST_RESULTS: 'Test Results'
+  TEST_RESULTS: 'Test Results',
+  // Audit Log (hidden)
+  AUDIT_LOG: '_Audit_Log'
 };
 
 // ============================================================================
@@ -772,6 +774,15 @@ function onOpen() {
       .addItem('🔄 Sync All Data Now', 'syncAllData')
       .addItem('🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory')
       .addItem('🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📋 Audit Log')
+      .addItem('📋 View Audit Log', 'viewAuditLog')
+      .addItem('🔧 Setup Audit Log', 'setupAuditLogSheet')
+      .addSeparator()
+      .addItem('⚡ Enable Audit Tracking', 'installAuditTrigger')
+      .addItem('🚫 Disable Audit Tracking', 'removeAuditTrigger')
+      .addSeparator()
+      .addItem('🗑️ Clear Old Entries (30+ days)', 'clearOldAuditEntries'))
     .addToUi();
 }
 
@@ -7599,4 +7610,240 @@ function configureAlertSettings() {
   props.setProperty('steward_alerts_enabled', stewardResponse === ui.Button.YES ? 'true' : 'false');
 
   ui.alert('✅ Settings Saved', 'Alert window: ' + newDays + ' days\nPer-steward alerts: ' + (stewardResponse === ui.Button.YES ? 'ENABLED' : 'DISABLED'), ui.ButtonSet.OK);
+}
+
+// ============================================================================
+// AUDIT LOGGING - Multi-Steward Accountability
+// ============================================================================
+
+/**
+ * Setup the hidden audit log sheet
+ */
+function setupAuditLogSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEETS.AUDIT_LOG);
+  }
+
+  sheet.clear();
+
+  var headers = ['Timestamp', 'User Email', 'Sheet', 'Row', 'Column', 'Field Name', 'Old Value', 'New Value', 'Record ID', 'Action Type'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+  var headerRange = sheet.getRange(1, 1, 1, headers.length);
+  headerRange.setBackground(COLORS.PRIMARY_PURPLE);
+  headerRange.setFontColor(COLORS.WHITE);
+  headerRange.setFontWeight('bold');
+  sheet.setFrozenRows(1);
+
+  sheet.setColumnWidth(1, 160);
+  sheet.setColumnWidth(2, 200);
+  sheet.setColumnWidth(3, 120);
+  sheet.setColumnWidth(4, 50);
+  sheet.setColumnWidth(5, 50);
+  sheet.setColumnWidth(6, 150);
+  sheet.setColumnWidth(7, 200);
+  sheet.setColumnWidth(8, 200);
+  sheet.setColumnWidth(9, 100);
+  sheet.setColumnWidth(10, 100);
+
+  sheet.hideSheet();
+  SpreadsheetApp.getActiveSpreadsheet().toast('Audit log sheet created and hidden.', '✅ Setup Complete', 3);
+}
+
+/**
+ * Log an audit event
+ */
+function logAuditEvent(sheetName, row, col, fieldName, oldValue, newValue, recordId, actionType) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+
+    if (!auditSheet) {
+      setupAuditLogSheet();
+      auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+    }
+
+    var logEntry = [
+      new Date(),
+      Session.getEffectiveUser().getEmail(),
+      sheetName,
+      row,
+      col,
+      fieldName,
+      String(oldValue || ''),
+      String(newValue || ''),
+      recordId || '',
+      actionType || 'Edit'
+    ];
+
+    auditSheet.appendRow(logEntry);
+  } catch (e) {
+    Logger.log('Audit log error: ' + e.message);
+  }
+}
+
+/**
+ * onEdit trigger for audit logging
+ */
+function onEditAudit(e) {
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  if (sheetName !== SHEETS.MEMBER_DIR && sheetName !== SHEETS.GRIEVANCE_LOG) return;
+
+  var row = e.range.getRow();
+  var col = e.range.getColumn();
+
+  if (row < 2) return;
+
+  var oldValue = e.oldValue || '';
+  var newValue = e.value || '';
+
+  if (oldValue === newValue) return;
+
+  var fieldName = sheet.getRange(1, col).getValue() || ('Column ' + col);
+  var recordId = sheet.getRange(row, 1).getValue() || '';
+
+  var actionType = 'Edit';
+  if (!oldValue && newValue) actionType = 'Create';
+  else if (oldValue && !newValue) actionType = 'Delete';
+
+  logAuditEvent(sheetName, row, col, fieldName, oldValue, newValue, recordId, actionType);
+}
+
+/**
+ * Install the audit trigger
+ */
+function installAuditTrigger() {
+  removeAuditTrigger();
+
+  ScriptApp.newTrigger('onEditAudit')
+    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+    .onEdit()
+    .create();
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss.getSheetByName(SHEETS.AUDIT_LOG)) {
+    setupAuditLogSheet();
+  }
+
+  SpreadsheetApp.getUi().alert('✅ Audit Tracking Enabled',
+    'All changes to Member Directory and Grievance Log will now be logged.\n\n' +
+    'View via: ⚙️ Administrator > 📋 Audit Log > 📋 View Audit Log',
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Remove the audit trigger
+ */
+function removeAuditTrigger() {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onEditAudit') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  SpreadsheetApp.getActiveSpreadsheet().toast('Audit tracking disabled.', '🚫 Disabled', 3);
+}
+
+/**
+ * View the audit log sheet
+ */
+function viewAuditLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+
+  if (!sheet) {
+    var response = SpreadsheetApp.getUi().alert('📋 Audit Log Not Found',
+      'Would you like to create it now?', SpreadsheetApp.getUi().ButtonSet.YES_NO);
+
+    if (response === SpreadsheetApp.getUi().Button.YES) {
+      setupAuditLogSheet();
+      sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+    } else {
+      return;
+    }
+  }
+
+  sheet.showSheet();
+  ss.setActiveSheet(sheet);
+
+  if (sheet.getLastRow() > 1) {
+    sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).sort({column: 1, ascending: false});
+  }
+
+  SpreadsheetApp.getUi().alert('📋 Audit Log',
+    'Total entries: ' + Math.max(0, sheet.getLastRow() - 1),
+    SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Clear audit entries older than 30 days
+ */
+function clearOldAuditEntries() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('🗑️ Clear Old Audit Entries',
+    'Delete entries older than 30 days? This cannot be undone.', ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+
+  if (!sheet || sheet.getLastRow() < 2) {
+    ui.alert('No audit entries to clear.');
+    return;
+  }
+
+  var cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - 30);
+
+  var data = sheet.getDataRange().getValues();
+  var rowsToDelete = [];
+
+  for (var i = data.length - 1; i >= 1; i--) {
+    var timestamp = data[i][0];
+    if (timestamp instanceof Date && timestamp < cutoffDate) {
+      rowsToDelete.push(i + 1);
+    }
+  }
+
+  for (var j = 0; j < rowsToDelete.length; j++) {
+    sheet.deleteRow(rowsToDelete[j]);
+  }
+
+  ui.alert('✅ Cleanup Complete', 'Deleted ' + rowsToDelete.length + ' entries older than 30 days.', ui.ButtonSet.OK);
+}
+
+/**
+ * Get audit history for a specific record
+ */
+function getAuditHistory(recordId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
+
+  if (!sheet || sheet.getLastRow() < 2) return [];
+
+  var data = sheet.getDataRange().getValues();
+  var history = [];
+
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][8] === recordId) {
+      history.push({
+        timestamp: data[i][0],
+        user: data[i][1],
+        field: data[i][5],
+        oldValue: data[i][6],
+        newValue: data[i][7],
+        action: data[i][9]
+      });
+    }
+  }
+
+  return history;
 }
