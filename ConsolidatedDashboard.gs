@@ -680,6 +680,9 @@ function onOpen() {
       .addItem('🗑️ Clear Calendar Events', 'clearAllCalendarEvents'))
     .addSubMenu(ui.createMenu('📬 Notifications')
       .addItem('⚙️ Notification Settings', 'showNotificationSettings')
+      .addItem('⚙️ Alert Settings', 'configureAlertSettings')
+      .addSeparator()
+      .addItem('📧 Send Steward Alerts Now', 'sendStewardAlertsNow')
       .addItem('🧪 Test Notifications', 'testDeadlineNotifications'))
     .addToUi();
 
@@ -7390,4 +7393,210 @@ function testDeadlineNotifications() {
   } catch (e) {
     ui.alert('❌ Error', 'Failed to send test email: ' + e.message, ui.ButtonSet.OK);
   }
+}
+
+/**
+ * Send daily digest to all stewards with their assigned grievance deadlines
+ * Each steward gets their own personalized email
+ */
+function sendStewardDeadlineAlerts() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!sheet || !memberSheet) {
+    Logger.log('Required sheets not found for steward alerts');
+    return;
+  }
+
+  var props = PropertiesService.getScriptProperties();
+  var alertDays = parseInt(props.getProperty('alert_days') || '7', 10);
+
+  var grievanceData = sheet.getDataRange().getValues();
+  var memberData = memberSheet.getDataRange().getValues();
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Build member lookup for steward emails
+  var memberLookup = {};
+  for (var m = 1; m < memberData.length; m++) {
+    var memberId = memberData[m][MEMBER_COLS.MEMBER_ID - 1];
+    if (memberId) {
+      memberLookup[memberId] = {
+        name: (memberData[m][MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (memberData[m][MEMBER_COLS.LAST_NAME - 1] || ''),
+        steward: memberData[m][MEMBER_COLS.ASSIGNED_STEWARD - 1] || ''
+      };
+    }
+  }
+
+  // Group grievances by steward
+  var stewardGrievances = {};
+  var closedStatuses = ['Closed', 'Settled', 'Won', 'Denied', 'Withdrawn'];
+
+  for (var i = 1; i < grievanceData.length; i++) {
+    var row = grievanceData[i];
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var currentStep = row[GRIEVANCE_COLS.CURRENT_STEP - 1];
+    var nextDue = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+    var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var steward = row[GRIEVANCE_COLS.ASSIGNED_STEWARD - 1] || '';
+
+    // Skip closed grievances
+    if (closedStatuses.indexOf(status) !== -1) continue;
+    if (!grievanceId) continue;
+
+    // Check if deadline is within alert window
+    var daysRemaining = null;
+    if (daysToDeadline === 'Overdue') {
+      daysRemaining = -1;
+    } else if (typeof daysToDeadline === 'number') {
+      daysRemaining = daysToDeadline;
+    } else {
+      continue; // No deadline
+    }
+
+    if (daysRemaining > alertDays) continue;
+
+    // Get member info
+    var memberInfo = memberLookup[memberId] || { name: 'Unknown', steward: '' };
+    var assignedSteward = steward || memberInfo.steward || 'Unassigned';
+
+    if (!stewardGrievances[assignedSteward]) {
+      stewardGrievances[assignedSteward] = [];
+    }
+
+    stewardGrievances[assignedSteward].push({
+      id: grievanceId,
+      memberName: memberInfo.name,
+      step: currentStep,
+      status: status,
+      daysRemaining: daysRemaining,
+      nextDue: nextDue
+    });
+  }
+
+  // Get steward emails from Config sheet
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+  var stewardEmails = {};
+  if (configSheet) {
+    var configData = configSheet.getDataRange().getValues();
+    for (var c = 1; c < configData.length; c++) {
+      var stewardName = configData[c][CONFIG_COLS.STEWARDS - 1];
+      var stewardEmail = configData[c][CONFIG_COLS.STEWARDS];
+      if (stewardName && stewardEmail && stewardEmail.indexOf('@') !== -1) {
+        stewardEmails[stewardName] = stewardEmail;
+      }
+    }
+  }
+
+  // Send emails to each steward
+  var emailsSent = 0;
+  var adminEmail = Session.getEffectiveUser().getEmail();
+
+  for (var stewardName in stewardGrievances) {
+    var grievances = stewardGrievances[stewardName];
+    if (grievances.length === 0) continue;
+
+    grievances.sort(function(a, b) { return a.daysRemaining - b.daysRemaining; });
+
+    var email = stewardEmails[stewardName] || adminEmail;
+
+    var overdue = grievances.filter(function(g) { return g.daysRemaining < 0; });
+    var urgent = grievances.filter(function(g) { return g.daysRemaining >= 0 && g.daysRemaining <= 3; });
+    var upcoming = grievances.filter(function(g) { return g.daysRemaining > 3; });
+
+    var body = '📋 509 GRIEVANCE DEADLINE ALERT\n';
+    body += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n';
+    body += 'Steward: ' + stewardName + '\n';
+    body += 'Date: ' + Utilities.formatDate(today, Session.getScriptTimeZone(), 'EEEE, MMMM d, yyyy') + '\n\n';
+
+    if (overdue.length > 0) {
+      body += '🔴 OVERDUE (' + overdue.length + ')\n─────────────────────\n';
+      for (var o = 0; o < overdue.length; o++) {
+        body += '  ⚠️ ' + overdue[o].id + ' - ' + overdue[o].memberName + '\n';
+        body += '     Step: ' + overdue[o].step + ' | OVERDUE by ' + Math.abs(overdue[o].daysRemaining) + ' day(s)\n\n';
+      }
+    }
+
+    if (urgent.length > 0) {
+      body += '🟠 URGENT - Due within 3 days (' + urgent.length + ')\n─────────────────────\n';
+      for (var u = 0; u < urgent.length; u++) {
+        body += '  ⏰ ' + urgent[u].id + ' - ' + urgent[u].memberName + '\n';
+        body += '     Step: ' + urgent[u].step + ' | Due in ' + urgent[u].daysRemaining + ' day(s)\n\n';
+      }
+    }
+
+    if (upcoming.length > 0) {
+      body += '🟡 UPCOMING (' + upcoming.length + ')\n─────────────────────\n';
+      for (var up = 0; up < upcoming.length; up++) {
+        body += '  📅 ' + upcoming[up].id + ' - ' + upcoming[up].memberName + ' | Due in ' + upcoming[up].daysRemaining + ' day(s)\n';
+      }
+    }
+
+    body += '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+    body += '📊 Dashboard: ' + ss.getUrl() + '\n';
+
+    var subject = (overdue.length > 0 ? '🔴 OVERDUE: ' : '⏰ ') + grievances.length + ' Grievance Deadline(s) - ' + stewardName;
+
+    try {
+      MailApp.sendEmail({ to: email, subject: subject, body: body, name: 'SEIU Local 509 Dashboard' });
+      emailsSent++;
+      Logger.log('Sent alert to ' + stewardName + ' (' + email + ')');
+    } catch (e) {
+      Logger.log('Failed to send to ' + email + ': ' + e.message);
+    }
+  }
+
+  Logger.log('Steward deadline alerts complete. Sent ' + emailsSent + ' emails.');
+  return emailsSent;
+}
+
+/**
+ * Manual trigger to send steward alerts now
+ */
+function sendStewardAlertsNow() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('📬 Send Steward Alerts',
+    'This will send deadline alert emails to all stewards with upcoming deadlines.\n\nContinue?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  var emailsSent = sendStewardDeadlineAlerts();
+  ui.alert('✅ Alerts Sent', 'Sent ' + emailsSent + ' steward alert email(s).', ui.ButtonSet.OK);
+}
+
+/**
+ * Configure alert settings
+ */
+function configureAlertSettings() {
+  var ui = SpreadsheetApp.getUi();
+  var props = PropertiesService.getScriptProperties();
+
+  var currentDays = props.getProperty('alert_days') || '7';
+  var stewardAlerts = props.getProperty('steward_alerts_enabled') === 'true';
+
+  var response = ui.prompt('⚙️ Alert Settings',
+    'Current alert window: ' + currentDays + ' days\n\nEnter new alert window (1-30 days):',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) return;
+
+  var newDays = parseInt(response.getResponseText(), 10);
+  if (isNaN(newDays) || newDays < 1 || newDays > 30) {
+    ui.alert('Invalid input. Please enter a number between 1 and 30.');
+    return;
+  }
+
+  props.setProperty('alert_days', newDays.toString());
+
+  var stewardResponse = ui.alert('Per-Steward Alerts',
+    'Enable per-steward email alerts?\n\nEach steward receives their own personalized deadline digest.',
+    ui.ButtonSet.YES_NO);
+
+  props.setProperty('steward_alerts_enabled', stewardResponse === ui.Button.YES ? 'true' : 'false');
+
+  ui.alert('✅ Settings Saved', 'Alert window: ' + newDays + ' days\nPer-steward alerts: ' + (stewardResponse === ui.Button.YES ? 'ENABLED' : 'DISABLED'), ui.ButtonSet.OK);
 }
