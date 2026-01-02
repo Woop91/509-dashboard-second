@@ -124,7 +124,9 @@ function trackSeededGrievanceIdsBatch(grievanceIds) {
 // ============================================================================
 
 /**
- * Seed all sample data: Config + 50 members + 25 grievances
+ * Seed all sample data: Config + 1,000 members + 300 grievances
+ * Grievances are randomly distributed - some members may have multiple
+ * Auto-installs the sync trigger for live updates between sheets
  */
 function SEED_SAMPLE_DATA() {
   var ui = SpreadsheetApp.getUi();
@@ -134,8 +136,11 @@ function SEED_SAMPLE_DATA() {
     '🚀 Seed Sample Data',
     'This will seed:\n' +
     '• Config dropdowns (Job Titles, Locations, etc.)\n' +
-    '• 50 sample members\n' +
-    '• 25 sample grievances\n\n' +
+    '• 1,000 sample members\n' +
+    '• 300 sample grievances (randomly distributed)\n' +
+    '• Auto-sync trigger for live updates\n\n' +
+    'Note: Some members may have multiple grievances.\n' +
+    'Member Directory will auto-update when Grievance Log changes.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -147,17 +152,23 @@ function SEED_SAMPLE_DATA() {
   ss.toast('Seeding config data...', '🌱 Seeding', 3);
   seedConfigData();
 
-  ss.toast('Seeding members...', '🌱 Seeding', 3);
-  SEED_MEMBERS(50);
+  ss.toast('Seeding 1,000 members (this may take a moment)...', '🌱 Seeding', 10);
+  SEED_MEMBERS_ONLY(1000);
 
-  ss.toast('Seeding grievances...', '🌱 Seeding', 3);
-  SEED_GRIEVANCES(25);
+  ss.toast('Seeding 300 grievances...', '🌱 Seeding', 5);
+  SEED_GRIEVANCES(300);
+
+  ss.toast('Installing auto-sync trigger...', '🔧 Setup', 3);
+  installAutoSyncTriggerQuick();
 
   ss.toast('Sample data seeded successfully!', '✅ Success', 5);
   ui.alert('✅ Success', 'Sample data has been seeded!\n\n' +
     '• Config dropdowns populated\n' +
-    '• 50 members added\n' +
-    '• 25 grievances added', ui.ButtonSet.OK);
+    '• 1,000 members added\n' +
+    '• 300 grievances added (randomly distributed)\n' +
+    '• Auto-sync trigger installed\n\n' +
+    'Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) ' +
+    'will now auto-update when you edit the Grievance Log.', ui.ButtonSet.OK);
 }
 
 /**
@@ -442,6 +453,141 @@ function SEED_MEMBERS(count, grievancePercent) {
 }
 
 /**
+ * Seed members only (no automatic grievance seeding)
+ * Used by SEED_SAMPLE_DATA to separate member and grievance seeding
+ * @param {number} count - Number of members to seed (max 2000)
+ */
+function SEED_MEMBERS_ONLY(count) {
+  count = Math.min(count || 50, 2000);
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!sheet || !configSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  // Always ensure Config has data for all required columns
+  seedConfigData();
+
+  // Get all config values
+  var jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
+  var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
+  var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
+  var supervisors = getConfigValues(configSheet, CONFIG_COLS.SUPERVISORS);
+  var managers = getConfigValues(configSheet, CONFIG_COLS.MANAGERS);
+  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
+  var homeTowns = getConfigValues(configSheet, CONFIG_COLS.HOME_TOWNS);
+  var committees = getConfigValues(configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
+
+  // Expanded name pools for better variety
+  var firstNames = [
+    'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
+    'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen',
+    'Christopher', 'Nancy', 'Daniel', 'Lisa', 'Matthew', 'Betty', 'Anthony', 'Margaret', 'Mark', 'Sandra',
+    'Donald', 'Ashley', 'Steven', 'Kimberly', 'Paul', 'Emily', 'Andrew', 'Donna', 'Joshua', 'Michelle',
+    'Kenneth', 'Dorothy', 'Kevin', 'Carol', 'Brian', 'Amanda', 'George', 'Melissa', 'Timothy', 'Deborah',
+    'Ronald', 'Stephanie', 'Edward', 'Rebecca', 'Jason', 'Sharon', 'Jeffrey', 'Laura', 'Ryan', 'Cynthia',
+    'Jacob', 'Kathleen', 'Gary', 'Amy', 'Nicholas', 'Angela', 'Eric', 'Shirley', 'Jonathan', 'Anna',
+    'Stephen', 'Brenda', 'Larry', 'Pamela', 'Justin', 'Emma', 'Scott', 'Nicole', 'Brandon', 'Helen',
+    'Benjamin', 'Samantha', 'Samuel', 'Katherine', 'Raymond', 'Christine', 'Gregory', 'Debra', 'Frank', 'Rachel',
+    'Alexander', 'Carolyn', 'Patrick', 'Janet', 'Jack', 'Catherine', 'Dennis', 'Maria', 'Jerry', 'Heather',
+    'Tyler', 'Diane', 'Aaron', 'Ruth', 'Jose', 'Julie', 'Adam', 'Olivia', 'Nathan', 'Joyce',
+    'Henry', 'Virginia', 'Douglas', 'Victoria', 'Zachary', 'Kelly', 'Peter', 'Lauren', 'Kyle', 'Christina'
+  ];
+  var lastNames = [
+    'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez',
+    'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin',
+    'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
+    'Walker', 'Young', 'Allen', 'King', 'Wright', 'Scott', 'Torres', 'Nguyen', 'Hill', 'Flores',
+    'Green', 'Adams', 'Nelson', 'Baker', 'Hall', 'Rivera', 'Campbell', 'Mitchell', 'Carter', 'Roberts',
+    'Gomez', 'Phillips', 'Evans', 'Turner', 'Diaz', 'Parker', 'Cruz', 'Edwards', 'Collins', 'Reyes',
+    'Stewart', 'Morris', 'Morales', 'Murphy', 'Cook', 'Rogers', 'Gutierrez', 'Ortiz', 'Morgan', 'Cooper',
+    'Peterson', 'Bailey', 'Reed', 'Kelly', 'Howard', 'Ramos', 'Kim', 'Cox', 'Ward', 'Richardson',
+    'Watson', 'Brooks', 'Chavez', 'Wood', 'James', 'Bennett', 'Gray', 'Mendoza', 'Ruiz', 'Hughes',
+    'Price', 'Alvarez', 'Castillo', 'Sanders', 'Patel', 'Myers', 'Long', 'Ross', 'Foster', 'Jimenez',
+    'Powell', 'Jenkins', 'Perry', 'Russell', 'Sullivan', 'Bell', 'Coleman', 'Butler', 'Henderson', 'Barnes',
+    'Gonzales', 'Fisher', 'Vasquez', 'Simmons', 'Stokes', 'Burns', 'Fox', 'Alexander', 'Rice', 'Stone'
+  ];
+  var officeDays = DEFAULT_CONFIG.OFFICE_DAYS;
+  var commMethods = DEFAULT_CONFIG.COMM_METHODS;
+
+  var startRow = Math.max(sheet.getLastRow() + 1, 2);
+
+  // Build set of existing member IDs to prevent duplicates
+  var existingMemberIds = {};
+  if (startRow > 2) {
+    var existingData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, startRow - 2, 1).getValues();
+    for (var e = 0; e < existingData.length; e++) {
+      if (existingData[e][0]) {
+        existingMemberIds[existingData[e][0]] = true;
+      }
+    }
+  }
+
+  var rows = [];
+  var seededIds = [];
+  var batchSize = 100; // Larger batches for 1000 members
+  var today = new Date();
+
+  for (var i = 0; i < count; i++) {
+    var firstName = randomChoice(firstNames);
+    var lastName = randomChoice(lastNames);
+    var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
+    existingMemberIds[memberId] = true;
+    seededIds.push(memberId);
+    var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
+    var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
+    var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
+    var assignedSteward = randomChoice(stewards);
+
+    var hasRecentContact = Math.random() < 0.5;
+    var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
+    var contactSteward = hasRecentContact ? assignedSteward : '';
+
+    var sampleContactNotes = [
+      'Discussed workload concerns', 'Follow up on scheduling issue', 'Interested in becoming steward',
+      'Addressed safety complaint', 'Positive feedback received', 'Needs info on benefits',
+      'Question about contract language', 'Planning to attend next meeting', 'Grievance update provided',
+      'Initial outreach - new member', 'Discussed upcoming negotiations', 'Shared resources on workplace rights'
+    ];
+    var contactNotes = hasRecentContact ? randomChoice(sampleContactNotes) : '';
+
+    var row = generateSingleMemberRow(
+      memberId, firstName, lastName,
+      randomChoice(jobTitles), randomChoice(locations), randomChoice(units), randomChoice(officeDays),
+      email, phone, randomChoice(commMethods), 'Morning',
+      randomChoice(supervisors), randomChoice(managers),
+      isSteward, isSteward === 'Yes' ? randomChoice(committees) : '', assignedSteward,
+      randomChoice(homeTowns), recentContactDate, contactSteward, contactNotes
+    );
+
+    rows.push(row);
+
+    // Write in batches
+    if (rows.length >= batchSize || i === count - 1) {
+      sheet.getRange(startRow, 1, rows.length, 31).setValues(rows);
+      startRow += rows.length;
+      rows = [];
+      Utilities.sleep(50);
+    }
+  }
+
+  // Re-apply checkboxes
+  var lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+  }
+
+  // Track seeded IDs
+  trackSeededMemberIdsBatch(seededIds);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
+}
+
+/**
  * Generate a single member row with all 31 columns
  * @param {string} memberId - Member ID
  * @param {string} firstName - First name
@@ -647,6 +793,9 @@ function SEED_GRIEVANCES(count) {
 
   // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
   syncGrievanceFormulasToLog();
+
+  // Sync grievance data to Member Directory (populates Has Open Grievance?, Status, Days to Deadline)
+  syncGrievanceToMemberDirectory();
 
   // Track seeded IDs for later cleanup (nuke only removes seeded data)
   trackSeededGrievanceIdsBatch(seededIds);

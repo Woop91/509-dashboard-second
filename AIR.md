@@ -110,19 +110,14 @@
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~1200 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 15 grievances (30%)
+- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances + installs auto-sync trigger
 - `seedConfigData()` - Populate Config dropdowns
 - `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (default 30%)
-- `SEED_GRIEVANCES(count)` - Seed N grievances for existing members (max 300)
-- `SEED_MEMBERS_DIALOG()` - Prompt for count (30% grievances auto-created)
-- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for count AND grievance percentage
-- `SEED_GRIEVANCES_DIALOG()` - Prompt for grievance count (existing members)
-- `seed50Members()` - Shortcut: 50 members with 30% grievances
-- `seed100MembersWithGrievances()` - Shortcut: 100 members with 50% grievances
-- `seed25Grievances()` - Shortcut: seed 25 grievances for existing members
+- `SEED_MEMBERS_ONLY(count)` - Seed N members without auto-seeding grievances
+- `SEED_GRIEVANCES(count)` - Seed N grievances for existing members (max 300, randomly distributed)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
-- `NUKE_ALL_DATA()` - Clear all data with confirmation
+- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation, disable demo mode
 - `NUKE_CONFIG_DROPDOWNS()` - Clear only Config dropdowns
 - `getConfigValues()` - Helper: get values from Config column
 - `randomChoice()` - Helper: pick random array element
@@ -610,15 +605,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 └── ↩️ Undo ADHD Defaults
 
 🎭 Demo (hidden if demo mode disabled)
-├── 🚀 Seed All Sample Data
-├── ────────────────
-├── 🌱 Seed Data
-│   ├── ⚙️ Seed Config Dropdowns Only
-│   ├── 👥 Seed Members & Grievances (Custom)
-│   ├── 👥 Seed Members (Advanced - Set % Grievances)
-│   ├── 👥 Seed 50 Members (30% Grievances)
-│   ├── 👥 Seed 100 Members (50% Grievances)
-│   └── 📋 Seed Grievances Only (existing members)
+├── 🚀 Seed All Sample Data (1,000 members + 300 grievances + auto-sync trigger)
 ├── ────────────────
 └── 🗑️ Nuke Data
     ├── ☢️ NUKE SEEDED DATA
@@ -930,23 +917,23 @@ All seeding now uses combined member + grievance approach across all files:
 - `seed100MembersWithGrievances()` - 100 members with 50% grievances (~50 grievances)
 - `SEED_GRIEVANCES_DIALOG()` - Seeds grievances for existing members only
 
-**Demo Menu Updated:**
+**Demo Menu Simplified:**
 
 ```
-🎭 Demo > 🌱 Seed Data
-├── ⚙️ Seed Config Dropdowns Only
-├── 👥 Seed Members & Grievances (Custom)
-├── 👥 Seed Members (Advanced - Set % Grievances)
-├── 👥 Seed 50 Members (30% Grievances)
-├── 👥 Seed 100 Members (50% Grievances)
-└── 📋 Seed Grievances Only (existing members)
+🎭 Demo
+├── 🚀 Seed All Sample Data (1,000 members + 300 grievances)
+├── ────────────────
+└── 🗑️ Nuke Data
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
 ```
 
-**Parity Achieved:**
+**Seeding Features:**
 
-- Code.gs, SeedNuke.gs, and ConsolidatedDashboard.gs now have identical seeding functionality
-- All three files use the same Demo menu structure
-- ConsolidatedDashboard.gs remains a complete standalone copy
+- Seeds 1,000 members and 300 grievances (randomly distributed - some members may have multiple)
+- Automatically installs the `onEditAutoSync` trigger for live updates
+- Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) auto-update when Grievance Log is edited
 
 **AIR.md Updates:**
 
