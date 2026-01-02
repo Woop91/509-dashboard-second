@@ -7533,11 +7533,49 @@ function syncSingleGrievanceToCalendar(grievanceId) {
   if (typeof syncDeadlinesToCalendar === 'function') syncDeadlinesToCalendar();
 }
 
-// ==================== INTERACTIVE DASHBOARD TAB ====================
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║                                                                           ║
+// ║   ██████╗ ██████╗  ██████╗ ████████╗███████╗ ██████╗████████╗███████╗██████╗  ║
+// ║   ██╔══██╗██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██╔════╝╚══██╔══╝██╔════╝██╔══██╗ ║
+// ║   ██████╔╝██████╔╝██║   ██║   ██║   █████╗  ██║        ██║   █████╗  ██║  ██║ ║
+// ║   ██╔═══╝ ██╔══██╗██║   ██║   ██║   ██╔══╝  ██║        ██║   ██╔══╝  ██║  ██║ ║
+// ║   ██║     ██║  ██║╚██████╔╝   ██║   ███████╗╚██████╗   ██║   ███████╗██████╔╝ ║
+// ║   ╚═╝     ╚═╝  ╚═╝ ╚═════╝    ╚═╝   ╚══════╝ ╚═════╝   ╚═╝   ╚══════╝╚═════╝  ║
+// ║                                                                           ║
+// ║         ⚠️  DO NOT MODIFY THIS SECTION - PROTECTED CODE  ⚠️              ║
+// ║                                                                           ║
+// ╠═══════════════════════════════════════════════════════════════════════════╣
+// ║  INTERACTIVE DASHBOARD TAB - Modal Popup with Tabbed Interface           ║
+// ╠═══════════════════════════════════════════════════════════════════════════╣
+// ║                                                                           ║
+// ║  This code block is PROTECTED and should NOT be modified or removed.     ║
+// ║                                                                           ║
+// ║  Protected Functions:                                                     ║
+// ║  • showInteractiveDashboardTab() - Opens the modal dialog                 ║
+// ║  • getInteractiveDashboardHtml() - Returns the HTML/CSS/JS for the UI     ║
+// ║  • getInteractiveOverviewData()  - Fetches overview statistics            ║
+// ║  • getInteractiveMemberData()    - Fetches member list data               ║
+// ║  • getInteractiveGrievanceData() - Fetches grievance list data            ║
+// ║  • getInteractiveAnalyticsData() - Fetches analytics/charts data          ║
+// ║                                                                           ║
+// ║  Features:                                                                ║
+// ║  • 4 Tabs: Overview, Members, Grievances, Analytics                       ║
+// ║  • Live search and status filtering                                       ║
+// ║  • Mobile-responsive design with touch targets                            ║
+// ║  • Bar charts for status distribution and categories                      ║
+// ║                                                                           ║
+// ║  Menu Location: 👤 Dashboard > 🎯 Interactive Dashboard                  ║
+// ║                                                                           ║
+// ║  Added: December 29, 2025 (commit c75c1cc)                                ║
+// ║  Status: USER APPROVED - DO NOT CHANGE                                    ║
+// ║                                                                           ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 /**
  * Shows the Interactive Dashboard with tabbed interface
  * Features: Overview, Members, Grievances, and Analytics tabs
+ *
+ * ⚠️ PROTECTED FUNCTION - DO NOT MODIFY ⚠️
  */
 function showInteractiveDashboardTab() {
   var html = HtmlService.createHtmlOutput(getInteractiveDashboardHtml())
@@ -8115,6 +8153,11 @@ function getInteractiveAnalyticsData() {
   return data;
 }
 
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║                                                                           ║
+// ║         ⚠️  END OF PROTECTED SECTION - INTERACTIVE DASHBOARD  ⚠️         ║
+// ║                                                                           ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
 
 
 // ================================================================================
