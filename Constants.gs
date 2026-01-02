@@ -35,7 +35,9 @@ var SHEETS = {
   // Test Results
   TEST_RESULTS: 'Test Results',
   // Menu Checklist
-  MENU_CHECKLIST: 'Menu Checklist'
+  MENU_CHECKLIST: 'Menu Checklist',
+  // Audit Log (hidden)
+  AUDIT_LOG: '_Audit_Log'
 };
 
 // ============================================================================
