@@ -1553,9 +1553,65 @@ function onEditAutoSync(e) {
 }
 
 /**
- * Install the auto-sync trigger
+ * Install the auto-sync trigger with options dialog
+ * Users can customize the sync behavior
  */
 function installAutoSyncTrigger() {
+  var ui = SpreadsheetApp.getUi();
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px}' +
+    'h2{color:#1a73e8;margin-top:0}' +
+    '.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px}' +
+    '.section h4{margin:0 0 10px;color:#333}' +
+    '.option{display:flex;align-items:center;margin:8px 0}' +
+    '.option input[type="checkbox"]{margin-right:10px}' +
+    '.option label{font-size:14px}' +
+    '.info{background:#e8f4fd;padding:12px;border-radius:8px;font-size:13px;margin-bottom:15px}' +
+    '.buttons{display:flex;gap:10px;margin-top:20px}' +
+    'button{padding:12px 20px;border:none;border-radius:4px;cursor:pointer}' +
+    '.primary{background:#1a73e8;color:white;flex:1}' +
+    '.secondary{background:#e0e0e0;flex:1}' +
+    '.warning{background:#fff3cd;padding:10px;border-radius:4px;font-size:12px;color:#856404}' +
+    '</style></head><body><div class="container">' +
+    '<h2>⚡ Auto-Sync Settings</h2>' +
+    '<div class="info">Auto-sync automatically updates cross-sheet data when you edit cells in Member Directory or Grievance Log.</div>' +
+
+    '<div class="section"><h4>Sync Options</h4>' +
+    '<div class="option"><input type="checkbox" id="syncGrievances" checked><label>Sync Grievance data to Member Directory</label></div>' +
+    '<div class="option"><input type="checkbox" id="syncMembers" checked><label>Sync Member data to Grievance Log</label></div>' +
+    '<div class="option"><input type="checkbox" id="autoSort" checked><label>Auto-sort Grievance Log by status/deadline</label></div>' +
+    '<div class="option"><input type="checkbox" id="repairCheckboxes" checked><label>Auto-repair checkboxes after sync</label></div>' +
+    '</div>' +
+
+    '<div class="section"><h4>Performance</h4>' +
+    '<div class="option"><input type="checkbox" id="showToasts" checked><label>Show sync notifications (toasts)</label></div>' +
+    '<div class="warning">💡 Disabling notifications improves performance but you won\'t see sync status.</div>' +
+    '</div>' +
+
+    '<div class="buttons">' +
+    '<button class="secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="primary" onclick="install()">Install Trigger</button>' +
+    '</div></div>' +
+    '<script>' +
+    'function install(){' +
+    'var opts={syncGrievances:document.getElementById("syncGrievances").checked,syncMembers:document.getElementById("syncMembers").checked,autoSort:document.getElementById("autoSort").checked,repairCheckboxes:document.getElementById("repairCheckboxes").checked,showToasts:document.getElementById("showToasts").checked};' +
+    'google.script.run.withSuccessHandler(function(){google.script.host.close()}).installAutoSyncTriggerWithOptions(opts)}' +
+    '</script></body></html>'
+  ).setWidth(450).setHeight(480);
+  ui.showModalDialog(html, '⚡ Auto-Sync Settings');
+}
+
+/**
+ * Install auto-sync trigger with saved options
+ * @param {Object} options - Sync configuration options
+ */
+function installAutoSyncTriggerWithOptions(options) {
+  // Save options to script properties
+  var props = PropertiesService.getScriptProperties();
+  props.setProperty('autoSyncOptions', JSON.stringify(options));
+
   // Remove existing triggers first
   var triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(function(trigger) {
@@ -1570,8 +1626,46 @@ function installAutoSyncTrigger() {
     .onEdit()
     .create();
 
-  Logger.log('Auto-sync trigger installed');
+  Logger.log('Auto-sync trigger installed with options: ' + JSON.stringify(options));
   SpreadsheetApp.getActiveSpreadsheet().toast('Auto-sync trigger installed!', '✅ Success', 3);
+}
+
+/**
+ * Get auto-sync options (with defaults)
+ */
+function getAutoSyncOptions() {
+  var props = PropertiesService.getScriptProperties();
+  var optionsJSON = props.getProperty('autoSyncOptions');
+  if (optionsJSON) {
+    return JSON.parse(optionsJSON);
+  }
+  // Default options
+  return {
+    syncGrievances: true,
+    syncMembers: true,
+    autoSort: true,
+    repairCheckboxes: true,
+    showToasts: true
+  };
+}
+
+/**
+ * Quick install (no dialog) - used by repair functions
+ */
+function installAutoSyncTriggerQuick() {
+  var triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(function(trigger) {
+    if (trigger.getHandlerFunction() === 'onEditAutoSync') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  ScriptApp.newTrigger('onEditAutoSync')
+    .forSpreadsheet(SpreadsheetApp.getActiveSpreadsheet())
+    .onEdit()
+    .create();
+
+  Logger.log('Auto-sync trigger installed (quick mode)');
 }
 
 /**
@@ -1694,8 +1788,8 @@ function repairAllHiddenSheets() {
   // Recreate all hidden sheets with formulas
   setupAllHiddenSheets();
 
-  // Install trigger
-  installAutoSyncTrigger();
+  // Install trigger (quick mode - no dialog)
+  installAutoSyncTriggerQuick();
 
   // Run initial sync
   ss.toast('Running initial data sync...', '🔧 Sync', 3);
@@ -1780,10 +1874,11 @@ function verifyHiddenSheets() {
 }
 
 /**
- * Manual sync all data
+ * Manual sync all data with data quality validation
  */
 function syncAllData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
   ss.toast('Syncing all data...', '🔄 Sync', 3);
 
   syncGrievanceFormulasToLog();
@@ -1794,7 +1889,189 @@ function syncAllData() {
   repairGrievanceCheckboxes();
   repairMemberCheckboxes();
 
-  ss.toast('All data synced!', '✅ Success', 3);
+  // Run data quality check
+  var issues = checkDataQuality();
+
+  if (issues.length > 0) {
+    var issueMsg = issues.slice(0, 5).join('\n');
+    if (issues.length > 5) {
+      issueMsg += '\n... and ' + (issues.length - 5) + ' more issues';
+    }
+
+    ui.alert('⚠️ Sync Complete with Data Issues',
+      'Data synced successfully, but some issues were found:\n\n' + issueMsg + '\n\n' +
+      'Use "Fix Data Issues" from Administrator menu to resolve.',
+      ui.ButtonSet.OK);
+  } else {
+    ss.toast('All data synced! No issues found.', '✅ Success', 3);
+  }
+}
+
+/**
+ * Check data quality and return list of issues
+ * @return {Array} List of issue descriptions
+ */
+function checkDataQuality() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var issues = [];
+
+  // Check Grievance Log
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!grievanceSheet || !memberSheet) return issues;
+
+  var lastGRow = grievanceSheet.getLastRow();
+  var lastMRow = memberSheet.getLastRow();
+
+  if (lastGRow <= 1) return issues;
+
+  // Get all member IDs for lookup
+  var memberIds = {};
+  if (lastMRow > 1) {
+    var memberData = memberSheet.getRange(2, MEMBER_COLS.MEMBER_ID, lastMRow - 1, 1).getValues();
+    memberData.forEach(function(row) {
+      if (row[0]) memberIds[row[0]] = true;
+    });
+  }
+
+  // Check grievances for missing/invalid member IDs
+  var grievanceData = grievanceSheet.getRange(2, 1, lastGRow - 1, GRIEVANCE_COLS.MEMBER_ID).getValues();
+  var missingMemberIds = 0;
+  var invalidMemberIds = 0;
+
+  grievanceData.forEach(function(row) {
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+
+    if (!memberId || memberId === '') {
+      missingMemberIds++;
+    } else if (!memberIds[memberId]) {
+      invalidMemberIds++;
+    }
+  });
+
+  if (missingMemberIds > 0) {
+    issues.push('⚠️ ' + missingMemberIds + ' grievance(s) have no Member ID');
+  }
+  if (invalidMemberIds > 0) {
+    issues.push('⚠️ ' + invalidMemberIds + ' grievance(s) have Member IDs not found in Member Directory');
+  }
+
+  return issues;
+}
+
+/**
+ * Fix data quality issues with interactive dialog
+ */
+function fixDataQualityIssues() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  var issues = checkDataQuality();
+
+  if (issues.length === 0) {
+    ui.alert('✅ No Data Issues',
+      'All data passes quality checks!\n\n' +
+      '• All grievances have valid Member IDs\n' +
+      '• All Member IDs exist in Member Directory',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px}' +
+    'h2{color:#DC2626;margin-top:0}' +
+    '.issue{background:#fff5f5;padding:15px;margin:10px 0;border-radius:8px;border-left:4px solid #DC2626}' +
+    '.issue-title{font-weight:bold;margin-bottom:5px}' +
+    '.issue-desc{font-size:13px;color:#666}' +
+    '.fix-option{background:#f8f9fa;padding:12px;margin:8px 0;border-radius:4px;display:flex;align-items:center}' +
+    '.fix-option input{margin-right:10px}' +
+    'button{padding:12px 24px;border:none;border-radius:4px;cursor:pointer;margin:5px}' +
+    '.primary{background:#1a73e8;color:white}' +
+    '.secondary{background:#e0e0e0}' +
+    '</style></head><body><div class="container">' +
+    '<h2>⚠️ Data Quality Issues</h2>' +
+    '<p>The following issues were found:</p>' +
+    issues.map(function(i) { return '<div class="issue">' + i + '</div>'; }).join('') +
+    '<h3>How to Fix:</h3>' +
+    '<div class="fix-option"><strong>Option 1:</strong> Manually update Member IDs in Grievance Log</div>' +
+    '<div class="fix-option"><strong>Option 2:</strong> Use "Setup Member ID Dropdown" to add validation</div>' +
+    '<div class="fix-option"><strong>Option 3:</strong> Add missing members to Member Directory first</div>' +
+    '<p style="margin-top:20px"><button class="primary" onclick="google.script.run.showGrievancesWithMissingMemberIds();google.script.host.close()">📋 View Affected Rows</button>' +
+    '<button class="secondary" onclick="google.script.host.close()">Close</button></p>' +
+    '</div></body></html>'
+  ).setWidth(500).setHeight(450);
+  ui.showModalDialog(html, '⚠️ Data Quality Issues');
+}
+
+/**
+ * Show grievances that have missing or invalid Member IDs
+ */
+function showGrievancesWithMissingMemberIds() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!grievanceSheet) {
+    ui.alert('Grievance Log not found');
+    return;
+  }
+
+  var lastGRow = grievanceSheet.getLastRow();
+  if (lastGRow <= 1) {
+    ui.alert('No grievances found');
+    return;
+  }
+
+  // Get all member IDs
+  var memberIds = {};
+  var lastMRow = memberSheet ? memberSheet.getLastRow() : 1;
+  if (lastMRow > 1) {
+    var memberData = memberSheet.getRange(2, MEMBER_COLS.MEMBER_ID, lastMRow - 1, 1).getValues();
+    memberData.forEach(function(row) {
+      if (row[0]) memberIds[row[0]] = true;
+    });
+  }
+
+  // Find problematic rows
+  var grievanceData = grievanceSheet.getRange(2, 1, lastGRow - 1, GRIEVANCE_COLS.MEMBER_ID).getValues();
+  var problemRows = [];
+
+  grievanceData.forEach(function(row, index) {
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    var rowNum = index + 2;
+
+    if (!memberId || memberId === '') {
+      problemRows.push('Row ' + rowNum + ': ' + grievanceId + ' - NO MEMBER ID');
+    } else if (!memberIds[memberId]) {
+      problemRows.push('Row ' + rowNum + ': ' + grievanceId + ' - Invalid ID: "' + memberId + '"');
+    }
+  });
+
+  if (problemRows.length === 0) {
+    ui.alert('✅ All Good', 'All grievances have valid Member IDs!', ui.ButtonSet.OK);
+    return;
+  }
+
+  // Show first 20 rows
+  var displayRows = problemRows.slice(0, 20);
+  var msg = displayRows.join('\n');
+  if (problemRows.length > 20) {
+    msg += '\n\n... and ' + (problemRows.length - 20) + ' more rows with issues';
+  }
+
+  ui.alert('📋 Grievances with Member ID Issues (' + problemRows.length + ' total)',
+    msg + '\n\n' +
+    'To fix: Open Grievance Log and update the Member ID column (B) for these rows.',
+    ui.ButtonSet.OK);
+
+  // Activate Grievance Log sheet
+  ss.setActiveSheet(grievanceSheet);
 }
 
 /**

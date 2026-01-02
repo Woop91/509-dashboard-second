@@ -370,17 +370,72 @@ function showMyAssignedGrievances() {
 
 // ==================== QUICK ACTIONS ====================
 
+/**
+ * Show context-aware Quick Actions menu
+ *
+ * HOW IT WORKS:
+ * Quick Actions provides contextual shortcuts based on your current selection.
+ *
+ * AVAILABLE ON:
+ * - Member Directory: Start new grievance, send email, view history, copy ID
+ * - Grievance Log: Sync to calendar, setup folder, update status, copy ID
+ *
+ * HOW TO USE:
+ * 1. Navigate to Member Directory or Grievance Log
+ * 2. Click on any data row (not the header)
+ * 3. Run Quick Actions from the menu
+ * 4. A popup will show relevant actions for that row
+ */
 function showQuickActionsMenu() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
   var sheet = ss.getActiveSheet();
   var name = sheet.getName();
   var selection = sheet.getActiveRange();
-  if (!selection) { SpreadsheetApp.getUi().alert('Please select a row first.'); return; }
+
+  if (!selection) {
+    ui.alert('⚡ Quick Actions - How to Use',
+      'Quick Actions provides contextual shortcuts for the selected row.\n\n' +
+      'TO USE:\n' +
+      '1. Go to Member Directory or Grievance Log\n' +
+      '2. Click on a data row (not the header)\n' +
+      '3. Run this menu item again\n\n' +
+      'MEMBER DIRECTORY ACTIONS:\n' +
+      '• Start new grievance for member\n' +
+      '• Send email to member\n' +
+      '• View grievance history\n' +
+      '• Copy Member ID\n\n' +
+      'GRIEVANCE LOG ACTIONS:\n' +
+      '• Sync deadlines to calendar\n' +
+      '• Setup Drive folder\n' +
+      '• Quick status update\n' +
+      '• Copy Grievance ID',
+      ui.ButtonSet.OK);
+    return;
+  }
+
   var row = selection.getRow();
-  if (row < 2) { SpreadsheetApp.getUi().alert('Please select a data row, not header.'); return; }
-  if (name === SHEETS.MEMBER_DIR) showMemberQuickActions(row);
-  else if (name === SHEETS.GRIEVANCE_LOG) showGrievanceQuickActions(row);
-  else SpreadsheetApp.getUi().alert('Quick Actions', 'Available for Member Directory and Grievance Log.', SpreadsheetApp.getUi().ButtonSet.OK);
+  if (row < 2) {
+    ui.alert('Quick Actions',
+      'Please select a data row, not the header row.\n\n' +
+      'Click on row 2 or below to use Quick Actions.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  if (name === SHEETS.MEMBER_DIR) {
+    showMemberQuickActions(row);
+  } else if (name === SHEETS.GRIEVANCE_LOG) {
+    showGrievanceQuickActions(row);
+  } else {
+    ui.alert('⚡ Quick Actions',
+      'Quick Actions is available for:\n\n' +
+      '• Member Directory - actions for members\n' +
+      '• Grievance Log - actions for grievances\n\n' +
+      'Current sheet: ' + name + '\n\n' +
+      'Navigate to one of the supported sheets and select a row.',
+      ui.ButtonSet.OK);
+  }
 }
 
 function showMemberQuickActions(row) {
