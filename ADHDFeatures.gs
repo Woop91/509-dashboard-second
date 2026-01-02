@@ -113,14 +113,56 @@ function toggleReducedMotion() {
 
 // ==================== FOCUS MODE ====================
 
+/**
+ * Activate Focus Mode - ADHD-friendly distraction-free view
+ *
+ * WHAT IT DOES:
+ * - Hides all sheets except the one you're currently viewing
+ * - Removes gridlines to reduce visual clutter
+ * - Creates a clean, focused work environment
+ *
+ * HOW TO EXIT:
+ * - Use menu: ADHD > Exit Focus Mode
+ * - Or run: deactivateFocusMode()
+ *
+ * BEST FOR:
+ * - Deep work on a single task
+ * - Reducing cognitive load
+ * - Preventing tab-switching distractions
+ */
 function activateFocusMode() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
   var active = ss.getActiveSheet();
+
+  // Count visible sheets to warn user
+  var visibleSheets = ss.getSheets().filter(function(s) { return !s.isSheetHidden(); });
+
+  if (visibleSheets.length === 1) {
+    ui.alert('🎯 Focus Mode',
+      'Focus mode is already active (only one sheet visible).\n\n' +
+      'To exit focus mode, use:\n' +
+      'ADHD Menu > Exit Focus Mode',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Hide all sheets except active
   ss.getSheets().forEach(function(sheet) {
     if (sheet.getName() !== active.getName()) sheet.hideSheet();
   });
   active.setHiddenGridlines(true);
-  ss.toast('🎯 Focus mode activated. Use menu to exit.', 'Focus Mode', 5);
+
+  ui.alert('🎯 Focus Mode Activated',
+    'You are now in Focus Mode on: "' + active.getName() + '"\n\n' +
+    'WHAT THIS DOES:\n' +
+    '• Hides all other sheets to reduce distractions\n' +
+    '• Removes gridlines for a cleaner view\n\n' +
+    'TO EXIT:\n' +
+    '• Use menu: 🔧 ADHD > Exit Focus Mode\n' +
+    '• Or run: deactivateFocusMode()\n\n' +
+    '💡 Tip: Focus mode helps with deep work and reduces cognitive load.',
+    ui.ButtonSet.OK);
 }
 
 function deactivateFocusMode() {
@@ -250,12 +292,158 @@ function showThemeManager() {
 
 // ==================== SETUP DEFAULTS ====================
 
+/**
+ * Setup ADHD-friendly defaults with options dialog
+ * User can choose which settings to apply and settings can be undone
+ */
 function setupADHDDefaults() {
-  SpreadsheetApp.getUi().alert('🎨 Setting up ADHD-friendly defaults...');
+  var ui = SpreadsheetApp.getUi();
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px;max-width:500px}' +
+    'h2{color:#1a73e8;margin-top:0}' +
+    '.option{display:flex;align-items:center;padding:12px;margin:8px 0;background:#f8f9fa;border-radius:8px;cursor:pointer}' +
+    '.option:hover{background:#e8f0fe}' +
+    '.option input{margin-right:12px;width:18px;height:18px}' +
+    '.option-text{flex:1}' +
+    '.option-label{font-weight:bold;font-size:14px}' +
+    '.option-desc{font-size:12px;color:#666;margin-top:2px}' +
+    '.buttons{display:flex;gap:10px;margin-top:20px}' +
+    'button{padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-size:14px;flex:1}' +
+    '.primary{background:#1a73e8;color:white}' +
+    '.secondary{background:#e0e0e0;color:#333}' +
+    '.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px}' +
+    '</style></head><body><div class="container">' +
+    '<h2>🎨 ADHD-Friendly Setup</h2>' +
+    '<div class="info">💡 These settings can be undone anytime via the ADHD Control Panel or by running "Undo ADHD Defaults"</div>' +
+    '<div class="option" onclick="toggle(\'gridlines\')"><input type="checkbox" id="gridlines" checked><div class="option-text"><div class="option-label">Hide Gridlines</div><div class="option-desc">Reduce visual clutter by hiding sheet gridlines</div></div></div>' +
+    '<div class="option" onclick="toggle(\'zebra\')"><input type="checkbox" id="zebra"><div class="option-text"><div class="option-label">Zebra Stripes</div><div class="option-desc">Alternating row colors for easier reading</div></div></div>' +
+    '<div class="option" onclick="toggle(\'fontSize\')"><input type="checkbox" id="fontSize"><div class="option-text"><div class="option-label">Larger Font (12pt)</div><div class="option-desc">Increase default font size for better readability</div></div></div>' +
+    '<div class="option" onclick="toggle(\'focus\')"><input type="checkbox" id="focus"><div class="option-text"><div class="option-label">Focus Mode</div><div class="option-desc">Hide all sheets except the active one</div></div></div>' +
+    '<div class="buttons">' +
+    '<button class="secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="primary" onclick="apply()">Apply Settings</button>' +
+    '</div></div>' +
+    '<script>' +
+    'function toggle(id){var cb=document.getElementById(id);cb.checked=!cb.checked}' +
+    'function apply(){' +
+    'var opts={gridlines:document.getElementById("gridlines").checked,zebra:document.getElementById("zebra").checked,fontSize:document.getElementById("fontSize").checked,focus:document.getElementById("focus").checked};' +
+    'google.script.run.withSuccessHandler(function(){google.script.host.close()}).applyADHDDefaultsWithOptions(opts)}' +
+    '</script></body></html>'
+  ).setWidth(500).setHeight(450);
+  ui.showModalDialog(html, '🎨 ADHD-Friendly Setup');
+}
+
+/**
+ * Apply ADHD defaults with selected options
+ * @param {Object} options - Selected options
+ */
+function applyADHDDefaultsWithOptions(options) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var applied = [];
+
   try {
-    hideAllGridlines();
-    SpreadsheetApp.getUi().alert('🎉 ADHD-friendly setup complete!\n\n✅ Gridlines hidden\n✅ Ready for focus!');
+    // Store previous settings for undo
+    var prevSettings = {
+      gridlinesWereHidden: [],
+      zebraWasApplied: false,
+      previousFontSize: 10
+    };
+
+    var sheets = ss.getSheets();
+
+    if (options.gridlines) {
+      sheets.forEach(function(sheet) {
+        var name = sheet.getName();
+        if (name !== SHEETS.CONFIG && name !== SHEETS.MEMBER_DIR && name !== SHEETS.GRIEVANCE_LOG) {
+          sheet.setHiddenGridlines(true);
+        }
+      });
+      applied.push('✅ Gridlines hidden on dashboard sheets');
+    }
+
+    if (options.zebra) {
+      sheets.forEach(function(sheet) {
+        applyZebraStripes(sheet);
+      });
+      saveADHDSettings({zebraStripes: true});
+      applied.push('✅ Zebra stripes applied');
+    }
+
+    if (options.fontSize) {
+      sheets.forEach(function(sheet) {
+        if (sheet.getLastRow() > 0) {
+          sheet.getDataRange().setFontSize(12);
+        }
+      });
+      saveADHDSettings({fontSize: 12});
+      applied.push('✅ Font size increased to 12pt');
+    }
+
+    if (options.focus) {
+      activateFocusMode();
+      applied.push('✅ Focus mode activated');
+    }
+
+    ss.toast(applied.join('\n'), '🎨 Setup Complete', 5);
+
   } catch (e) {
     SpreadsheetApp.getUi().alert('⚠️ Error: ' + e.message);
+  }
+}
+
+/**
+ * Undo ADHD defaults - restore original settings
+ */
+function undoADHDDefaults() {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert('↩️ Undo ADHD Defaults',
+    'This will:\n\n' +
+    '• Show all gridlines\n' +
+    '• Remove zebra stripes\n' +
+    '• Reset font size to 10pt\n' +
+    '• Exit focus mode (show all sheets)\n\n' +
+    'Continue?',
+    ui.ButtonSet.YES_NO);
+
+  if (response !== ui.Button.YES) return;
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    // Show all gridlines
+    ss.getSheets().forEach(function(sheet) {
+      sheet.setHiddenGridlines(false);
+    });
+
+    // Remove zebra stripes
+    ss.getSheets().forEach(function(sheet) {
+      removeZebraStripes(sheet);
+    });
+
+    // Reset font size
+    ss.getSheets().forEach(function(sheet) {
+      if (sheet.getLastRow() > 0) {
+        sheet.getDataRange().setFontSize(10);
+      }
+    });
+
+    // Exit focus mode
+    deactivateFocusMode();
+
+    // Reset stored settings
+    resetADHDSettings();
+
+    ui.alert('↩️ Undo Complete',
+      'ADHD defaults have been reset:\n\n' +
+      '✅ Gridlines restored\n' +
+      '✅ Zebra stripes removed\n' +
+      '✅ Font size reset to 10pt\n' +
+      '✅ Focus mode deactivated',
+      ui.ButtonSet.OK);
+
+  } catch (e) {
+    ui.alert('⚠️ Error: ' + e.message);
   }
 }
