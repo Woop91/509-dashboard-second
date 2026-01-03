@@ -123,9 +123,8 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `syncDeadlinesToCalendar()` - Sync deadlines to Google Calendar
   - `showUpcomingDeadlinesFromCalendar()` - View calendar deadlines
 - Email Notifications:
-  - `setupDailyDeadlineNotifications()` - Enable daily alerts
-  - `disableDailyDeadlineNotifications()` - Disable alerts
-  - `checkDeadlinesAndNotify()` - Daily notification trigger
+  - `showNotificationSettings()` - UI to enable/disable daily notifications
+  - `testDeadlineNotifications()` - Test notification system
 - Audit Log:
   - `setupAuditLogSheet()` - Create hidden audit log
   - `logAuditEvent()` - Record audit entry
