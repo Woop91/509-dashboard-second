@@ -68,14 +68,9 @@ When you execute the **Nuke Seeded Data** function, the system will:
    > **NOTE (v3.11+):** These fields are now LEFT EMPTY during CREATE_509_DASHBOARD. Users populate them with their own data. If no user data was added, there's nothing to clear.
 
 ### Code Removal (Zero Trace Guarantee)
-5. **Delete ALL Seed Functions**: Uses Apps Script API to permanently remove:
-   - All SEED_MEMBERS_TOGGLE functions from Code.gs
-   - All SEED_GRIEVANCES_TOGGLE functions from Code.gs
-   - All seed helper functions (seedMembersWithCount, etc.)
-   - SEED_FULL_DEMO, SEED_2K_MEMBERS, SEED_300_GRIEVANCES functions
-6. **COMPLETELY DELETE SeedNuke.gs**: The entire file is removed (not just replaced)
-7. **Remove Seed Menu**: Deletes the "🌱 Seed Demo Data" menu from ReorganizedMenu.gs
-8. **Remove Nuke Menu Item**: Deletes the "🚨 Nuke All Data" menu item itself
+5. **Disable Demo Mode**: Sets DEMO_MODE_DISABLED flag
+6. **Remove Demo Menu**: The 🎭 Demo menu will be hidden on next refresh
+7. **Clear Tracked IDs**: Removes seeded member/grievance ID tracking
 
 ### Preserved Items
 9. **Preserve Organization Info**: Keep your real organization settings:
@@ -192,16 +187,13 @@ After nuking, a comprehensive guide will appear with:
    - No overdue grievances
 
 3. **Menu Changes**:
-   - "🌱 Seed Demo Data" menu completely removed
-   - Cleaner Data Management menu
+   - 🎭 Demo menu completely removed (hidden on refresh)
    - Focus on production tools
 
-4. **Code Changes** (if Apps Script API enabled):
-   - All SEED_* functions removed from Code.gs (~600 lines deleted)
-   - **SeedNuke.gs completely deleted** (file removed from project)
-   - Seed menu items removed from ReorganizedMenu.gs
-   - **Nuke menu item also removed** from ReorganizedMenu.gs
-   - **Zero evidence** that seed OR nuke functionality ever existed
+4. **Demo Mode Disabled**:
+   - DEMO_MODE_DISABLED flag set in Script Properties
+   - 🎭 Demo menu hidden on next spreadsheet refresh
+   - Seed functions remain in code but menu is not accessible
 
 ### What Remains Intact
 

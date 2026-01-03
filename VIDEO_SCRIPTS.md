@@ -10,7 +10,7 @@ Complete recording scripts for creating video tutorials. Each script includes na
 ## Recording Tips
 
 **Before Recording:**
-- Use seed data (20k members, 5k grievances) for realistic demonstrations
+- Use seed data (1,000 members, 300 grievances) for realistic demonstrations
 - Set screen resolution to 1920x1080 for clarity
 - Use a quiet environment with clear audio
 - Have the script open on a second monitor

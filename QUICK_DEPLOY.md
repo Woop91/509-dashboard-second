@@ -11,7 +11,7 @@ This guide shows you how to deploy the **entire 509 Dashboard** using a **single
 - ✅ **All 59 modules** in one auto-generated file
 - ✅ **Complete functionality** - nothing missing
 - ✅ **Copy/paste deployment** - no complex setup
-- ✅ **20k members + 5k grievances** capacity
+- ✅ **1,000 members + 300 grievances** demo seeding with auto-sync
 - ✅ **Terminal dashboard** with 26+ real-time metrics
 - ✅ **ADHD-friendly** design and features
 - ✅ **Audit logging and RBAC** (v2.4)
@@ -78,14 +78,11 @@ Download `ConsolidatedDashboard.gs` from this repository's main branch.
 
 ### **Step 7: Seed Test Data**
 
-1. Click **🎭 Demo → 🌱 Seed Demo Data → 👥 Seed Members**
-2. Click **"Seed Members - Toggle 1 (5,000)"** (takes ~1 minute)
-3. Repeat for Toggle 2, 3, 4 to generate up to 20k members total
-4. Click **🎭 Demo → 🌱 Seed Demo Data → 📋 Seed Grievances**
-5. Click **"Seed Grievances - Toggle 1 (2,500)"** (takes ~1 minute)
-6. Repeat for Toggle 2 to generate up to 5k grievances total
+1. Click **🎭 Demo → 🚀 Seed All Sample Data**
+2. Confirm when prompted
+3. Wait for seeding to complete (seeds 1,000 members + 300 grievances)
 
-**Note:** Toggle-based approach prevents timeout issues with large datasets
+**Note:** Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) auto-update when you edit the Grievance Log
 
 ### **Step 8: Open the Terminal Dashboard**
 
@@ -105,8 +102,8 @@ Download `ConsolidatedDashboard.gs` from this repository's main branch.
 ## ✅ You're Done!
 
 Your dashboard is fully operational with:
-- ✅ 20,000 test members
-- ✅ 5,000 test grievances
+- ✅ 1,000 test members
+- ✅ 300 test grievances
 - ✅ Real-time analytics
 - ✅ Terminal operations monitor
 - ✅ Interactive customizable views
@@ -239,6 +236,6 @@ You now have a fully functional union management system with:
 - **Audit logging system** - Full audit trail for all data modifications
 - **Role-based access control (RBAC)** - Admin, Steward, Viewer roles
 - **DIAGNOSE_SETUP()** - Comprehensive system health check
-- Toggle-based data seeding to prevent timeouts
+- Simplified seeding (1,000 members + 300 grievances) with auto-sync
 - Enhanced accessibility features (ADHD controls, dark mode, focus mode)
 - Advanced analytics and predictive insights

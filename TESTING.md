@@ -420,8 +420,8 @@ function testMyNewFeature() {
 | Dashboard refresh | < 5s | ~2s |
 | Run all tests | < 5min | ~2-3min |
 | Create 10 grievances | < 30s | ~15s |
-| Seed 20k members | < 3min | ~2-3min |
-| Seed 5k grievances | < 2min | ~1-2min |
+| Seed 1k members | < 1min | ~30s |
+| Seed 300 grievances | < 30s | ~15s |
 
 ---
 
@@ -432,7 +432,7 @@ function testMyNewFeature() {
 
 **Solutions:**
 - Run test categories separately
-- Reduce test data size (use 10 members instead of 20k)
+- Reduce test data size (use smaller counts)
 - Optimize `SpreadsheetApp.flush()` usage
 
 ### Tests Failing Intermittently

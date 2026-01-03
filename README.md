@@ -84,7 +84,7 @@ Complete union member database and grievance tracking system for Local 509.
 
 ### Major Updates
 - **Three-Tier Menu System**: Reorganized menus by role (User, Manager, Administrator)
-- **Toggle-Based Data Generation**: Seed members and grievances in 5k/2.5k increments
+- **Simplified Seeding**: Seed 1,000 members + 300 grievances with auto-sync trigger
 - **Enhanced Accessibility**: ADHD-friendly controls, dark mode, focus mode, custom themes
 - **Advanced Analytics**: Predictive analytics and root cause analysis tools
 - **Performance Optimization**: Caching layer, lazy loading, optimized batch operations
@@ -117,7 +117,7 @@ The 509 Dashboard is a comprehensive Google Sheets-based system for managing uni
 
 **Built for**: Local 509 union organizers, stewards, and administrators
 **Platform**: Google Sheets + Google Apps Script
-**Data Capacity**: Tested with 20,000 members and 5,000 grievances
+**Data Capacity**: Supports up to 2,000 members and 300 grievances per seed operation
 **Key Principle**: All metrics derived from real data—no simulated or fake statistics
 
 ## 🔧 How It Works
@@ -162,7 +162,7 @@ Dashboard (Real-time metrics and visualizations)
 ✅ **Real Data Only** - No fake CPU/memory metrics, all analytics from actual data
 ✅ **Config Tab** - Centralized dropdown management for consistency
 ✅ **Auto-Calculations** - Deadline tracking, days open, status snapshots
-✅ **Data Seeding** - Generate 20k members + 5k grievances for testing/training
+✅ **Data Seeding** - Generate 1,000 members + 300 grievances for testing/training with auto-sync
 ✅ **Member Satisfaction Tracking** - Survey data with calculated averages
 ✅ **Feedback System** - Track system improvements and feature requests
 
@@ -294,7 +294,7 @@ Features include:
 **For system administration and configuration**
 
 Features include:
-- **Seed Functions**: Toggle-based member/grievance generation (5,000 increments), legacy 20k/5k functions
+- **Demo Menu**: Seed sample data (1,000 members + 300 grievances) with auto-sync trigger
 - **System Health**: Error dashboard, health checks, error trend analysis
 - **Root Cause Analysis**: Advanced diagnostic tools
 - **Workflow Management**: Workflow visualizer, state management, batch updates
@@ -471,26 +471,15 @@ Features include:
 
 **Purpose**: Generate realistic test data for training and testing
 
-**SEED_FULL_DEMO()** - Seeds complete demo dataset (max 2K members + 300 grievances)
-- Config dropdown values
-- 2,000 members with ALL fields populated
-- 300 grievances with ALL fields populated
-- Batch writes 50 members / 25 grievances at a time
+**SEED_SAMPLE_DATA()** - Seeds complete demo dataset via Demo menu
+- Config dropdown values (Job Titles, Locations, Units, etc.)
+- 1,000 members with ALL fields populated
+- 300 grievances randomly distributed (some members may have multiple)
+- Auto-installs sync trigger for live updates between sheets
 
-**SEED_2K_MEMBERS()** - Generates 2,000 member records
-- Realistic names, job titles, locations, units
-- Contact tracking (last contact, notes, followup dates)
-- Committee assignments and skills
-- Steward contact history
-- Batch writes 50 rows at a time with 1s delay
+**Live Wiring**: After seeding, Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) automatically update when Grievance Log is edited.
 
-**SEED_300_GRIEVANCES()** - Generates 300 grievance records
-- Links to existing members via Member ID
-- Step dates, deadlines, management responses
-- Coordinator messages and resolution notes
-- Batch writes 25 rows at a time with 1s delay
-
-**NUKE_ALL_DATA()** - Clears all member and grievance data
+**NUKE_SEEDED_DATA()** - Clears all seeded member and grievance data
 
 **Limits**: Max 2,000 members, 300 grievances (prevents timeout)
 
@@ -618,31 +607,29 @@ System improvement tracking
 
 ## Data Seeding
 
-Generate realistic test data using the toggle-based approach:
+Generate realistic test data using the simplified Demo menu:
 
-### Member Seeding
-- **Toggle 1-4**: Generate 5,000 members each (20,000 total maximum)
-- Each batch includes diverse names, locations, job titles, engagement history
-- Access via: **⚙️ Administrator > Seed Functions > Seed Members**
+### Seed All Sample Data
+- **Menu**: 🎭 Demo > 🚀 Seed All Sample Data
+- Seeds 1,000 members with complete data
+- Seeds 300 grievances (randomly distributed - some members may have multiple)
+- Auto-installs sync trigger for live updates
 
-### Grievance Seeding
-- **Toggle 1-2**: Generate 2,500 grievances each (5,000 total maximum)
-- Linked to existing members with various statuses and realistic timelines
-- Access via: **⚙️ Administrator > Seed Functions > Seed Grievances**
+### Live Wiring (Auto-Sync)
+After seeding, Member Directory columns automatically update when Grievance Log changes:
+- **Has Open Grievance?** - Yes/No based on grievance status
+- **Grievance Status** - Open/Pending Info/blank
+- **Days to Deadline** - Minimum deadline for open grievances
 
-### Benefits of Toggle-Based Approach
-- Avoids Google Apps Script timeout limits
-- Allows incremental data generation
-- Better performance for large datasets
-- Legacy functions (Seed All 20k/5k) still available for backward compatibility
+Updates happen within 1-3 seconds of editing.
 
 ### Clear Data Options
-- **Nuke Seed Data (Exit Demo Mode)**: Removes core test data, sets SEED_NUKED flag, shows post-nuke guidance
-  - Access via: **⚙️ Administrator > Seed Functions > 🚨 Nuke Seed Data (Exit Demo Mode)**
-- **Nuke ALL Sheet Data (Comprehensive)**: Clears ALL sheets including analytics, surveys, feedback, archive
-  - Access via: **⚙️ Administrator > Seed Functions > 🗑️ Nuke ALL Sheet Data (Comprehensive)**
-- **Clear Core Data Only**: Clears only Member Directory and Grievance Log
-  - Access via: **⚙️ Administrator > Seed Functions > ⚠️ Clear Core Data Only**
+- **Nuke Seeded Data**: Removes all seeded test data, disables Demo menu
+  - Access via: **🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA**
+- **Clear Config Dropdowns Only**: Clears only Config dropdown values
+  - Access via: **🎭 Demo > 🗑️ Nuke Data > 🧹 Clear Config Dropdowns Only**
+- **Restore Config & Dropdowns**: Re-seeds Config and reapplies validations
+  - Access via: **🎭 Demo > 🗑️ Nuke Data > 🔄 Restore Config & Dropdowns**
 
 ## Key Improvements
 
@@ -656,7 +643,7 @@ Generate realistic test data using the toggle-based approach:
 
 ### Recent Enhancements (v2.0)
 ✅ **Three-tier menu system** - Role-based organization for improved usability
-✅ **Toggle-based seeding** - Incremental data generation to avoid timeouts
+✅ **Simplified seeding** - 1,000 members + 300 grievances with auto-sync trigger
 ✅ **Enhanced accessibility** - ADHD-friendly features, dark mode, focus mode
 ✅ **Advanced analytics** - Predictive analytics and root cause analysis
 ✅ **Workflow automation** - State machine for grievance lifecycle management
@@ -764,15 +751,14 @@ Generate realistic test data using the toggle-based approach:
 
 **For Training or Testing**:
 
-1. Click **⚙️ Administrator** menu
-2. Select **Seed Functions > Seed Members > Seed Members - Toggle 1 (5,000)**
-3. Repeat for additional member batches if needed (Toggle 2, 3, 4 for up to 20k total)
-4. Select **Seed Functions > Seed Grievances > Seed Grievances - Toggle 1 (2,500)**
-5. Repeat for additional grievance batch if needed (Toggle 2 for up to 5k total)
-6. Go to **Dashboard > Dashboards > Main Dashboard** to see populated metrics
-7. Use **Administrator > Seed Functions > 🚨 Nuke Seed Data (Exit Demo Mode)** when done testing
+1. Click **🎭 Demo** menu
+2. Select **🚀 Seed All Sample Data**
+3. Confirm when prompted - this seeds 1,000 members + 300 grievances
+4. Go to **💼 Dashboard** to see populated metrics
+5. Edit grievances in **Grievance Log** - Member Directory updates automatically
+6. Use **🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA** when done testing
 
-**Note**: The toggle-based approach allows for incremental data generation to avoid timeouts
+**Note**: Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) auto-update when you edit the Grievance Log
 
 ### Example 7: Monthly Report Generation
 
@@ -839,9 +825,9 @@ Generate realistic test data using the toggle-based approach:
 **Cause**: Google Apps Script execution time limit (6 minutes)
 
 **Solution**:
-- Reduce batch size in code (change BATCH_SIZE constant)
-- Run in smaller chunks (modify functions to seed 5k at a time instead of 20k)
-- For very large datasets, consider importing CSV data instead
+- The default seed (1,000 members + 300 grievances) is designed to avoid timeouts
+- For larger datasets, consider importing CSV data instead
+- Or use SEED_MEMBERS(count) with smaller counts in multiple runs
 
 ### Issue: Deadline calculations not working
 

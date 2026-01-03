@@ -277,25 +277,23 @@ After entering, these columns auto-populate:
 
 ## 9. Seeding Demo Data (for Training)
 
-### Adding Test Members
+### Seed All Sample Data
 
-1. Click **🎭 Demo** → **🌱 Seed Demo Data** → **👥 Seed Members**
-2. Click "Seed Members - Toggle 1 (5,000)"
-3. Wait ~1 minute per toggle
-4. Repeat toggles 2-4 for up to 20,000 members
+1. Click **🎭 Demo** → **🚀 Seed All Sample Data**
+2. Confirm when prompted
+3. Wait for seeding to complete
 
-### Adding Test Grievances
+This seeds:
+- 1,000 sample members with complete data
+- 300 grievances (randomly distributed - some members may have multiple)
+- Auto-sync trigger for live updates
 
-1. Click **🎭 Demo** → **🌱 Seed Demo Data** → **📋 Seed Grievances**
-2. Click "Seed Grievances - Toggle 1 (2,500)"
-3. Wait ~1 minute per toggle
-4. Toggle 2 adds another 2,500 (5,000 total)
+### Live Wiring
 
-### Why Use Toggles?
-
-- Prevents Google Apps Script timeout (6-minute limit)
-- Allows incremental testing
-- Better performance for large datasets
+After seeding, Member Directory columns auto-update when you edit Grievance Log:
+- **Has Open Grievance?** - Yes/No based on grievance status
+- **Grievance Status** - Open/Pending Info/blank
+- **Days to Deadline** - Minimum deadline for open grievances
 
 ---
 
@@ -309,7 +307,7 @@ After entering, these columns auto-populate:
 
 ### Nuke Process
 
-1. Click **🎭 Demo** → **🗑️ Data Management** → **🚨 Nuke Seed Data (Exit Demo Mode)**
+1. Click **🎭 Demo** → **🗑️ Nuke Data** → **☢️ NUKE SEEDED DATA**
 2. Read the warning carefully
 3. Click "Yes" on first confirmation
 4. Click "Yes" on second confirmation
@@ -476,8 +474,8 @@ If something goes wrong, use these repair functions:
 | Refresh dashboard | 👤 Dashboard → 🔄 Refresh All |
 | View operations monitor | 👤 Dashboard → 📊 Dashboards → 🎯 Unified Operations Monitor |
 | Check system health | ⚙️ Administrator → System Health → 🔧 Diagnose Setup |
-| Seed test data | 🎭 Demo → 🌱 Seed Demo Data |
-| Exit demo mode | 🎭 Demo → 🗑️ Data Management → 🚨 Nuke Seed Data |
+| Seed test data | 🎭 Demo → 🚀 Seed All Sample Data |
+| Exit demo mode | 🎭 Demo → 🗑️ Nuke Data → ☢️ NUKE SEEDED DATA |
 
 ### Column Reference
 
