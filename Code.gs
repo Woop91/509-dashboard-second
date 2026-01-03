@@ -813,19 +813,30 @@ function createDashboard(ss) {
     .setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECTION 9: STATUS LEGEND
+  // SECTION 9: STATUS LEGEND (matches Grievance Log conditional formatting)
   // ═══════════════════════════════════════════════════════════════════════════
-  sheet.getRange('A46').setValue('STATUS LEGEND')
+  sheet.getRange('A46').setValue('GRIEVANCE LOG STATUS LEGEND')
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
-  sheet.getRange('A46:F46').merge();
+  sheet.getRange('A46:G46').merge();
 
-  var legend = [
-    ['🟢 On Track', '🟡 Due in 7 days', '🟠 Due in 3 days', '🔴 Overdue', '✅ Won', '❌ Denied']
+  // Row 1: Deadline status (Days to Deadline column)
+  var legendDeadline = [
+    ['Deadline:', '🟢 On Track (>7d)', '🟡 Due Soon (4-7d)', '🟠 Urgent (1-3d)', '🔴 Overdue', '', '']
   ];
-  sheet.getRange('A47:F47').setValues(legend)
+  sheet.getRange('A47:G47').setValues(legendDeadline)
     .setHorizontalAlignment('center')
-    .setFontSize(10);
+    .setFontSize(9);
+  sheet.getRange('A47').setFontWeight('bold').setHorizontalAlignment('right');
+
+  // Row 2: Outcome status (Status column)
+  var legendOutcome = [
+    ['Outcome:', '✅ Won', '❌ Denied', '🤝 Settled', '', '', '']
+  ];
+  sheet.getRange('A48:G48').setValues(legendOutcome)
+    .setHorizontalAlignment('center')
+    .setFontSize(9);
+  sheet.getRange('A48').setFontWeight('bold').setHorizontalAlignment('right');
 
   // Auto-resize and format
   sheet.autoResizeColumns(1, 6);
@@ -2366,18 +2377,52 @@ function applyStepHighlighting() {
     .setRanges([step3Range])
     .build();
 
-  // Rule 4: Highlight Next Action Due (T) in green if within 7 days
+  // -------------------------------------------------------------------------
+  // DEADLINE STATUS RULES (Days to Deadline column U)
+  // Order matters: more specific rules first, then broader ones
+  // -------------------------------------------------------------------------
+
+  var daysDeadlineRange = sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, lastRow - 1, 1);
   var nextDueRange = sheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, lastRow - 1, 1);
+
+  // Rule 4: 🔴 Red - Overdue (Days to Deadline shows "Overdue" or negative/0)
   var rule4 = SpreadsheetApp.newConditionalFormatRule()
-    .whenFormulaSatisfied('=AND($T2<>"",($T2-TODAY())<=7,($T2-TODAY())>=0)')
+    .whenFormulaSatisfied('=OR($U2="Overdue",AND(ISNUMBER($U2),$U2<=0))')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule 5: 🟠 Orange - Due in 1-3 days
+  var rule5 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=1,$U2<=3)')
     .setBackground('#fff3e0')
     .setFontColor('#e65100')
     .setBold(true)
-    .setRanges([nextDueRange])
+    .setRanges([daysDeadlineRange])
     .build();
 
-  // Rule 5: Red highlight if overdue
-  var rule5 = SpreadsheetApp.newConditionalFormatRule()
+  // Rule 6: 🟡 Yellow - Due in 4-7 days
+  var rule6 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=4,$U2<=7)')
+    .setBackground('#fffde7')
+    .setFontColor('#f57f17')
+    .setBold(false)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule 7: 🟢 Green - On Track (more than 7 days remaining)
+  var rule7 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>7)')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setBold(false)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule 8: Red highlight for Next Action Due if overdue
+  var rule8 = SpreadsheetApp.newConditionalFormatRule()
     .whenFormulaSatisfied('=AND($T2<>"",$T2<TODAY())')
     .setBackground('#ffebee')
     .setFontColor('#c62828')
@@ -2385,21 +2430,53 @@ function applyStepHighlighting() {
     .setRanges([nextDueRange])
     .build();
 
-  // Rule 6: Highlight Days to Deadline (U) if overdue
-  var daysDeadlineRange = sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, lastRow - 1, 1);
-  var rule6 = SpreadsheetApp.newConditionalFormatRule()
-    .whenTextEqualTo('Overdue')
+  // Rule 9: Orange for Next Action Due within 3 days
+  var rule9 = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($T2<>"",($T2-TODAY())>=0,($T2-TODAY())<=3)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([nextDueRange])
+    .build();
+
+  // -------------------------------------------------------------------------
+  // OUTCOME STATUS RULES (Status column E)
+  // -------------------------------------------------------------------------
+
+  var statusRange = sheet.getRange(2, GRIEVANCE_COLS.STATUS, lastRow - 1, 1);
+
+  // Rule 10: ✅ Green - Won
+  var rule10 = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Won')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setBold(true)
+    .setRanges([statusRange])
+    .build();
+
+  // Rule 11: ❌ Red - Denied
+  var rule11 = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Denied')
     .setBackground('#ffebee')
     .setFontColor('#c62828')
     .setBold(true)
-    .setRanges([daysDeadlineRange])
+    .setRanges([statusRange])
+    .build();
+
+  // Rule 12: 🤝 Blue - Settled
+  var rule12 = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Settled')
+    .setBackground('#e3f2fd')
+    .setFontColor('#1565c0')
+    .setBold(true)
+    .setRanges([statusRange])
     .build();
 
   // Add new rules (keep existing rules)
-  rules.push(rule1, rule2, rule3, rule4, rule5, rule6);
+  rules.push(rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12);
   sheet.setConditionalFormatRules(rules);
 
-  ss.toast('Step highlighting applied! Inactive steps grayed, urgent dates highlighted', '✅ Done', 5);
+  ss.toast('Formatting applied! Deadline colors (🟢🟡🟠🔴) and outcome status (Won/Denied/Settled)', '✅ Done', 5);
 }
 
 /**
