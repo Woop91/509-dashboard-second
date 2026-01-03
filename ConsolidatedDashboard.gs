@@ -464,10 +464,8 @@ function getGrievanceHeaders() {
 var DEFAULT_CONFIG = {
   OFFICE_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   YES_NO: ['Yes', 'No'],
-  // Status = workflow state (where is the case in the process)
-  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'In Arbitration', 'Appealed', 'Closed'],
-  // Resolution = outcome (how did the case end, only when Status = Closed)
-  GRIEVANCE_RESOLUTION: ['Won - Full', 'Won - Partial', 'Settled - Favorable', 'Settled - Neutral', 'Denied - Appealing', 'Denied - Final', 'Withdrawn'],
+  // Status includes both workflow states AND outcomes (single column design)
+  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'Settled', 'Withdrawn', 'Denied', 'Won', 'Appealed', 'In Arbitration', 'Closed'],
   GRIEVANCE_STEP: ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'],
   ISSUE_CATEGORY: ['Discipline', 'Workload', 'Scheduling', 'Pay', 'Benefits', 'Safety', 'Harassment', 'Discrimination', 'Contract Violation', 'Other'],
   ARTICLES: [
@@ -1221,10 +1219,10 @@ function createDashboard(ss) {
     [
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Settled*")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Denied*")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"Withdrawn")'
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")',
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")',
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")'
     ]
   ];
   sheet.getRange('A14:F14').setFormulas(grievanceFormulas)
@@ -5485,7 +5483,13 @@ function SEED_MEMBERS(count, grievancePercent) {
 
   // Grievance config
   var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
-  var resolutions = DEFAULT_CONFIG.GRIEVANCE_RESOLUTION;
+  // Resolution notes for resolved statuses (optional detail in RESOLUTION column)
+  var resolutionNotes = {
+    'Won': ['Full remedy awarded', 'Partial remedy - back pay', 'Grievance sustained', 'Management corrected violation'],
+    'Settled': ['Mutual agreement reached', 'Informal resolution', 'Step I settlement', 'Written agreement signed'],
+    'Denied': ['Denied at Step II', 'Denied at Step III', 'Insufficient evidence cited', 'Management position upheld'],
+    'Withdrawn': ['Member requested withdrawal', 'Issue resolved informally', 'Member left bargaining unit', 'Duplicate grievance']
+  };
   var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
   var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
   var articles = DEFAULT_CONFIG.ARTICLES;
@@ -5616,7 +5620,8 @@ function SEED_MEMBERS(count, grievancePercent) {
       var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
       var status = randomChoice(statuses);
       var step = randomChoice(steps);
-      var resolution = (status === 'Closed') ? randomChoice(resolutions) : '';
+      // Add resolution note for resolved statuses (Won, Settled, Denied, Withdrawn)
+      var resolution = resolutionNotes[status] ? randomChoice(resolutionNotes[status]) : '';
 
       var grievanceRow = generateSingleGrievanceRow(
         grievanceId,
