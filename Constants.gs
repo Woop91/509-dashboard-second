@@ -433,7 +433,10 @@ function getGrievanceHeaders() {
 var DEFAULT_CONFIG = {
   OFFICE_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   YES_NO: ['Yes', 'No'],
-  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'Settled', 'Withdrawn', 'Denied', 'Won', 'Appealed', 'In Arbitration', 'Closed'],
+  // Status = workflow state (where is the case in the process)
+  GRIEVANCE_STATUS: ['Open', 'Pending Info', 'In Arbitration', 'Appealed', 'Closed'],
+  // Resolution = outcome (how did the case end, only when Status = Closed)
+  GRIEVANCE_RESOLUTION: ['Won - Full', 'Won - Partial', 'Settled - Favorable', 'Settled - Neutral', 'Denied - Appealing', 'Denied - Final', 'Withdrawn'],
   GRIEVANCE_STEP: ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'],
   ISSUE_CATEGORY: ['Discipline', 'Workload', 'Scheduling', 'Pay', 'Benefits', 'Safety', 'Harassment', 'Discrimination', 'Contract Violation', 'Other'],
   ARTICLES: [
@@ -477,11 +480,7 @@ var GRIEVANCE_STATUS_PRIORITY = {
   'Pending Info': 2,
   'In Arbitration': 3,
   'Appealed': 4,
-  'Settled': 5,
-  'Won': 6,
-  'Denied': 7,
-  'Withdrawn': 8,
-  'Closed': 9
+  'Closed': 5
 };
 
 // ============================================================================
