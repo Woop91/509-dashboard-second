@@ -137,7 +137,7 @@ function SEED_SAMPLE_DATA() {
     'This will seed:\n' +
     '• Config dropdowns (Job Titles, Locations, etc.)\n' +
     '• 1,000 sample members\n' +
-    '• 300 sample grievances (randomly distributed)\n' +
+    '• 300 sample grievances (30%)\n' +
     '• Auto-sync trigger for live updates\n\n' +
     'Note: Some members may have multiple grievances.\n' +
     'Member Directory will auto-update when Grievance Log changes.\n\n' +
@@ -152,11 +152,8 @@ function SEED_SAMPLE_DATA() {
   ss.toast('Seeding config data...', '🌱 Seeding', 3);
   seedConfigData();
 
-  ss.toast('Seeding 1,000 members (this may take a moment)...', '🌱 Seeding', 10);
-  SEED_MEMBERS_ONLY(1000);
-
-  ss.toast('Seeding 300 grievances...', '🌱 Seeding', 5);
-  SEED_GRIEVANCES(300);
+  ss.toast('Seeding 1,000 members + 300 grievances (this may take a moment)...', '🌱 Seeding', 10);
+  SEED_MEMBERS(1000, 30);
 
   ss.toast('Installing auto-sync trigger...', '🔧 Setup', 3);
   installAutoSyncTriggerQuick();
@@ -165,7 +162,7 @@ function SEED_SAMPLE_DATA() {
   ui.alert('✅ Success', 'Sample data has been seeded!\n\n' +
     '• Config dropdowns populated\n' +
     '• 1,000 members added\n' +
-    '• 300 grievances added (randomly distributed)\n' +
+    '• 300 grievances added (30%)\n' +
     '• Auto-sync trigger installed\n\n' +
     'Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) ' +
     'will now auto-update when you edit the Grievance Log.', ui.ButtonSet.OK);
