@@ -52,16 +52,15 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 ## File Architecture
 
-### Project Structure (10 Files)
+### Project Structure (9 Source Files)
 
 ```
 509-dashboard/
 ├── Constants.gs           # Configuration constants (SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS)
-├── Code.gs                # Main entry point, setup functions, sheet creation
+├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
 ├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
-├── DriveCalendarEmail.gs  # Google Drive, Calendar, Email notifications
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -71,7 +70,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 ### File Descriptions
 
-**Constants.gs** (~500 lines)
+**Constants.gs** (~607 lines)
 - `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
@@ -92,7 +91,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~900 lines)
+**Code.gs** (~3733 lines) - Main entry point with Drive/Calendar/Email/Audit
 - `onOpen()` - Creates menu system
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
@@ -111,12 +110,30 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `refreshAllFormulas()` - Refresh all formulas and sync
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
-- `searchMembers()` - Search members (stub)
+- `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Start grievance (stub)
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
+- Google Drive Integration:
+  - `setupDriveFolderForGrievance()` - Create folder for grievance
+  - `getOrCreateDashboardFolder_()` - Get/create root folder
+  - `showGrievanceFiles()` - View files for grievance
+  - `batchCreateGrievanceFolders()` - Bulk folder creation
+- Calendar Integration:
+  - `syncDeadlinesToCalendar()` - Sync deadlines to Google Calendar
+  - `showUpcomingDeadlinesFromCalendar()` - View calendar deadlines
+- Email Notifications:
+  - `setupDailyDeadlineNotifications()` - Enable daily alerts
+  - `disableDailyDeadlineNotifications()` - Disable alerts
+  - `checkDeadlinesAndNotify()` - Daily notification trigger
+- Audit Log:
+  - `setupAuditLogSheet()` - Create hidden audit log
+  - `logAuditEvent()` - Record audit entry
+  - `onEditAudit()` - Audit trigger handler
+  - `viewAuditLog()` - View audit entries
+  - `getAuditHistory()` - Get history for a record
 
-**SeedNuke.gs** (~500 lines)
+**SeedNuke.gs** (~1353 lines)
 - `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%)
 - `seedConfigData()` - Populate Config dropdowns
 - `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
@@ -138,7 +155,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~1500 lines)
+**HiddenSheets.gs** (~2207 lines)
 - `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
 - Hidden Sheet Setup Functions (5 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -178,29 +195,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
 - `setupADHDDefaults()` - Initialize ADHD-friendly defaults
 
-**DriveCalendarEmail.gs** (~500 lines) - Google Drive, Calendar & Email
-- Google Drive:
-  - `createRootFolder()` - Create base folder for grievance files
-  - `createGrievanceFolder()` - Create folder for specific grievance
-  - `linkFolderToGrievance()` - Link folder ID to grievance row
-  - `setupDriveFolderForGrievance()` - Menu handler for folder creation
-  - `listFolderFiles()` - List files in a folder
-  - `showGrievanceFiles()` - Show files for selected grievance
-  - `batchCreateGrievanceFolders()` - Create folders for all grievances
-- Calendar:
-  - `syncDeadlinesToCalendar()` - Sync all deadlines to Google Calendar
-  - `checkCalendarEventExists()` - Check if event already exists
-  - `clearAllCalendarEvents()` - Remove all dashboard calendar events
-  - `showUpcomingDeadlinesFromCalendar()` - View upcoming deadlines
-- Email Notifications:
-  - `setupDailyDeadlineNotifications()` - Enable daily email reminders
-  - `disableDailyDeadlineNotifications()` - Disable notifications
-  - `checkDeadlinesAndNotify()` - Main notification check (runs daily)
-  - `sendDeadlineNotification()` - Send individual notification
-  - `showNotificationSettings()` - Notification configuration UI
-  - `testDeadlineNotifications()` - Test notification system
-
-**TestingValidation.gs** (~500 lines) - Testing Framework & Data Validation
+**TestingValidation.gs** (~474 lines) - Testing Framework & Data Validation
 - Testing Framework:
   - `Assert` - Assertion library (assertEquals, assertTrue, assertFalse, etc.)
   - `runAllTests()` - Run complete test suite
@@ -224,7 +219,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `installValidationTrigger()` - Real-time validation on edit
   - `onEditValidation()` - Validation trigger handler
 
-**PerformanceUndo.gs** (~500 lines) - Caching Layer & Undo/Redo
+**PerformanceUndo.gs** (~294 lines) - Caching Layer & Undo/Redo
 - Caching:
   - `getCachedData()` - Get data from cache or load
   - `setCachedData()` - Store data in cache
@@ -246,7 +241,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `exportUndoHistoryToSheet()` - Export history to sheet
   - `createGrievanceSnapshot()`, `restoreFromSnapshot()` - Full snapshot backup
 
-**MobileQuickActions.gs** (~600 lines) - Mobile Interface & Quick Actions
+**MobileQuickActions.gs** (~1164 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
   - `showMobileDashboard()` - Touch-optimized dashboard
   - `getMobileDashboardStats()` - Dashboard statistics
