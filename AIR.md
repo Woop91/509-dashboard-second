@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.0 (Enhanced Analytics Dashboard)
-**Last Updated:** 2025-12-18
+**Version:** 1.6.0 (Desktop Search Implementation)
+**Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -66,7 +66,7 @@
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~900 lines)
+**Code.gs** (~1400 lines)
 - `onOpen()` - Creates menu system
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
@@ -85,7 +85,11 @@
 - `refreshAllFormulas()` - Refresh all formulas and sync
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
-- `searchMembers()` - Search members (stub)
+- `searchMembers()` - Opens desktop search modal (calls `showDesktopSearch()`)
+- `showDesktopSearch()` - Desktop unified search with advanced filtering
+- `getDesktopSearchLocations()` - Get unique locations for filter dropdown
+- `getDesktopSearchData(query, tab, filters)` - Backend search across members/grievances
+- `navigateToSearchResult(type, id, row)` - Navigate to search result row
 - `startNewGrievance()` - Start grievance (stub)
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
@@ -685,6 +689,46 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.6.0 (2026-01-03) - Desktop Search Implementation
+
+**New Feature: Desktop Unified Search**
+
+Comprehensive search functionality accessible via **Dashboard → 🔍 Search Members**
+
+| Feature | Description |
+|---------|-------------|
+| **Unified Search** | Search across both Members and Grievances in one interface |
+| **Tabbed Interface** | All, Members, Grievances tabs for filtering results |
+| **Advanced Filters** | Status (grievances), Location (all), Is Steward (members) |
+| **Searchable Fields** | Name, ID, Email, Job Title, Location, Issue Type, Steward Name |
+| **Click-to-Navigate** | Click any result to jump directly to that row in the spreadsheet |
+| **Desktop Optimized** | 900x700 modal with responsive grid layout |
+
+**New Functions (Code.gs):**
+
+- `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
+- `getDesktopSearchLocations()` - Get unique locations for filter dropdown
+- `getDesktopSearchData(query, tab, filters)` - Backend search handler
+- `navigateToSearchResult(type, id, row)` - Navigate to search result
+
+**Mobile vs Desktop Search Comparison:**
+
+| Aspect | Mobile (`showMobileUnifiedSearch`) | Desktop (`showDesktopSearch`) |
+|--------|-----------------------------------|------------------------------|
+| Search Fields | ID, Name, Email, Status | ID, Name, Email, Job Title, Location, Issue Type, Steward |
+| Filters | Tab only | Status, Location, Is Steward |
+| Result Details | Minimal | Full (email, location, job, status, issue, steward, date) |
+| Result Limit | 20 | 50 |
+| Navigation | No | Yes - click to jump to row |
+| Dialog Size | 800x700 | 900x700 |
+
+**Code Changes:**
+
+- Code.gs: Replaced stub `searchMembers()` with full implementation (+474 lines)
+- ConsolidatedDashboard.gs: Rebuilt to include desktop search
+
+---
 
 ### Version 1.5.0 (2025-12-18) - Enhanced Analytics Dashboard
 
