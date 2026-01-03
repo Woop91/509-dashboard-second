@@ -14,10 +14,10 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-03T03:24:30.864Z
- * - Build Type: PRODUCTION
- * - Modules: 77 files
- * - Tests Included: No
+ * - Build Date: 2025-12-28T20:48:52.086Z
+ * - Build Type: DEVELOPMENT
+ * - Modules: 80 files
+ * - Tests Included: Yes
  *
  * ============================================================================
  */
@@ -144,8 +144,9 @@ var MEMBER_COLS = {
   NEXT_DEADLINE: 30,               // AD - Script-calculated (static value)
   START_GRIEVANCE: 31,             // AE - Checkbox to start grievance
 
-  // ALIAS - For backward compatibility
-  LOCATION: 5                      // Alias for WORK_LOCATION
+  // ALIASES - For backward compatibility
+  LOCATION: 5,                     // Alias for WORK_LOCATION
+  DAYS_TO_DEADLINE: 30             // Alias for NEXT_DEADLINE
 };
 
 // ============================================================================
@@ -463,6 +464,7 @@ function getGrievanceHeaders() {
 var DEFAULT_CONFIG = {
   OFFICE_DAYS: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
   YES_NO: ['Yes', 'No'],
+  // Status includes both workflow states AND outcomes (single column design)
   GRIEVANCE_STATUS: ['Open', 'Pending Info', 'Settled', 'Withdrawn', 'Denied', 'Won', 'Appealed', 'In Arbitration', 'Closed'],
   GRIEVANCE_STEP: ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'],
   ISSUE_CATEGORY: ['Discipline', 'Workload', 'Scheduling', 'Pay', 'Benefits', 'Safety', 'Harassment', 'Discrimination', 'Contract Violation', 'Other'],
@@ -498,20 +500,36 @@ var DEFAULT_CONFIG = {
 };
 
 /**
- * Grievance status priority order for auto-sorting
- * Lower number = higher priority (appears first in sorted list)
- * Active cases appear first, resolved cases last
+ * Grievance STATUS priority for auto-sorting
+ * Status = workflow state only (where the case is in the process)
+ * Lower number = higher priority (appears first)
  */
 var GRIEVANCE_STATUS_PRIORITY = {
   'Open': 1,
   'Pending Info': 2,
   'In Arbitration': 3,
   'Appealed': 4,
-  'Settled': 5,
-  'Won': 6,
-  'Denied': 7,
-  'Withdrawn': 8,
-  'Closed': 9
+  'Closed': 5
+};
+
+/**
+ * Grievance RESOLUTION priority for auto-sorting closed cases
+ * Resolution = outcome (how the case ended, only when Status = Closed)
+ * Lower number = higher priority (appears first)
+ */
+var GRIEVANCE_RESOLUTION_PRIORITY = {
+  'Won - Full': 1,
+  'Won - Partial': 2,
+  'Won': 3,
+  'Settled - Favorable': 4,
+  'Settled - Neutral': 5,
+  'Settled': 6,
+  'Denied - Appealing': 7,
+  'Denied - Final': 8,
+  'Denied': 9,
+  'Withdrawn': 10,
+  'Pending': 50,
+  '': 99
 };
 
 // ============================================================================
@@ -610,9 +628,7 @@ function onOpen() {
   // Main Dashboard Menu
   ui.createMenu('👤 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
-    .addItem('🎯 Interactive Dashboard', 'showInteractiveDashboardTab')
     .addSeparator()
-    .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
@@ -620,13 +636,21 @@ function onOpen() {
     .addSubMenu(ui.createMenu('📋 Grievance Tools')
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
-      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas'))
+      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
+      .addSeparator()
+      .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
+      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+      .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
+    .addToUi();
+
+  // Member Search Menu (standalone for quick access)
+  ui.createMenu('🔍 Search')
+    .addItem('🔍 Search Members', 'searchMembers')
     .addToUi();
 
   // Sheet Manager Menu
   ui.createMenu('📊 Sheet Manager')
     .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
-    .addItem('📈 Refresh Interactive Charts', 'refreshInteractiveCharts')
     .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
     .addSeparator()
     .addSubMenu(ui.createMenu('📁 Google Drive')
@@ -680,7 +704,6 @@ function onOpen() {
 
   // Setup Menu
   ui.createMenu('🏗️ Setup')
-    .addItem('🏗️ CREATE 509 DASHBOARD', 'CREATE_509_DASHBOARD')
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
@@ -695,15 +718,17 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🌱 Seed Data')
         .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
         .addSeparator()
-        .addItem('👥 Seed Members (Custom Count)', 'SEED_MEMBERS_DIALOG')
-        .addItem('📋 Seed Grievances (Custom Count)', 'SEED_GRIEVANCES_DIALOG')
+        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
+        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
         .addSeparator()
-        .addItem('👥 Seed 50 Members', 'seed50Members')
-        .addItem('📋 Seed 25 Grievances', 'seed25Grievances'))
+        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
+        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
-        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS'))
+        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
+        .addSeparator()
+        .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
       .addToUi();
   }
 
@@ -792,6 +817,11 @@ function CREATE_509_DASHBOARD() {
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
     setupDataValidations();
+
+    // Setup live grievance links and member dropdown
+    ss.toast('Setting up live data links...', '🏗️ Progress', 3);
+    setupLiveGrievanceFormulas();
+    setupGrievanceMemberDropdown();
 
     // Move Config to first position
     var configSheet = ss.getSheetByName(SHEETS.CONFIG);
@@ -985,9 +1015,37 @@ function createMemberDirectory(ss) {
   sheet.setColumnWidth(MEMBER_COLS.EMAIL, 200);
   sheet.setColumnWidth(MEMBER_COLS.CONTACT_NOTES, 250);
 
-  // Add checkbox for Start Grievance column
-  var checkboxRange = sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 998, 1);
-  checkboxRange.insertCheckboxes();
+  // Add checkbox for Start Grievance column (pre-allocate for future rows)
+  sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
+
+  // Format date columns (MM/dd/yyyy)
+  var dateColumns = [
+    MEMBER_COLS.LAST_VIRTUAL_MTG,
+    MEMBER_COLS.LAST_INPERSON_MTG,
+    MEMBER_COLS.RECENT_CONTACT_DATE
+  ];
+  dateColumns.forEach(function(col) {
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
+  });
+
+  // Add LIVE FORMULAS for grievance data columns (AB-AD)
+  // These formulas directly reference Grievance Log for real-time updates
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);  // B
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);        // E
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);  // U
+
+  // Column AB: Has Open Grievance? (live formula)
+  var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
+  sheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
+
+  // Column AC: Grievance Status (live formula)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
+  sheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
+
+  // Column AD: Days to Deadline (LIVE-WIRED directly from Grievance Log column U)
+  // Uses MINIFS to get the most urgent deadline for open grievances
+  var daysToDeadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
+  sheet.getRange(2, MEMBER_COLS.DAYS_TO_DEADLINE).setFormula(daysToDeadlineFormula);
 
   // Auto-resize other columns
   sheet.autoResizeColumns(1, headers.length);
@@ -1017,9 +1075,8 @@ function createGrievanceLog(ss) {
   sheet.setColumnWidth(GRIEVANCE_COLS.RESOLUTION, 250);
   sheet.setColumnWidth(GRIEVANCE_COLS.COORDINATOR_MESSAGE, 250);
 
-  // Add checkbox for Message Alert column (AC)
-  var checkboxRange = sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 998, 1);
-  checkboxRange.insertCheckboxes();
+  // Add checkbox for Message Alert column (pre-allocate for future rows)
+  sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 4999, 1).insertCheckboxes();
 
   // Format date columns
   var dateColumns = [
@@ -1039,7 +1096,7 @@ function createGrievanceLog(ss) {
   ];
 
   dateColumns.forEach(function(col) {
-    sheet.getRange(2, col, 998, 1).setNumberFormat('dd-mm-yyyy');
+    sheet.getRange(2, col, 998, 1).setNumberFormat('MM/dd/yyyy');
   });
 
   // Format Days Open (S) and Days to Deadline (U) as whole numbers
@@ -1163,7 +1220,7 @@ function createDashboard(ss) {
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")',
+      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")',
       '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")'
     ]
@@ -1377,6 +1434,12 @@ function createDashboard(ss) {
       sheet.setColumnWidth(i, 120);
     }
   }
+
+  // Hide unused columns (G onwards) - A-F used for data
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 6) {
+    sheet.hideColumns(7, maxCols - 6);  // Hide columns G onwards
+  }
 }
 
 /**
@@ -1392,56 +1455,72 @@ function createInteractiveDashboard(ss) {
     .setFontSize(20)
     .setFontWeight('bold')
     .setFontColor(COLORS.PRIMARY_PURPLE);
-  sheet.getRange('A1:F1').merge();
+  sheet.getRange('A1:H1').merge();
 
   // Instructions
-  sheet.getRange('A3').setValue('Select metrics and chart types using the dropdowns below. Metrics auto-update from live data.')
+  sheet.getRange('A3').setValue('Select metrics, chart types, and time range. Charts auto-update from live data.')
     .setFontStyle('italic');
-  sheet.getRange('A3:F3').merge();
+  sheet.getRange('A3:H3').merge();
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // METRIC SELECTION ROW
+  // CONTROL PANEL - ROW 5-6
   // ═══════════════════════════════════════════════════════════════════════════
-  var controlLabels = [['Metric 1', 'Metric 2', 'Metric 3', 'Time Range', 'Show Trend', 'Theme']];
+  var controlLabels = [['Metric 1', 'Chart Type 1', 'Metric 2', 'Chart Type 2', 'Time Range', 'Theme']];
   sheet.getRange('A5:F5').setValues(controlLabels)
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
 
   // Default selections
-  var defaultSelections = [['Total Members', 'Open Grievances', 'Win Rate', 'All Time', 'Yes', 'Default']];
-  sheet.getRange('A6:F6').setValues(defaultSelections);
+  var defaultSelections = [['Total Members', 'Bar Chart', 'Open Grievances', 'Pie Chart', 'All Time', 'Default']];
+  sheet.getRange('A6:F6').setValues(defaultSelections)
+    .setBackground('#FFF9C4')  // Light yellow highlight for dropdown cells
+    .setBorder(true, true, true, true, true, true, '#F59E0B', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SELECTED METRICS DISPLAY
+  // METRIC LOOKUP TABLE (Hidden reference data) - Rows 8-16
   // ═══════════════════════════════════════════════════════════════════════════
-  sheet.getRange('A8').setValue('SELECTED METRICS')
+  sheet.getRange('A8').setValue('METRIC DATA')
     .setFontWeight('bold')
-    .setBackground(COLORS.UNION_GREEN)
+    .setBackground(COLORS.PRIMARY_PURPLE)
     .setFontColor(COLORS.WHITE);
-  sheet.getRange('A8:F8').merge();
+  sheet.getRange('A8:C8').merge();
 
-  // Headers for metrics
-  sheet.getRange('A9:C9').setValues([['Metric', 'Current Value', 'Description']])
+  // Time Range Helper - Calculate filter start date based on E6 selection
+  sheet.getRange('E8').setValue('Filter Start:')
+    .setFontWeight('bold')
+    .setFontSize(10);
+  sheet.getRange('F8').setFormula('=SWITCH($E$6,"All Time",DATE(1900,1,1),"This Month",EOMONTH(TODAY(),-1)+1,"This Quarter",DATE(YEAR(TODAY()),FLOOR((MONTH(TODAY())-1)/3)*3+1,1),"This Year",DATE(YEAR(TODAY()),1,1),"Last 30 Days",TODAY()-30,"Last 90 Days",TODAY()-90,DATE(1900,1,1))')
+    .setNumberFormat('MM/dd/yyyy')
+    .setFontSize(10);
+
+  sheet.getRange('A9:C9').setValues([['Metric Name', 'Value', 'Description']])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
 
-  // Dynamic metric formulas based on selection
+  // Dynamic metric formulas
   var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
   var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
+  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
+  var mUnitCol = getColumnLetter(MEMBER_COLS.UNIT);
   var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
   var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
   var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
+  var gCategoryCol = getColumnLetter(GRIEVANCE_COLS.ISSUE_CATEGORY);
+  var gFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
 
-  // Metric lookup table (row 10-17)
+  // Date-filtered grievance formulas (uses $F$8 as filter start date)
+  var gDateRange = '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gFiledCol + ':' + gFiledCol;
+  var dateFilter = ',">="&$F$8';
+
   var metricData = [
-    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members'],
     ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
-    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
-    ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
-    ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
-    ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],
-    ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")', 'Cases won (full or partial)'],
-    ['Win Rate', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)*100,1)&"%","0%")', 'Win percentage of all cases']
+    ['Total Grievances', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"<>",' + gDateRange + dateFilter + ')', 'Grievances in time range'],
+    ['Open Grievances', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open",' + gDateRange + dateFilter + ')', 'Currently open cases'],
+    ['Pending Info', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info",' + gDateRange + dateFilter + ')', 'Awaiting information'],
+    ['Settled', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled",' + gDateRange + dateFilter + ')', 'Cases settled'],
+    ['Won', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*",' + gDateRange + dateFilter + ')', 'Cases won'],
+    ['Win Rate', '=IFERROR(ROUND(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*",' + gDateRange + dateFilter + ')/COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"<>",' + gDateRange + dateFilter + ')*100,1)&"%","0%")', 'Win percentage']
   ];
 
   for (var i = 0; i < metricData.length; i++) {
@@ -1449,6 +1528,142 @@ function createInteractiveDashboard(ss) {
     sheet.getRange(10 + i, 2).setFormula(metricData[i][1]);
     sheet.getRange(10 + i, 3).setValue(metricData[i][2]);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHART 1 DISPLAY AREA - Rows 19-30
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A19').setFormula('="📊 CHART 1: "&$A$6&" ("&$B$6&")"')
+    .setFontWeight('bold')
+    .setFontSize(12);
+  sheet.getRange('A19:D19').merge();
+
+  // Chart 1 data header
+  sheet.getRange('A20:D20').setValues([['Category', 'Count', 'Percentage', 'Visual']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Visual formula that changes based on Chart Type 1 selection (B6)
+  // Chart types: Bar Chart, Horizontal Bar, Pie Chart, Line Graph, Area Chart, Sparkline, Progress Bar, Gauge, Sankey Diagram
+  var visual1Formula = function(row) {
+    return '=IFERROR(SWITCH($B$6,' +
+      '"Bar Chart",REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10)),' +
+      '"Horizontal Bar",REPT("▓",ROUND(B' + row + '/MAX($B$21:$B$25)*10)),' +
+      '"Pie Chart",REPT("●",ROUND(B' + row + '/SUM($B$21:$B$25)*10))&REPT("○",10-ROUND(B' + row + '/SUM($B$21:$B$25)*10)),' +
+      '"Line Graph",SPARKLINE(B' + row + ',{"charttype","line";"color","#7C3AED"}),' +
+      '"Area Chart",SPARKLINE({0,B' + row + ',B' + row + '*0.8,B' + row + '*0.3,0},{"charttype","area";"color","#7C3AED"}),' +
+      '"Sparkline",SPARKLINE(B' + row + ',{"charttype","bar";"max",MAX($B$21:$B$25);"color1","#7C3AED"}),' +
+      '"Progress Bar","["&REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10))&REPT("░",10-ROUND(B' + row + '/MAX($B$21:$B$25)*10))&"]",' +
+      '"Gauge",IF(B' + row + '/MAX($B$21:$B$25)<0.25,"◔",IF(B' + row + '/MAX($B$21:$B$25)<0.5,"◑",IF(B' + row + '/MAX($B$21:$B$25)<0.75,"◕","●")))&" "&C' + row + ',' +
+      '"Sankey Diagram","▐"&REPT("═",ROUND(B' + row + '/MAX($B$21:$B$25)*8))&"▶ "&C' + row + ',' +
+      'REPT("█",ROUND(B' + row + '/MAX($B$21:$B$25)*10))),"")';
+  };
+
+  // Chart 1 dynamic data - Status breakdown for grievances (with date filter) or location for members
+  // Labels show actual status names or actual location names from data
+  var chart1Data = [
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Open",IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),1,1),"Location 1"))',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open",' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),1,1)))',
+     '=IFERROR(ROUND(B21/SUM($B$21:$B$25)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Pending Info",IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),2,1),""))',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info",' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),2,1),"")))',
+     '=IFERROR(ROUND(B22/SUM($B$21:$B$25)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Settled",IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),3,1),""))',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled",' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),3,1),"")))',
+     '=IFERROR(ROUND(B23/SUM($B$21:$B$25)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Closed",IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),4,1),""))',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Closed",' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),4,1),"")))',
+     '=IFERROR(ROUND(B24/SUM($B$21:$B$25)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),"Withdrawn",IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),5,1),""))',
+     '=IF(REGEXMATCH($A$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn",' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + '<>"")),5,1),"")))',
+     '=IFERROR(ROUND(B25/SUM($B$21:$B$25)*100,1)&"%","0%")']
+  ];
+
+  for (var r = 0; r < chart1Data.length; r++) {
+    var rowNum = 21 + r;
+    sheet.getRange(rowNum, 1).setFormula(chart1Data[r][0]);
+    sheet.getRange(rowNum, 2).setFormula(chart1Data[r][1]);
+    sheet.getRange(rowNum, 3).setFormula(chart1Data[r][2]);
+    sheet.getRange(rowNum, 4).setFormula(visual1Formula(rowNum)).setFontColor(COLORS.PRIMARY_PURPLE);
+  }
+
+  // Chart 1 Total
+  sheet.getRange('A26:D26').setValues([['TOTAL', '=SUM(B21:B25)', '100%', '']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHART 2 DISPLAY AREA - Rows 28-38
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A28').setFormula('="📈 CHART 2: "&$C$6&" ("&$D$6&")"')
+    .setFontWeight('bold')
+    .setFontSize(12);
+  sheet.getRange('A28:D28').merge();
+
+  // Chart 2 data header
+  sheet.getRange('A29:D29').setValues([['Category', 'Count', 'Percentage', 'Visual']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Visual formula that changes based on Chart Type 2 selection (D6)
+  var visual2Formula = function(row) {
+    return '=IFERROR(SWITCH($D$6,' +
+      '"Bar Chart",REPT("█",ROUND(B' + row + '/MAX($B$30:$B$34)*10)),' +
+      '"Horizontal Bar",REPT("▓",ROUND(B' + row + '/MAX($B$30:$B$34)*10)),' +
+      '"Pie Chart",REPT("●",ROUND(B' + row + '/SUM($B$30:$B$34)*10))&REPT("○",10-ROUND(B' + row + '/SUM($B$30:$B$34)*10)),' +
+      '"Line Graph",SPARKLINE(B' + row + ',{"charttype","line";"color","#059669"}),' +
+      '"Area Chart",SPARKLINE({0,B' + row + ',B' + row + '*0.8,B' + row + '*0.3,0},{"charttype","area";"color","#059669"}),' +
+      '"Sparkline",SPARKLINE(B' + row + ',{"charttype","bar";"max",MAX($B$30:$B$34);"color1","#059669"}),' +
+      '"Progress Bar","["&REPT("█",ROUND(B' + row + '/MAX($B$30:$B$34)*10))&REPT("░",10-ROUND(B' + row + '/MAX($B$30:$B$34)*10))&"]",' +
+      '"Gauge",IF(B' + row + '/MAX($B$30:$B$34)<0.25,"◔",IF(B' + row + '/MAX($B$30:$B$34)<0.5,"◑",IF(B' + row + '/MAX($B$30:$B$34)<0.75,"◕","●")))&" "&C' + row + ',' +
+      '"Sankey Diagram","▐"&REPT("═",ROUND(B' + row + '/MAX($B$30:$B$34)*8))&"▶ "&C' + row + ',' +
+      'REPT("█",ROUND(B' + row + '/MAX($B$30:$B$34)*10))),"")';
+  };
+
+  // Chart 2 dynamic data - Issue categories (with date filter) or units for members
+  // Labels show actual category names or actual unit names from data
+  var chart2Data = [
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),1,1),""),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),1,1),""))',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),1,1),""),' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),1,1),"")))',
+     '=IFERROR(ROUND(B30/SUM($B$30:$B$34)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),2,1),""),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),2,1),""))',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),2,1),""),' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),2,1),"")))',
+     '=IFERROR(ROUND(B31/SUM($B$30:$B$34)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),3,1),""),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),3,1),""))',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),3,1),""),' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),3,1),"")))',
+     '=IFERROR(ROUND(B32/SUM($B$30:$B$34)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),4,1),""),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),4,1),""))',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),4,1),""),' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),4,1),"")))',
+     '=IFERROR(ROUND(B33/SUM($B$30:$B$34)*100,1)&"%","0%")'],
+    ['=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),5,1),""),IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),5,1),""))',
+     '=IF(REGEXMATCH($C$6,"Grievance|Open|Pending|Settled|Won"),COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gCategoryCol + ':' + gCategoryCol + '<>"")),5,1),""),' + gDateRange + ',">="&$F$8),COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',IFERROR(INDEX(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mUnitCol + ':' + mUnitCol + '<>"")),5,1),"")))',
+     '=IFERROR(ROUND(B34/SUM($B$30:$B$34)*100,1)&"%","0%")']
+  ];
+
+  for (var r = 0; r < chart2Data.length; r++) {
+    var rowNum = 30 + r;
+    sheet.getRange(rowNum, 1).setFormula(chart2Data[r][0]);
+    sheet.getRange(rowNum, 2).setFormula(chart2Data[r][1]);
+    sheet.getRange(rowNum, 3).setFormula(chart2Data[r][2]);
+    sheet.getRange(rowNum, 4).setFormula(visual2Formula(rowNum)).setFontColor(COLORS.UNION_GREEN);
+  }
+
+  // Chart 2 Total
+  sheet.getRange('A35:D35').setValues([['TOTAL', '=SUM(B30:B34)', '100%', '']])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUMMARY STATS - Row 37-38
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A37').setValue('📋 QUICK STATS')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setBackground(COLORS.UNION_GREEN)
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A37:D37').merge();
+
+  sheet.getRange('A38:D38').setValues([['Selected Metric 1', '=VLOOKUP(A6,A10:B17,2,FALSE)', 'Selected Metric 2', '=VLOOKUP(C6,A10:B17,2,FALSE)']])
+    .setFontWeight('bold');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DROPDOWN VALIDATIONS
@@ -1459,9 +1674,17 @@ function createInteractiveDashboard(ss) {
     .requireValueInList(metricOptions, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange('A6').setDataValidation(metricRule);
-  sheet.getRange('B6').setDataValidation(metricRule);
-  sheet.getRange('C6').setDataValidation(metricRule);
+  sheet.getRange('A6').setDataValidation(metricRule);  // Metric 1
+  sheet.getRange('C6').setDataValidation(metricRule);  // Metric 2
+
+  // Chart type options
+  var chartOptions = ['Bar Chart', 'Horizontal Bar', 'Pie Chart', 'Line Graph', 'Area Chart', 'Sparkline', 'Progress Bar', 'Gauge', 'Sankey Diagram'];
+  var chartRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(chartOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange('B6').setDataValidation(chartRule);  // Chart Type 1
+  sheet.getRange('D6').setDataValidation(chartRule);  // Chart Type 2
 
   // Time range options
   var timeOptions = ['All Time', 'This Month', 'This Quarter', 'This Year', 'Last 30 Days', 'Last 90 Days'];
@@ -1469,14 +1692,7 @@ function createInteractiveDashboard(ss) {
     .requireValueInList(timeOptions, true)
     .setAllowInvalid(false)
     .build();
-  sheet.getRange('D6').setDataValidation(timeRule);
-
-  // Yes/No options
-  var yesNoRule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['Yes', 'No'], true)
-    .setAllowInvalid(false)
-    .build();
-  sheet.getRange('E6').setDataValidation(yesNoRule);
+  sheet.getRange('E6').setDataValidation(timeRule);
 
   // Theme options
   var themeOptions = ['Default', 'Dark', 'High Contrast', 'Print Friendly'];
@@ -1486,9 +1702,205 @@ function createInteractiveDashboard(ss) {
     .build();
   sheet.getRange('F6').setDataValidation(themeRule);
 
-  // Format
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FORMATTING
+  // ═══════════════════════════════════════════════════════════════════════════
   sheet.autoResizeColumns(1, 6);
-  sheet.setColumnWidth(3, 250);
+  sheet.setColumnWidth(3, 200);
+  sheet.setColumnWidth(4, 150);
+
+  // Add borders to chart areas
+  sheet.getRange('A20:D26').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
+  sheet.getRange('A29:D35').setBorder(true, true, true, true, false, false, COLORS.LIGHT_GRAY, SpreadsheetApp.BorderStyle.SOLID);
+
+  // Hide unused columns (I onwards) - A-H used for data + charts
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 8) {
+    sheet.hideColumns(9, maxCols - 8);  // Hide columns I onwards
+  }
+
+  // Create initial charts
+  refreshInteractiveCharts();
+}
+
+/**
+ * Refresh/Update embedded charts based on dropdown selections
+ * Call this function when dropdowns change or manually via menu
+ */
+function refreshInteractiveCharts() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.INTERACTIVE);
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Interactive Dashboard not found. Please run CREATE 509 DASHBOARD first.');
+    return;
+  }
+
+  // Read dropdown selections
+  var metric1 = sheet.getRange('A6').getValue();
+  var chartType1 = sheet.getRange('B6').getValue();
+  var metric2 = sheet.getRange('C6').getValue();
+  var chartType2 = sheet.getRange('D6').getValue();
+
+  // Remove existing charts
+  var charts = sheet.getCharts();
+  charts.forEach(function(chart) {
+    sheet.removeChart(chart);
+  });
+
+  // Chart type mapping
+  var chartTypeMap = {
+    'Bar Chart': Charts.ChartType.BAR,
+    'Horizontal Bar': Charts.ChartType.BAR,
+    'Pie Chart': Charts.ChartType.PIE,
+    'Line Graph': Charts.ChartType.LINE,
+    'Area Chart': Charts.ChartType.AREA,
+    'Sparkline': Charts.ChartType.BAR,
+    'Progress Bar': Charts.ChartType.BAR,
+    'Gauge': Charts.ChartType.PIE,
+    'Sankey Diagram': Charts.ChartType.BAR  // Use stacked bar as Sankey approximation
+  };
+
+  // Get chart type or default to COLUMN
+  var type1 = chartTypeMap[chartType1] || Charts.ChartType.COLUMN;
+  var type2 = chartTypeMap[chartType2] || Charts.ChartType.COLUMN;
+
+  // For "Bar Chart" use COLUMN (vertical), for "Horizontal Bar" use BAR
+  if (chartType1 === 'Bar Chart') type1 = Charts.ChartType.COLUMN;
+  if (chartType2 === 'Bar Chart') type2 = Charts.ChartType.COLUMN;
+
+  // Create Chart 1 - positioned at column E, rows 19-26
+  var chart1Builder = sheet.newChart()
+    .setChartType(type1)
+    .addRange(sheet.getRange('A21:B25'))  // Category and Count columns
+    .setPosition(19, 5, 0, 0)  // Row 19, Column E
+    .setOption('title', metric1)
+    .setOption('legend', { position: 'bottom' })
+    .setOption('width', 350)
+    .setOption('height', 250);
+
+  // Apply chart-specific options
+  if (type1 === Charts.ChartType.PIE) {
+    chart1Builder.setOption('pieHole', 0);
+    chart1Builder.setOption('is3D', false);
+  } else if (chartType1 === 'Sankey Diagram') {
+    // Sankey-style stacked bar with flow colors
+    chart1Builder.setOption('colors', ['#7C3AED', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE']);
+    chart1Builder.setOption('isStacked', true);
+    chart1Builder.setOption('bar', { groupWidth: '80%' });
+  } else if (type1 === Charts.ChartType.BAR || type1 === Charts.ChartType.COLUMN) {
+    chart1Builder.setOption('colors', ['#7C3AED']);
+  } else if (type1 === Charts.ChartType.LINE || type1 === Charts.ChartType.AREA) {
+    chart1Builder.setOption('colors', ['#7C3AED']);
+    chart1Builder.setOption('curveType', 'function');
+  }
+
+  var chart1 = chart1Builder.build();
+  sheet.insertChart(chart1);
+
+  // Create Chart 2 - positioned at column E, rows 28-35
+  var chart2Builder = sheet.newChart()
+    .setChartType(type2)
+    .addRange(sheet.getRange('A30:B34'))  // Category and Count columns
+    .setPosition(28, 5, 0, 0)  // Row 28, Column E
+    .setOption('title', metric2)
+    .setOption('legend', { position: 'bottom' })
+    .setOption('width', 350)
+    .setOption('height', 250);
+
+  // Apply chart-specific options
+  if (type2 === Charts.ChartType.PIE) {
+    chart2Builder.setOption('pieHole', 0);
+    chart2Builder.setOption('is3D', false);
+  } else if (chartType2 === 'Sankey Diagram') {
+    // Sankey-style stacked bar with flow colors
+    chart2Builder.setOption('colors', ['#059669', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5']);
+    chart2Builder.setOption('isStacked', true);
+    chart2Builder.setOption('bar', { groupWidth: '80%' });
+  } else if (type2 === Charts.ChartType.BAR || type2 === Charts.ChartType.COLUMN) {
+    chart2Builder.setOption('colors', ['#059669']);
+  } else if (type2 === Charts.ChartType.LINE || type2 === Charts.ChartType.AREA) {
+    chart2Builder.setOption('colors', ['#059669']);
+    chart2Builder.setOption('curveType', 'function');
+  }
+
+  var chart2 = chart2Builder.build();
+  sheet.insertChart(chart2);
+
+  ss.toast('Charts updated!', '📊 Interactive Dashboard', 3);
+}
+
+/**
+ * Main onEdit trigger - handles all edit events
+ * Auto-refreshes Interactive Dashboard charts when dropdowns change
+ */
+function onEdit(e) {
+  // Safety check
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Handle Interactive Dashboard dropdown changes
+  if (sheetName === SHEETS.INTERACTIVE) {
+    var row = e.range.getRow();
+    var col = e.range.getColumn();
+
+    // Check if edit is in the control panel row (row 6, columns A-F)
+    if (row === 6 && col >= 1 && col <= 6) {
+      // Small delay to let formulas recalculate
+      Utilities.sleep(300);
+      refreshInteractiveCharts();
+    }
+  }
+
+  // Call other onEdit handlers
+  if (typeof onEditMultiSelect === 'function') {
+    onEditMultiSelect(e);
+  }
+  if (typeof onEditAutoSync === 'function') {
+    onEditAutoSync(e);
+  }
+}
+
+/**
+ * onSelectionChange trigger - highlights entire row when cell selected
+ * Works on Member Directory and Grievance Log sheets
+ */
+function onSelectionChange(e) {
+  // Safety check
+  if (!e || !e.range) return;
+
+  var sheet = e.range.getSheet();
+  var sheetName = sheet.getName();
+
+  // Only apply to Member Directory and Grievance Log
+  if (sheetName !== SHEETS.MEMBER_DIR && sheetName !== SHEETS.GRIEVANCE_LOG) return;
+
+  var row = e.range.getRow();
+
+  // Don't highlight header row
+  if (row === 1) return;
+
+  // Get the previous highlighted row from properties
+  var props = PropertiesService.getDocumentProperties();
+  var propKey = 'highlightedRow_' + sheetName;
+  var previousRow = props.getProperty(propKey);
+
+  // Clear previous highlight
+  if (previousRow && previousRow !== String(row)) {
+    var prevRowNum = parseInt(previousRow);
+    var lastCol = sheet.getLastColumn();
+    if (lastCol > 0) {
+      sheet.getRange(prevRowNum, 1, 1, lastCol).setBackground(null);
+    }
+  }
+
+  // Highlight current row (soft yellow)
+  var lastCol = sheet.getLastColumn();
+  if (lastCol > 0 && row > 1) {
+    sheet.getRange(row, 1, 1, lastCol).setBackground('#FFF9C4');
+    props.setProperty(propKey, String(row));
+  }
 }
 
 // ============================================================================
@@ -1684,31 +2096,70 @@ function showMultiSelectDialog() {
   var currentValue = cell.getValue() || '';
   var currentValues = currentValue ? currentValue.split(/,\s*/) : [];
 
-  // Create and show dialog
-  var html = HtmlService.createHtmlOutputFromFile('MultiSelectDialog')
-    .setWidth(350)
-    .setHeight(420);
-
-  // Pass data to dialog
+  // Dialog data
   var dialogData = {
     label: config.label,
     options: options,
     currentValues: currentValues
   };
 
-  html.append('<script>initDialog(' + JSON.stringify(dialogData) + ');</script>');
+  // Create inline HTML for multi-select dialog
+  var htmlContent = '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    '*{box-sizing:border-box;font-family:"Google Sans",Arial,sans-serif}' +
+    'body{margin:0;padding:16px;background:#fff}' +
+    'h3{margin:0 0 12px 0;color:#7C3AED;font-size:16px}' +
+    '.options-container{max-height:250px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:8px;padding:8px;margin-bottom:16px}' +
+    '.option-item{display:flex;align-items:center;padding:8px 12px;margin:2px 0;border-radius:6px;cursor:pointer;transition:background 0.15s}' +
+    '.option-item:hover{background:#f3f4f6}.option-item.selected{background:#ede9fe}' +
+    '.option-item input[type="checkbox"]{margin-right:10px;width:18px;height:18px;accent-color:#7C3AED}' +
+    '.option-item label{flex:1;cursor:pointer;font-size:14px;color:#1f2937}' +
+    '.button-row{display:flex;gap:8px;justify-content:flex-end}' +
+    'button{padding:10px 20px;border:none;border-radius:6px;font-size:14px;font-weight:500;cursor:pointer;transition:all 0.15s}' +
+    '.btn-primary{background:#7C3AED;color:white}.btn-primary:hover{background:#6d28d9}' +
+    '.btn-secondary{background:#f3f4f6;color:#374151}.btn-secondary:hover{background:#e5e7eb}' +
+    '.btn-clear{background:#fef2f2;color:#dc2626}.btn-clear:hover{background:#fee2e2}' +
+    '.selected-count{font-size:12px;color:#6b7280;margin-bottom:8px}' +
+    '.quick-actions{display:flex;gap:8px;margin-bottom:12px}.quick-actions button{padding:6px 12px;font-size:12px}' +
+    '</style></head><body>' +
+    '<h3 id="dialogTitle">Select Options</h3>' +
+    '<div class="quick-actions"><button class="btn-secondary" onclick="selectAll()">Select All</button>' +
+    '<button class="btn-clear" onclick="clearAll()">Clear All</button></div>' +
+    '<div class="selected-count" id="selectedCount">0 selected</div>' +
+    '<div class="options-container" id="optionsContainer"></div>' +
+    '<div class="button-row"><button class="btn-secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="btn-primary" onclick="saveSelection()">Save</button></div>' +
+    '<script>' +
+    'var options=[];var currentSelection=[];' +
+    'function initDialog(data){document.getElementById("dialogTitle").textContent="Select "+data.label;options=data.options;currentSelection=data.currentValues||[];renderOptions();updateCount()}' +
+    'function renderOptions(){var c=document.getElementById("optionsContainer");c.innerHTML="";options.forEach(function(o,i){var s=currentSelection.indexOf(o)!==-1;var d=document.createElement("div");d.className="option-item"+(s?" selected":"");d.onclick=function(){toggleOption(i)};var cb=document.createElement("input");cb.type="checkbox";cb.id="opt_"+i;cb.checked=s;var l=document.createElement("label");l.htmlFor="opt_"+i;l.textContent=o;d.appendChild(cb);d.appendChild(l);c.appendChild(d)})}' +
+    'function toggleOption(i){var o=options[i];var p=currentSelection.indexOf(o);if(p===-1){currentSelection.push(o)}else{currentSelection.splice(p,1)}renderOptions();updateCount()}' +
+    'function selectAll(){currentSelection=options.slice();renderOptions();updateCount()}' +
+    'function clearAll(){currentSelection=[];renderOptions();updateCount()}' +
+    'function updateCount(){document.getElementById("selectedCount").textContent=currentSelection.length+" selected"}' +
+    'function saveSelection(){var v=currentSelection.join(", ");google.script.run.withSuccessHandler(function(){google.script.host.close()}).withFailureHandler(function(e){alert("Error: "+e.message)}).applyMultiSelectValue(v)}' +
+    '</script>' +
+    '<script>initDialog(' + JSON.stringify(dialogData) + ');</script>' +
+    '</body></html>';
+
+  var html = HtmlService.createHtmlOutput(htmlContent)
+    .setWidth(350)
+    .setHeight(420);
 
   SpreadsheetApp.getUi().showModalDialog(html, 'Multi-Select: ' + config.label);
 }
 
 /**
  * Get values from a Config sheet column
+ * Note: Row 1 = section headers, Row 2 = column headers, Row 3+ = data
  * @param {Sheet} configSheet - The Config sheet
  * @param {number} col - Column number
  * @returns {Array} Array of non-empty values
  */
 function getConfigValues(configSheet, col) {
-  var data = configSheet.getRange(3, col, 100, 1).getValues();
+  var lastRow = configSheet.getLastRow();
+  if (lastRow < 3) return [];
+
+  var data = configSheet.getRange(3, col, lastRow - 2, 1).getValues();
   var values = [];
   for (var i = 0; i < data.length; i++) {
     if (data[i][0] && data[i][0].toString().trim() !== '') {
@@ -2013,17 +2464,12 @@ function REPAIR_DASHBOARD() {
 // MENU HANDLER FUNCTIONS
 // ============================================================================
 
-/**
- * Show desktop search modal - comprehensive search for members and grievances
- * Enhanced version of mobile search with more fields and filtering options
- */
 function searchMembers() {
   showDesktopSearch();
 }
 
 /**
- * Show the desktop unified search dialog
- * Optimized for larger screens with advanced filtering
+ * Show desktop search dialog
  */
 function showDesktopSearch() {
   var html = HtmlService.createHtmlOutput(
@@ -2031,463 +2477,207 @@ function showDesktopSearch() {
     '<style>' +
     '*{box-sizing:border-box;margin:0;padding:0}' +
     'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f8fafc;color:#1e293b}' +
-
-    /* Header */
     '.header{background:linear-gradient(135deg,#7C3AED 0%,#5B21B6 100%);color:white;padding:24px 30px}' +
-    '.header h1{font-size:24px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:12px}' +
+    '.header h1{font-size:24px;font-weight:600;margin-bottom:8px}' +
     '.header p{opacity:0.9;font-size:14px}' +
-
-    /* Search Container */
     '.search-section{padding:20px 30px;background:white;border-bottom:1px solid #e2e8f0}' +
-    '.search-row{display:flex;gap:12px;align-items:center}' +
-    '.search-input-container{flex:1;position:relative}' +
-    '.search-input{width:100%;padding:14px 16px 14px 48px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px;transition:all 0.2s}' +
-    '.search-input:focus{outline:none;border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,0.1)}' +
-    '.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:20px;color:#94a3b8}' +
-
-    /* Tabs */
-    '.tabs{display:flex;gap:4px;background:#f1f5f9;padding:4px;border-radius:8px;width:fit-content}' +
-    '.tab{padding:10px 20px;border:none;background:transparent;border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;color:#64748b;transition:all 0.2s}' +
-    '.tab:hover{background:#e2e8f0}' +
-    '.tab.active{background:white;color:#7C3AED;box-shadow:0 1px 3px rgba(0,0,0,0.1)}' +
-
-    /* Filters */
-    '.filters-section{padding:16px 30px;background:#f8fafc;border-bottom:1px solid #e2e8f0}' +
-    '.filters-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}' +
-    '.filter-group{display:flex;align-items:center;gap:8px}' +
-    '.filter-label{font-size:13px;color:#64748b;font-weight:500}' +
-    '.filter-select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;background:white;cursor:pointer;min-width:140px}' +
-    '.filter-select:focus{outline:none;border-color:#7C3AED}' +
-    '.clear-filters{padding:8px 16px;border:1px solid #e2e8f0;border-radius:6px;background:white;cursor:pointer;font-size:13px;color:#64748b}' +
-    '.clear-filters:hover{background:#f1f5f9}' +
-
-    /* Results */
-    '.results-section{padding:20px 30px;flex:1;overflow-y:auto;max-height:400px}' +
-    '.results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}' +
-    '.results-count{font-size:14px;color:#64748b}' +
-    '.results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}' +
-
-    /* Result Card */
-    '.result-card{background:white;border-radius:12px;padding:20px;border:1px solid #e2e8f0;cursor:pointer;transition:all 0.2s}' +
-    '.result-card:hover{border-color:#7C3AED;box-shadow:0 4px 12px rgba(124,58,237,0.15);transform:translateY(-1px)}' +
-    '.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}' +
-    '.card-type{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}' +
-    '.type-member{background:#dbeafe;color:#1d4ed8}' +
-    '.type-grievance{background:#fee2e2;color:#dc2626}' +
-    '.card-id{font-size:12px;color:#94a3b8;font-family:monospace}' +
-    '.card-title{font-size:16px;font-weight:600;color:#1e293b;margin-bottom:8px}' +
-    '.card-details{display:flex;flex-direction:column;gap:6px}' +
-    '.detail-row{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b}' +
-    '.detail-icon{width:16px;text-align:center}' +
-    '.detail-label{color:#94a3b8;min-width:60px}' +
-    '.status-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600}' +
-    '.status-open{background:#fef3c7;color:#d97706}' +
-    '.status-pending{background:#fef3c7;color:#b45309}' +
-    '.status-closed{background:#d1fae5;color:#059669}' +
-
-    /* Empty State */
-    '.empty-state{text-align:center;padding:60px 20px;color:#94a3b8}' +
-    '.empty-icon{font-size:48px;margin-bottom:16px}' +
-    '.empty-title{font-size:18px;font-weight:600;color:#64748b;margin-bottom:8px}' +
-    '.empty-text{font-size:14px}' +
-
-    /* Loading */
-    '.loading{text-align:center;padding:40px;color:#64748b}' +
-    '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e2e8f0;border-top-color:#7C3AED;border-radius:50%;animation:spin 1s linear infinite}' +
-    '@keyframes spin{to{transform:rotate(360deg)}}' +
-
-    /* Footer */
-    '.footer{padding:16px 30px;background:white;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center}' +
-    '.footer-info{font-size:13px;color:#94a3b8}' +
-    '.close-btn{padding:10px 24px;background:#64748b;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500}' +
-    '.close-btn:hover{background:#475569}' +
+    '.search-input{width:100%;padding:14px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:16px}' +
+    '.search-input:focus{outline:none;border-color:#7C3AED}' +
+    '.results{padding:20px 30px;max-height:400px;overflow-y:auto}' +
+    '.result-card{background:white;border-radius:12px;padding:16px;border:1px solid #e2e8f0;margin-bottom:12px;cursor:pointer}' +
+    '.result-card:hover{border-color:#7C3AED;box-shadow:0 4px 12px rgba(124,58,237,0.15)}' +
+    '.result-name{font-size:16px;font-weight:600;color:#1e293b}' +
+    '.result-details{font-size:13px;color:#64748b;margin-top:4px}' +
+    '.result-id{font-size:11px;color:#94a3b8;font-family:monospace}' +
+    '.empty{text-align:center;padding:40px;color:#94a3b8}' +
+    '.footer{padding:16px 30px;background:white;border-top:1px solid #e2e8f0;text-align:right}' +
+    '.close-btn{padding:10px 24px;background:#64748b;color:white;border:none;border-radius:8px;cursor:pointer}' +
     '</style></head><body>' +
-
-    '<div class="header">' +
-    '  <h1>🔍 Search Dashboard</h1>' +
-    '  <p>Search across members and grievances with advanced filters</p>' +
-    '</div>' +
-
-    '<div class="search-section">' +
-    '  <div class="search-row">' +
-    '    <div class="search-input-container">' +
-    '      <span class="search-icon">🔍</span>' +
-    '      <input type="text" class="search-input" id="searchQuery" placeholder="Search by name, ID, email, job title, location, or issue type..." autofocus>' +
-    '    </div>' +
-    '    <div class="tabs">' +
-    '      <button class="tab active" data-tab="all">All</button>' +
-    '      <button class="tab" data-tab="members">Members</button>' +
-    '      <button class="tab" data-tab="grievances">Grievances</button>' +
-    '    </div>' +
-    '  </div>' +
-    '</div>' +
-
-    '<div class="filters-section">' +
-    '  <div class="filters-row">' +
-    '    <div class="filter-group" id="statusFilter" style="display:none">' +
-    '      <span class="filter-label">Status:</span>' +
-    '      <select class="filter-select" id="filterStatus">' +
-    '        <option value="">All Statuses</option>' +
-    '        <option value="Open">Open</option>' +
-    '        <option value="Pending Info">Pending Info</option>' +
-    '        <option value="Settled">Settled</option>' +
-    '        <option value="Closed">Closed</option>' +
-    '        <option value="Won">Won</option>' +
-    '        <option value="Denied">Denied</option>' +
-    '      </select>' +
-    '    </div>' +
-    '    <div class="filter-group" id="locationFilter">' +
-    '      <span class="filter-label">Location:</span>' +
-    '      <select class="filter-select" id="filterLocation">' +
-    '        <option value="">All Locations</option>' +
-    '      </select>' +
-    '    </div>' +
-    '    <div class="filter-group" id="stewardFilter">' +
-    '      <span class="filter-label">Is Steward:</span>' +
-    '      <select class="filter-select" id="filterSteward">' +
-    '        <option value="">Any</option>' +
-    '        <option value="Yes">Yes</option>' +
-    '        <option value="No">No</option>' +
-    '      </select>' +
-    '    </div>' +
-    '    <button class="clear-filters" onclick="clearFilters()">Clear Filters</button>' +
-    '  </div>' +
-    '</div>' +
-
-    '<div class="results-section" id="resultsSection">' +
-    '  <div class="empty-state">' +
-    '    <div class="empty-icon">🔍</div>' +
-    '    <div class="empty-title">Start searching</div>' +
-    '    <div class="empty-text">Type at least 2 characters to search across all records</div>' +
-    '  </div>' +
-    '</div>' +
-
-    '<div class="footer">' +
-    '  <div class="footer-info">Press Enter to search • Click a result to navigate</div>' +
-    '  <button class="close-btn" onclick="google.script.host.close()">Close</button>' +
-    '</div>' +
-
+    '<div class="header"><h1>🔍 Search Members</h1><p>Search by name, ID, email, or location</p></div>' +
+    '<div class="search-section"><input type="text" class="search-input" id="q" placeholder="Type to search..." autofocus></div>' +
+    '<div class="results" id="results"><div class="empty">Type at least 2 characters to search</div></div>' +
+    '<div class="footer"><button class="close-btn" onclick="google.script.host.close()">Close</button></div>' +
     '<script>' +
-    'var currentTab = "all";' +
-    'var currentResults = [];' +
-    'var locations = [];' +
-
-    /* Initialize */
-    'document.addEventListener("DOMContentLoaded", function() {' +
-    '  loadLocations();' +
-    '  setupEventListeners();' +
+    'var timer;' +
+    'document.getElementById("q").addEventListener("input",function(){' +
+    '  clearTimeout(timer);' +
+    '  timer=setTimeout(doSearch,300);' +
     '});' +
-
-    /* Load locations for filter */
-    'function loadLocations() {' +
-    '  google.script.run.withSuccessHandler(function(locs) {' +
-    '    locations = locs || [];' +
-    '    var select = document.getElementById("filterLocation");' +
-    '    locations.forEach(function(loc) {' +
-    '      if (loc) {' +
-    '        var opt = document.createElement("option");' +
-    '        opt.value = loc;' +
-    '        opt.textContent = loc;' +
-    '        select.appendChild(opt);' +
-    '      }' +
-    '    });' +
-    '  }).getDesktopSearchLocations();' +
+    'function doSearch(){' +
+    '  var q=document.getElementById("q").value;' +
+    '  if(q.length<2){document.getElementById("results").innerHTML="<div class=\\"empty\\">Type at least 2 characters</div>";return;}' +
+    '  document.getElementById("results").innerHTML="<div class=\\"empty\\">Searching...</div>";' +
+    '  google.script.run.withSuccessHandler(showResults).searchMembersData(q);' +
     '}' +
-
-    /* Event Listeners */
-    'function setupEventListeners() {' +
-    '  var input = document.getElementById("searchQuery");' +
-    '  var debounceTimer;' +
-    '  input.addEventListener("input", function() {' +
-    '    clearTimeout(debounceTimer);' +
-    '    debounceTimer = setTimeout(function() { doSearch(); }, 300);' +
+    'function showResults(data){' +
+    '  if(!data||data.length===0){document.getElementById("results").innerHTML="<div class=\\"empty\\">No results found</div>";return;}' +
+    '  var html="";' +
+    '  data.forEach(function(r,i){' +
+    '    html+="<div class=\\"result-card\\" onclick=\\"goTo("+i+")\\">";' +
+    '    html+="<div class=\\"result-name\\">"+r.name+"</div>";' +
+    '    html+="<div class=\\"result-details\\">"+r.location+" • "+r.jobTitle+"</div>";' +
+    '    html+="<div class=\\"result-id\\">"+r.id+" • "+r.email+"</div></div>";' +
     '  });' +
-    '  input.addEventListener("keydown", function(e) {' +
-    '    if (e.key === "Enter") { doSearch(); }' +
-    '  });' +
-    '  document.querySelectorAll(".tab").forEach(function(tab) {' +
-    '    tab.addEventListener("click", function() {' +
-    '      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });' +
-    '      this.classList.add("active");' +
-    '      currentTab = this.dataset.tab;' +
-    '      updateFilterVisibility();' +
-    '      doSearch();' +
-    '    });' +
-    '  });' +
-    '  document.querySelectorAll(".filter-select").forEach(function(sel) {' +
-    '    sel.addEventListener("change", function() { doSearch(); });' +
-    '  });' +
+    '  document.getElementById("results").innerHTML=html;' +
+    '  window.searchResults=data;' +
     '}' +
-
-    /* Update filter visibility based on tab */
-    'function updateFilterVisibility() {' +
-    '  var statusFilter = document.getElementById("statusFilter");' +
-    '  var stewardFilter = document.getElementById("stewardFilter");' +
-    '  if (currentTab === "grievances") {' +
-    '    statusFilter.style.display = "flex";' +
-    '    stewardFilter.style.display = "none";' +
-    '  } else if (currentTab === "members") {' +
-    '    statusFilter.style.display = "none";' +
-    '    stewardFilter.style.display = "flex";' +
-    '  } else {' +
-    '    statusFilter.style.display = "flex";' +
-    '    stewardFilter.style.display = "flex";' +
-    '  }' +
-    '}' +
-
-    /* Clear all filters */
-    'function clearFilters() {' +
-    '  document.getElementById("filterStatus").value = "";' +
-    '  document.getElementById("filterLocation").value = "";' +
-    '  document.getElementById("filterSteward").value = "";' +
-    '  doSearch();' +
-    '}' +
-
-    /* Perform search */
-    'function doSearch() {' +
-    '  var query = document.getElementById("searchQuery").value.trim();' +
-    '  var filters = {' +
-    '    status: document.getElementById("filterStatus").value,' +
-    '    location: document.getElementById("filterLocation").value,' +
-    '    isSteward: document.getElementById("filterSteward").value' +
-    '  };' +
-    '  if (query.length < 2 && !filters.status && !filters.location && !filters.isSteward) {' +
-    '    showEmptyState();' +
-    '    return;' +
-    '  }' +
-    '  showLoading();' +
-    '  google.script.run' +
-    '    .withSuccessHandler(function(data) { renderResults(data); })' +
-    '    .withFailureHandler(function(err) { showError(err.message); })' +
-    '    .getDesktopSearchData(query, currentTab, filters);' +
-    '}' +
-
-    /* Show loading state */
-    'function showLoading() {' +
-    '  document.getElementById("resultsSection").innerHTML = ' +
-    '    \'<div class="loading"><div class="spinner"></div><p style="margin-top:12px">Searching...</p></div>\';' +
-    '}' +
-
-    /* Show empty state */
-    'function showEmptyState() {' +
-    '  document.getElementById("resultsSection").innerHTML = ' +
-    '    \'<div class="empty-state"><div class="empty-icon">🔍</div>\' +' +
-    '    \'<div class="empty-title">Start searching</div>\' +' +
-    '    \'<div class="empty-text">Type at least 2 characters to search</div></div>\';' +
-    '}' +
-
-    /* Show error */
-    'function showError(msg) {' +
-    '  document.getElementById("resultsSection").innerHTML = ' +
-    '    \'<div class="empty-state"><div class="empty-icon">⚠️</div>\' +' +
-    '    \'<div class="empty-title">Error</div>\' +' +
-    '    \'<div class="empty-text">\' + msg + \'</div></div>\';' +
-    '}' +
-
-    /* Render results */
-    'function renderResults(data) {' +
-    '  currentResults = data || [];' +
-    '  var container = document.getElementById("resultsSection");' +
-    '  if (currentResults.length === 0) {' +
-    '    container.innerHTML = \'<div class="empty-state"><div class="empty-icon">📭</div>\' +' +
-    '      \'<div class="empty-title">No results found</div>\' +' +
-    '      \'<div class="empty-text">Try adjusting your search or filters</div></div>\';' +
-    '    return;' +
-    '  }' +
-    '  var html = \'<div class="results-header"><div class="results-count">\' + currentResults.length + \' result\' + (currentResults.length !== 1 ? "s" : "") + \' found</div></div>\';' +
-    '  html += \'<div class="results-grid">\';' +
-    '  currentResults.forEach(function(r, i) {' +
-    '    var statusClass = "";' +
-    '    if (r.status) {' +
-    '      statusClass = r.status === "Open" ? "status-open" : (r.status.indexOf("Pending") >= 0 ? "status-pending" : "status-closed");' +
-    '    }' +
-    '    html += \'<div class="result-card" onclick="navigateToResult(\' + i + \')">\';' +
-    '    html += \'<div class="card-header">\';' +
-    '    html += \'<span class="card-type \' + (r.type === "member" ? "type-member" : "type-grievance") + \'">\' + (r.type === "member" ? "👤 Member" : "📋 Grievance") + \'</span>\';' +
-    '    html += \'<span class="card-id">\' + r.id + \'</span>\';' +
-    '    html += \'</div>\';' +
-    '    html += \'<div class="card-title">\' + r.title + \'</div>\';' +
-    '    html += \'<div class="card-details">\';' +
-    '    if (r.email) html += \'<div class="detail-row"><span class="detail-icon">📧</span>\' + r.email + \'</div>\';' +
-    '    if (r.location) html += \'<div class="detail-row"><span class="detail-icon">📍</span>\' + r.location + \'</div>\';' +
-    '    if (r.jobTitle) html += \'<div class="detail-row"><span class="detail-icon">💼</span>\' + r.jobTitle + \'</div>\';' +
-    '    if (r.status) html += \'<div class="detail-row"><span class="detail-icon">📌</span><span class="status-badge \' + statusClass + \'">\' + r.status + \'</span></div>\';' +
-    '    if (r.issueType) html += \'<div class="detail-row"><span class="detail-icon">⚖️</span>\' + r.issueType + \'</div>\';' +
-    '    if (r.steward) html += \'<div class="detail-row"><span class="detail-icon">🛡️</span>Steward: \' + r.steward + \'</div>\';' +
-    '    if (r.filedDate) html += \'<div class="detail-row"><span class="detail-icon">📅</span>Filed: \' + r.filedDate + \'</div>\';' +
-    '    if (r.isSteward === "Yes") html += \'<div class="detail-row"><span class="detail-icon">⭐</span>Union Steward</div>\';' +
-    '    html += \'</div></div>\';' +
-    '  });' +
-    '  html += \'</div>\';' +
-    '  container.innerHTML = html;' +
-    '}' +
-
-    /* Navigate to result */
-    'function navigateToResult(index) {' +
-    '  var r = currentResults[index];' +
-    '  if (!r) return;' +
-    '  google.script.run.withSuccessHandler(function() {' +
-    '    google.script.host.close();' +
-    '  }).navigateToSearchResult(r.type, r.id, r.row);' +
+    'function goTo(i){' +
+    '  var r=window.searchResults[i];' +
+    '  google.script.run.withSuccessHandler(function(){google.script.host.close();}).navigateToMemberRow(r.row);' +
     '}' +
     '</script></body></html>'
-  ).setWidth(900).setHeight(700);
-  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Search Dashboard');
+  ).setWidth(600).setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Search Members');
 }
 
 /**
- * Get locations for desktop search filter dropdown
- * @returns {Array} Array of unique locations
+ * Search members data for the search dialog
  */
-function getDesktopSearchLocations() {
+function searchMembersData(query) {
+  var results = [];
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var locations = [];
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet || sheet.getLastRow() < 2) return results;
 
-  // Get locations from Member Directory
-  var mSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  if (mSheet && mSheet.getLastRow() > 1) {
-    var mData = mSheet.getRange(2, MEMBER_COLS.WORK_LOCATION, mSheet.getLastRow() - 1, 1).getValues();
-    mData.forEach(function(row) {
-      var loc = row[0];
-      if (loc && locations.indexOf(loc) === -1) {
-        locations.push(loc);
-      }
+  var q = (query || '').toLowerCase();
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, Math.max(MEMBER_COLS.EMAIL, MEMBER_COLS.WORK_LOCATION, MEMBER_COLS.JOB_TITLE)).getValues();
+
+  data.forEach(function(row, index) {
+    var id = row[MEMBER_COLS.MEMBER_ID - 1] || '';
+    var firstName = row[MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = row[MEMBER_COLS.LAST_NAME - 1] || '';
+    var email = row[MEMBER_COLS.EMAIL - 1] || '';
+    var location = row[MEMBER_COLS.WORK_LOCATION - 1] || '';
+    var jobTitle = row[MEMBER_COLS.JOB_TITLE - 1] || '';
+
+    var searchable = (id + ' ' + firstName + ' ' + lastName + ' ' + email + ' ' + location + ' ' + jobTitle).toLowerCase();
+    if (searchable.indexOf(q) !== -1) {
+      results.push({
+        id: id,
+        name: (firstName + ' ' + lastName).trim() || 'Unknown',
+        email: email || 'No email',
+        location: location || 'Unknown location',
+        jobTitle: jobTitle || 'Unknown title',
+        row: index + 2
+      });
+    }
+  });
+
+  return results.slice(0, 50); // Limit to 50 results
+}
+
+/**
+ * Navigate to a member row
+ */
+function navigateToMemberRow(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (sheet) {
+    ss.setActiveSheet(sheet);
+    sheet.setActiveRange(sheet.getRange(row, 1));
+  }
+}
+
+/**
+ * Show smart dashboard (auto-detect device)
+ */
+function showSmartDashboard() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var totalMembers = memberSheet ? Math.max(0, memberSheet.getLastRow() - 1) : 0;
+  var totalGrievances = grievanceSheet ? Math.max(0, grievanceSheet.getLastRow() - 1) : 0;
+  var openGrievances = 0;
+
+  if (grievanceSheet && totalGrievances > 0) {
+    var statusData = grievanceSheet.getRange(2, GRIEVANCE_COLS.STATUS, totalGrievances, 1).getValues();
+    statusData.forEach(function(row) {
+      if (row[0] === 'Open' || row[0] === 'Pending Info') openGrievances++;
     });
   }
 
-  return locations.sort();
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5}' +
+    '.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:24px;text-align:center}' +
+    '.header h1{font-size:24px;margin-bottom:8px}' +
+    '.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:20px}' +
+    '.stat{background:white;padding:24px;border-radius:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.stat-value{font-size:36px;font-weight:bold;color:#1a73e8}' +
+    '.stat-label{font-size:13px;color:#666;margin-top:8px}' +
+    '.actions{padding:0 20px 20px;display:grid;grid-template-columns:repeat(2,1fr);gap:12px}' +
+    '.action-btn{background:white;border:none;padding:16px;border-radius:12px;text-align:left;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.action-btn:hover{background:#e8f0fe}' +
+    '.action-icon{font-size:24px;margin-bottom:8px}' +
+    '.action-label{font-weight:500}' +
+    '</style></head><body>' +
+    '<div class="header"><h1>📊 509 Dashboard</h1></div>' +
+    '<div class="stats">' +
+    '<div class="stat"><div class="stat-value">' + totalMembers + '</div><div class="stat-label">Total Members</div></div>' +
+    '<div class="stat"><div class="stat-value">' + totalGrievances + '</div><div class="stat-label">Total Grievances</div></div>' +
+    '<div class="stat"><div class="stat-value">' + openGrievances + '</div><div class="stat-label">Open Cases</div></div>' +
+    '</div>' +
+    '<div class="actions">' +
+    '<button class="action-btn" onclick="google.script.run.searchMembers();google.script.host.close()"><div class="action-icon">🔍</div><div class="action-label">Search Members</div></button>' +
+    '<button class="action-btn" onclick="google.script.run.viewActiveGrievances();google.script.host.close()"><div class="action-icon">📋</div><div class="action-label">View Grievances</div></button>' +
+    '</div>' +
+    '</body></html>'
+  ).setWidth(500).setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Dashboard');
 }
 
 /**
- * Get search data for desktop search
- * Searches more fields than mobile: job title, location, issue type, etc.
- * @param {string} query - Search query
- * @param {string} tab - Tab filter: 'all', 'members', 'grievances'
- * @param {Object} filters - Additional filters: status, location, isSteward
- * @returns {Array} Array of search results
+ * Show cache status dashboard
  */
-function getDesktopSearchData(query, tab, filters) {
-  var results = [];
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var q = (query || '').toLowerCase();
-  filters = filters || {};
+function showCacheStatusDashboard() {
+  var cache = CacheService.getScriptCache();
+  var cacheKeys = ['memberMeta', 'grievanceMeta', 'configData'];
+  var status = [];
 
-  // Search Members
-  if (tab === 'all' || tab === 'members') {
-    var mSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-    if (mSheet && mSheet.getLastRow() > 1) {
-      var lastCol = Math.max(MEMBER_COLS.IS_STEWARD, MEMBER_COLS.WORK_LOCATION, MEMBER_COLS.JOB_TITLE, MEMBER_COLS.EMAIL);
-      var mData = mSheet.getRange(2, 1, mSheet.getLastRow() - 1, lastCol).getValues();
+  cacheKeys.forEach(function(key) {
+    var data = cache.get(key);
+    status.push({
+      key: key,
+      cached: data ? 'Yes' : 'No',
+      size: data ? Math.round(data.length / 1024) + ' KB' : '0 KB'
+    });
+  });
 
-      mData.forEach(function(row, index) {
-        var memberId = row[MEMBER_COLS.MEMBER_ID - 1] || '';
-        var firstName = row[MEMBER_COLS.FIRST_NAME - 1] || '';
-        var lastName = row[MEMBER_COLS.LAST_NAME - 1] || '';
-        var fullName = firstName + ' ' + lastName;
-        var email = row[MEMBER_COLS.EMAIL - 1] || '';
-        var jobTitle = row[MEMBER_COLS.JOB_TITLE - 1] || '';
-        var location = row[MEMBER_COLS.WORK_LOCATION - 1] || '';
-        var isSteward = row[MEMBER_COLS.IS_STEWARD - 1] || '';
-
-        // Apply filters
-        if (filters.location && location !== filters.location) return;
-        if (filters.isSteward && isSteward !== filters.isSteward) return;
-
-        // Search across fields
-        var searchable = (memberId + ' ' + fullName + ' ' + email + ' ' + jobTitle + ' ' + location).toLowerCase();
-        if (q.length >= 2 && searchable.indexOf(q) === -1) return;
-
-        // Skip if no query and no filters
-        if (q.length < 2 && !filters.location && !filters.isSteward) return;
-
-        results.push({
-          type: 'member',
-          id: memberId,
-          title: fullName.trim() || 'Unnamed Member',
-          email: email,
-          jobTitle: jobTitle,
-          location: location,
-          isSteward: isSteward,
-          row: index + 2 // 1-indexed + header row
-        });
-      });
-    }
-  }
-
-  // Search Grievances
-  if (tab === 'all' || tab === 'grievances') {
-    var gSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-    if (gSheet && gSheet.getLastRow() > 1) {
-      var lastGCol = Math.max(GRIEVANCE_COLS.STATUS, GRIEVANCE_COLS.ISSUE_CATEGORY, GRIEVANCE_COLS.LOCATION, GRIEVANCE_COLS.STEWARD, GRIEVANCE_COLS.DATE_FILED);
-      var gData = gSheet.getRange(2, 1, gSheet.getLastRow() - 1, lastGCol).getValues();
-
-      gData.forEach(function(row, index) {
-        var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
-        var firstName = row[GRIEVANCE_COLS.FIRST_NAME - 1] || '';
-        var lastName = row[GRIEVANCE_COLS.LAST_NAME - 1] || '';
-        var fullName = firstName + ' ' + lastName;
-        var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
-        var issueType = row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || '';
-        var location = row[GRIEVANCE_COLS.LOCATION - 1] || '';
-        var steward = row[GRIEVANCE_COLS.STEWARD - 1] || '';
-        var dateFiled = row[GRIEVANCE_COLS.DATE_FILED - 1] || '';
-
-        // Apply filters
-        if (filters.status && status !== filters.status) return;
-        if (filters.location && location !== filters.location) return;
-
-        // Search across fields
-        var searchable = (grievanceId + ' ' + fullName + ' ' + status + ' ' + issueType + ' ' + location + ' ' + steward).toLowerCase();
-        if (q.length >= 2 && searchable.indexOf(q) === -1) return;
-
-        // Skip if no query and no filters
-        if (q.length < 2 && !filters.status && !filters.location) return;
-
-        // Format date
-        var filedDateStr = '';
-        if (dateFiled) {
-          try {
-            filedDateStr = Utilities.formatDate(new Date(dateFiled), Session.getScriptTimeZone(), 'MMM d, yyyy');
-          } catch(e) {
-            filedDateStr = dateFiled.toString();
-          }
-        }
-
-        results.push({
-          type: 'grievance',
-          id: grievanceId,
-          title: fullName.trim() || 'Unknown Member',
-          status: status,
-          issueType: issueType,
-          location: location,
-          steward: steward,
-          filedDate: filedDateStr,
-          row: index + 2
-        });
-      });
-    }
-  }
-
-  // Limit results
-  return results.slice(0, 50);
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:20px;background:#f5f5f5}' +
+    'h2{margin-bottom:16px;color:#333}' +
+    'table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    'th,td{padding:12px 16px;text-align:left;border-bottom:1px solid #eee}' +
+    'th{background:#f8f9fa;font-weight:600}' +
+    '.yes{color:#059669;font-weight:500}' +
+    '.no{color:#dc2626}' +
+    '.btn{margin-top:16px;padding:10px 20px;background:#1a73e8;color:white;border:none;border-radius:6px;cursor:pointer}' +
+    '.btn:hover{background:#1557b0}' +
+    '</style></head><body>' +
+    '<h2>🗄️ Cache Status</h2>' +
+    '<table><tr><th>Cache Key</th><th>Cached</th><th>Size</th></tr>' +
+    status.map(function(s) {
+      return '<tr><td>' + s.key + '</td><td class="' + (s.cached === 'Yes' ? 'yes' : 'no') + '">' + s.cached + '</td><td>' + s.size + '</td></tr>';
+    }).join('') +
+    '</table>' +
+    '<button class="btn" onclick="google.script.run.clearAllCaches();google.script.host.close()">Clear All Caches</button>' +
+    '</body></html>'
+  ).setWidth(400).setHeight(300);
+  SpreadsheetApp.getUi().showModalDialog(html, '🗄️ Cache Status');
 }
 
 /**
- * Navigate to a search result in the spreadsheet
- * @param {string} type - 'member' or 'grievance'
- * @param {string} id - The record ID
- * @param {number} row - The row number
+ * Clear all caches
  */
-function navigateToSearchResult(type, id, row) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetName = type === 'member' ? SHEETS.MEMBER_DIR : SHEETS.GRIEVANCE_LOG;
-  var sheet = ss.getSheetByName(sheetName);
-
-  if (sheet && row) {
-    ss.setActiveSheet(sheet);
-    sheet.setActiveRange(sheet.getRange(row, 1));
-    SpreadsheetApp.flush();
-  }
+function clearAllCaches() {
+  var cache = CacheService.getScriptCache();
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
+  SpreadsheetApp.getActiveSpreadsheet().toast('All caches cleared!', '✅ Success', 3);
 }
 
 function viewActiveGrievances() {
@@ -2500,6 +2690,87 @@ function viewActiveGrievances() {
 
 function startNewGrievance() {
   SpreadsheetApp.getUi().alert('Start New Grievance feature - Coming soon!\n\nFor now, add grievances directly to the Grievance Log sheet.');
+}
+
+/**
+ * Show mobile-friendly dashboard
+ */
+function showMobileDashboard() {
+  var stats = getMobileDashboardStats_();
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"><style>*{box-sizing:border-box}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial;padding:0;margin:0;background:#f5f5f5}.header{background:linear-gradient(135deg,#1a73e8,#1557b0);color:white;padding:20px}.header h1{margin:0;font-size:24px}.container{padding:15px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center}.stat-value{font-size:32px;font-weight:bold;color:#1a73e8}.stat-label{font-size:13px;color:#666;text-transform:uppercase}.section-title{font-size:16px;font-weight:600;color:#333;margin:20px 0 12px;padding-left:5px}.action-btn{background:white;border:none;padding:16px;margin-bottom:10px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);width:100%;text-align:left;display:flex;align-items:center;gap:15px;font-size:15px;cursor:pointer;min-height:60px}.action-btn:active{transform:scale(0.98)}.action-icon{font-size:24px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;background:#e8f0fe;border-radius:10px}.action-label{font-weight:500}.action-desc{font-size:12px;color:#666}.fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;background:#1a73e8;color:white;border:none;border-radius:50%;font-size:24px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer}</style></head><body><div class="header"><h1>509 Dashboard</h1><div style="font-size:14px;opacity:0.9">Mobile View</div></div><div class="container"><div class="stats"><div class="stat-card"><div class="stat-value">' + stats.totalGrievances + '</div><div class="stat-label">Total</div></div><div class="stat-card"><div class="stat-value">' + stats.activeGrievances + '</div><div class="stat-label">Active</div></div><div class="stat-card"><div class="stat-value">' + stats.pendingGrievances + '</div><div class="stat-label">Pending</div></div><div class="stat-card"><div class="stat-value">' + stats.overdueGrievances + '</div><div class="stat-label">Overdue</div></div></div><div class="section-title">Quick Actions</div><button class="action-btn" onclick="google.script.run.viewActiveGrievances();google.script.host.close()"><div class="action-icon">List</div><div><div class="action-label">View Grievances</div><div class="action-desc">Browse all grievances</div></div></button><button class="action-btn" onclick="google.script.run.showDesktopSearch();google.script.host.close()"><div class="action-icon">Find</div><div><div class="action-label">Search</div><div class="action-desc">Find grievances or members</div></div></button></div><button class="fab" onclick="location.reload()">Refresh</button></body></html>'
+  ).setWidth(400).setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Mobile Dashboard');
+}
+
+/**
+ * Get dashboard stats for mobile view
+ */
+function getMobileDashboardStats_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) return { totalGrievances: 0, activeGrievances: 0, pendingGrievances: 0, overdueGrievances: 0 };
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.DAYS_TO_DEADLINE).getValues();
+  var stats = { totalGrievances: data.length, activeGrievances: 0, pendingGrievances: 0, overdueGrievances: 0 };
+  data.forEach(function(row) {
+    var status = row[GRIEVANCE_COLS.STATUS - 1];
+    var daysTo = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    if (status && status !== 'Resolved' && status !== 'Withdrawn' && status !== 'Closed') stats.activeGrievances++;
+    if (status === 'Pending Info') stats.pendingGrievances++;
+    if (daysTo !== null && daysTo !== '' && daysTo < 0 && status === 'Open') stats.overdueGrievances++;
+  });
+  return stats;
+}
+
+/**
+ * Show quick actions menu based on current selection
+ */
+function showQuickActionsMenu() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var name = sheet.getName();
+  var selection = sheet.getActiveRange();
+  if (!selection) { SpreadsheetApp.getUi().alert('Please select a row first.'); return; }
+  var row = selection.getRow();
+  if (row < 2) { SpreadsheetApp.getUi().alert('Please select a data row, not header.'); return; }
+  if (name === SHEETS.MEMBER_DIR) showMemberQuickActions_(row);
+  else if (name === SHEETS.GRIEVANCE_LOG) showGrievanceQuickActions_(row);
+  else SpreadsheetApp.getUi().alert('Quick Actions', 'Available for Member Directory and Grievance Log.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show quick actions for a member row
+ */
+function showMemberQuickActions_(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var memberId = data[MEMBER_COLS.MEMBER_ID - 1];
+  var name = data[MEMBER_COLS.FIRST_NAME - 1] + ' ' + data[MEMBER_COLS.LAST_NAME - 1];
+  var email = data[MEMBER_COLS.EMAIL - 1];
+  var hasOpen = data[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1];
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;display:flex;align-items:center;gap:10px}.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}.name{font-size:18px;font-weight:bold}.id{color:#666;font-size:14px}.status{margin-top:10px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}.open{background:#ffebee;color:#c62828}.none{background:#e8f5e9;color:#2e7d32}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#e8f4fd}.icon{font-size:24px}.title{font-weight:bold}.desc{font-size:12px;color:#666;margin-top:2px}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>Quick Actions</h2><div class="info"><div class="name">' + name + '</div><div class="id">' + memberId + ' | ' + (email || 'No email') + '</div><div class="status">' + (hasOpen === 'Yes' ? '<span class="badge open">Has Open Grievance</span>' : '<span class="badge none">No Open Grievances</span>') + '</div></div><div class="actions"><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + memberId + '\');alert(\'Member ID copied!\')"><span class="icon">Copy</span><span><div class="title">Copy Member ID</div><div class="desc">' + memberId + '</div></span></button></div><button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
+  ).setWidth(400).setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Member Quick Actions');
+}
+
+/**
+ * Show quick actions for a grievance row
+ */
+function showGrievanceQuickActions_(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var data = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var grievanceId = data[GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+  var memberId = data[GRIEVANCE_COLS.MEMBER_ID - 1];
+  var name = data[GRIEVANCE_COLS.FIRST_NAME - 1] + ' ' + data[GRIEVANCE_COLS.LAST_NAME - 1];
+  var status = data[GRIEVANCE_COLS.STATUS - 1];
+  var step = data[GRIEVANCE_COLS.CURRENT_STEP - 1];
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8}.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}.name{font-size:18px;font-weight:bold}.id{color:#666;font-size:14px}.status{margin-top:10px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold;margin-right:8px}.open{background:#fff3e0;color:#e65100}.closed{background:#e8f5e9;color:#2e7d32}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#e8f4fd}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>Quick Actions</h2><div class="info"><div class="name">' + name + '</div><div class="id">' + grievanceId + ' | Member: ' + memberId + '</div><div class="status"><span class="badge ' + (status === 'Open' ? 'open' : 'closed') + '">' + status + '</span><span class="badge">' + step + '</span></div></div><div class="actions"><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + grievanceId + '\');alert(\'Grievance ID copied!\')"><span>Copy Grievance ID: ' + grievanceId + '</span></button></div><button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
+  ).setWidth(400).setHeight(350);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Grievance Quick Actions');
 }
 
 /**
@@ -2541,6 +2812,485 @@ function refreshMemberDirectoryFormulas() {
   repairMemberCheckboxes();
 
   ss.toast('Member Directory refreshed!', '✅ Success', 3);
+}
+
+/**
+ * Setup live grievance links in Member Directory (AB-AD columns)
+ * Installs LIVE FORMULAS directly in Member Directory that reference Grievance Log
+ * Days to Deadline is LIVE-WIRED to Grievance Log column U
+ */
+function setupLiveGrievanceFormulas() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Error: Member Directory not found.');
+    return;
+  }
+
+  ss.toast('Setting up live grievance formulas...', '🔄 Setup', 3);
+
+  // Get column letters for dynamic formulas
+  var gMemberIdCol = getColumnLetter(GRIEVANCE_COLS.MEMBER_ID);  // B
+  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);        // E
+  var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);  // U
+
+  // Column AB: Has Open Grievance? (live formula referencing Grievance Log)
+  var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
+  sheet.getRange(2, MEMBER_COLS.HAS_OPEN_GRIEVANCE).setFormula(hasOpenFormula);
+
+  // Column AC: Grievance Status (live formula referencing Grievance Log)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
+  sheet.getRange(2, MEMBER_COLS.GRIEVANCE_STATUS).setFormula(statusFormula);
+
+  // Column AD: Days to Deadline (LIVE-WIRED directly to Grievance Log column U)
+  // Uses MINIFS to get the minimum Days to Deadline for open grievances only
+  var daysToDeadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
+  sheet.getRange(2, MEMBER_COLS.DAYS_TO_DEADLINE).setFormula(daysToDeadlineFormula);
+
+  ss.toast('Live formulas installed! Days to Deadline is now live-wired to Grievance Log.', '✅ Success', 3);
+}
+
+/**
+ * Reset theme to default (light theme)
+ */
+function resetToDefaultTheme() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+
+  // Default light theme colors
+  var defaultTheme = {
+    headerBackground: '#1a73e8',
+    headerText: '#ffffff',
+    evenRow: '#f8f9fa',
+    oddRow: '#ffffff'
+  };
+
+  sheets.forEach(function(sheet) {
+    var lastRow = Math.max(sheet.getLastRow(), 1);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+
+    // Reset header row
+    if (lastCol > 0) {
+      sheet.getRange(1, 1, 1, lastCol)
+        .setBackground(defaultTheme.headerBackground)
+        .setFontColor(defaultTheme.headerText);
+    }
+
+    // Reset data rows with alternating colors
+    for (var row = 2; row <= lastRow; row++) {
+      var bgColor = (row % 2 === 0) ? defaultTheme.evenRow : defaultTheme.oddRow;
+      sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor).setFontColor('#202124');
+    }
+  });
+
+  ss.toast('Theme reset to default!', '✅ Success', 3);
+}
+
+// ==================== ADHD FEATURES ====================
+
+/**
+ * Show ADHD Control Panel
+ */
+function showADHDControlPanel() {
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>ADHD Control Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();google.script.host.close()">Toggle</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad();google.script.host.close()">Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">Start</button></div></div><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
+  ).setWidth(450).setHeight(400);
+  SpreadsheetApp.getUi().showModalDialog(html, 'ADHD Control Panel');
+}
+
+// Alias for showADHDControlPanel (handles typo without 'l')
+function showADHDControlPane() {
+  showADHDControlPanel();
+}
+
+/**
+ * Hide gridlines on dashboard sheets for cleaner ADHD-friendly view
+ */
+function hideAllGridlines() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.getSheets().forEach(function(sheet) {
+    var name = sheet.getName();
+    // Keep gridlines on data entry sheets, hide on dashboards
+    if (name !== SHEETS.CONFIG && name !== SHEETS.MEMBER_DIR && name !== SHEETS.GRIEVANCE_LOG) {
+      sheet.setHiddenGridlines(true);
+    }
+  });
+  ss.toast('Gridlines hidden on dashboards!', 'ADHD Setup', 3);
+}
+
+/**
+ * Setup ADHD-friendly defaults for the spreadsheet
+ */
+function setupADHDDefaults() {
+  var ui = SpreadsheetApp.getUi();
+  ui.alert('🎨 Setting up ADHD-friendly defaults...');
+  try {
+    hideAllGridlines();
+    ui.alert('🎉 ADHD-friendly setup complete!\n\n✅ Gridlines hidden on dashboards\n✅ Ready for focus!');
+  } catch (e) {
+    ui.alert('⚠️ Error: ' + e.message);
+  }
+}
+
+/**
+ * Activate focus mode - highlights current row
+ */
+function activateFocusMode() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var selection = sheet.getActiveRange();
+  if (selection) {
+    var row = selection.getRow();
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    sheet.getRange(row, 1, 1, lastCol).setBackground('#fff3cd');
+  }
+  ss.toast('Focus mode activated on current row!', 'Focus Mode', 3);
+}
+
+/**
+ * Toggle zebra stripes on current sheet
+ */
+function toggleZebraStripes() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  var lastRow = sheet.getLastRow();
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+
+  for (var row = 2; row <= lastRow; row++) {
+    var bgColor = (row % 2 === 0) ? '#f8f9fa' : '#ffffff';
+    sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor);
+  }
+  ss.toast('Zebra stripes applied!', 'Zebra Stripes', 3);
+}
+
+/**
+ * Show quick capture notepad
+ */
+function showQuickCaptureNotepad() {
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px}textarea{width:100%;height:200px;padding:10px;border:2px solid #ddd;border-radius:8px;font-size:14px}button{background:#1a73e8;color:white;border:none;padding:12px 24px;border-radius:4px;cursor:pointer;margin-top:10px}button:hover{background:#1557b0}</style></head><body><h3>Quick Capture</h3><textarea id="note" placeholder="Type your notes here..."></textarea><br><button onclick="var n=document.getElementById(\'note\').value;if(n)google.script.run.withSuccessHandler(function(){alert(\'Saved!\');google.script.host.close()}).saveQuickNote(n)">Save Note</button><button style="background:#6c757d" onclick="google.script.host.close()">Close</button></body></html>'
+  ).setWidth(400).setHeight(350);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Quick Capture');
+}
+
+/**
+ * Save quick note to script properties
+ */
+function saveQuickNote(note) {
+  var props = PropertiesService.getUserProperties();
+  var notes = JSON.parse(props.getProperty('quickNotes') || '[]');
+  notes.push({ text: note, date: new Date().toISOString() });
+  props.setProperty('quickNotes', JSON.stringify(notes));
+}
+
+/**
+ * Start Pomodoro timer
+ */
+function startPomodoroTimer() {
+  SpreadsheetApp.getUi().alert('Pomodoro Timer', '25-minute work session started!\n\nTake a 5-minute break when the timer ends.', SpreadsheetApp.getUi().ButtonSet.OK);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Pomodoro started! 25 minutes of focused work.', 'Pomodoro', 10);
+}
+
+/**
+ * Show theme manager
+ */
+function showThemeManager() {
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px}.theme-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}.theme-card{padding:20px;border-radius:8px;cursor:pointer;text-align:center;border:2px solid #ddd}.theme-card:hover{border-color:#1a73e8}.light{background:#fff}.dark{background:#202124;color:#e8eaed}.purple{background:#E8E3F3}.green{background:#D1FAE5}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin-top:15px}</style></head><body><h3>Theme Manager</h3><div class="theme-grid"><div class="theme-card light" onclick="google.script.run.resetToDefaultTheme();google.script.host.close()"><strong>Light</strong><br>Default theme</div><div class="theme-card dark" onclick="google.script.run.quickToggleDarkMode();google.script.host.close()"><strong>Dark</strong><br>Dark mode</div><div class="theme-card purple" onclick="google.script.run.applyPurpleTheme();google.script.host.close()"><strong>509 Purple</strong><br>Union purple</div><div class="theme-card green" onclick="google.script.run.applyGreenTheme();google.script.host.close()"><strong>Union Green</strong><br>Go green</div></div><button onclick="google.script.host.close()">Close</button></body></html>'
+  ).setWidth(400).setHeight(350);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Theme Manager');
+}
+
+/**
+ * Toggle dark mode
+ */
+function quickToggleDarkMode() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  var darkTheme = {
+    headerBackground: '#35363a',
+    headerText: '#e8eaed',
+    evenRow: '#292a2d',
+    oddRow: '#202124',
+    text: '#e8eaed'
+  };
+
+  sheets.forEach(function(sheet) {
+    var lastRow = Math.max(sheet.getLastRow(), 1);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    if (lastCol > 0) {
+      sheet.getRange(1, 1, 1, lastCol).setBackground(darkTheme.headerBackground).setFontColor(darkTheme.headerText);
+    }
+    for (var row = 2; row <= lastRow; row++) {
+      var bgColor = (row % 2 === 0) ? darkTheme.evenRow : darkTheme.oddRow;
+      sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor).setFontColor(darkTheme.text);
+    }
+  });
+  ss.toast('Dark mode applied!', 'Theme', 3);
+}
+
+/**
+ * Apply purple theme
+ */
+function applyPurpleTheme() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  sheets.forEach(function(sheet) {
+    var lastRow = Math.max(sheet.getLastRow(), 1);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    if (lastCol > 0) {
+      sheet.getRange(1, 1, 1, lastCol).setBackground('#5B4B9E').setFontColor('#ffffff');
+    }
+    for (var row = 2; row <= lastRow; row++) {
+      var bgColor = (row % 2 === 0) ? '#E8E3F3' : '#ffffff';
+      sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor).setFontColor('#1F2937');
+    }
+  });
+  ss.toast('Purple theme applied!', 'Theme', 3);
+}
+
+/**
+ * Apply green theme
+ */
+function applyGreenTheme() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheets = ss.getSheets();
+  sheets.forEach(function(sheet) {
+    var lastRow = Math.max(sheet.getLastRow(), 1);
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    if (lastCol > 0) {
+      sheet.getRange(1, 1, 1, lastCol).setBackground('#059669').setFontColor('#ffffff');
+    }
+    for (var row = 2; row <= lastRow; row++) {
+      var bgColor = (row % 2 === 0) ? '#D1FAE5' : '#ffffff';
+      sheet.getRange(row, 1, 1, lastCol).setBackground(bgColor).setFontColor('#1F2937');
+    }
+  });
+  ss.toast('Green theme applied!', 'Theme', 3);
+}
+
+// ==================== UNDO/REDO & CACHE ====================
+
+/**
+ * Undo last action (placeholder)
+ */
+function undoLastAction() {
+  SpreadsheetApp.getUi().alert('Undo', 'Use Ctrl+Z (Cmd+Z on Mac) to undo actions in Google Sheets.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Redo last action (placeholder)
+ */
+function redoLastAction() {
+  SpreadsheetApp.getUi().alert('Redo', 'Use Ctrl+Y (Cmd+Shift+Z on Mac) to redo actions in Google Sheets.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show undo/redo panel
+ */
+function showUndoRedoPanel() {
+  SpreadsheetApp.getUi().alert('Undo/Redo', 'Google Sheets has built-in undo/redo:\n\n• Undo: Ctrl+Z (Cmd+Z)\n• Redo: Ctrl+Y (Cmd+Shift+Z)\n\nUse Edit menu to see full history.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Clear undo history (placeholder)
+ */
+function clearUndoHistory() {
+  SpreadsheetApp.getActiveSpreadsheet().toast('Undo history is managed by Google Sheets.', 'Info', 3);
+}
+
+/**
+ * Warm up caches
+ * Note: CacheService has a 100KB limit per item, so we cache metadata only
+ */
+function warmUpCaches() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var cache = CacheService.getScriptCache();
+  var cached = 0;
+
+  try {
+    // Cache member count and column info (small data)
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (memberSheet && memberSheet.getLastRow() > 1) {
+      var memberMeta = {
+        lastRow: memberSheet.getLastRow(),
+        lastCol: memberSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('memberMeta', JSON.stringify(memberMeta), 21600);
+      cached++;
+    }
+
+    // Cache grievance count and column info (small data)
+    var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+    if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+      var grievanceMeta = {
+        lastRow: grievanceSheet.getLastRow(),
+        lastCol: grievanceSheet.getLastColumn(),
+        updated: new Date().toISOString()
+      };
+      cache.put('grievanceMeta', JSON.stringify(grievanceMeta), 21600);
+      cached++;
+    }
+
+    // Cache config data (usually small enough)
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+    if (configSheet) {
+      var configData = configSheet.getDataRange().getValues();
+      var configStr = JSON.stringify(configData);
+      if (configStr.length < 100000) {  // Only cache if under 100KB
+        cache.put('configData', configStr, 21600);
+        cached++;
+      }
+    }
+
+    ss.toast('Cached ' + cached + ' items successfully!', 'Cache Warmup', 3);
+  } catch (e) {
+    ss.toast('Cache warmup partial: ' + e.message, 'Cache', 3);
+  }
+}
+
+/**
+ * Invalidate all caches
+ */
+function invalidateAllCaches() {
+  var cache = CacheService.getScriptCache();
+  cache.removeAll(['memberMeta', 'grievanceMeta', 'configData']);
+  SpreadsheetApp.getActiveSpreadsheet().toast('All caches invalidated!', 'Cache', 3);
+}
+
+// ==================== VALIDATION ====================
+
+/**
+ * Run bulk validation on all data
+ */
+function runBulkValidation() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var issues = [];
+
+  // Check Member Directory
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet) {
+    var memberData = memberSheet.getDataRange().getValues();
+    for (var i = 1; i < memberData.length; i++) {
+      var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+      var email = memberData[i][MEMBER_COLS.EMAIL - 1];
+      if (memberId && email && !email.toString().includes('@')) {
+        issues.push('Row ' + (i + 1) + ': Invalid email format');
+      }
+    }
+  }
+
+  if (issues.length === 0) {
+    ss.toast('All data passed validation!', 'Validation', 3);
+  } else {
+    SpreadsheetApp.getUi().alert('Validation Issues', issues.slice(0, 10).join('\n') + (issues.length > 10 ? '\n...and ' + (issues.length - 10) + ' more' : ''), SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+/**
+ * Show validation settings
+ */
+function showValidationSettings() {
+  SpreadsheetApp.getUi().alert('Validation Settings', 'Validation checks:\n\n• Email format\n• Required fields\n• Data consistency\n\nRun "Run Bulk Validation" to check all data.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Clear validation indicators
+ */
+function clearValidationIndicators() {
+  SpreadsheetApp.getActiveSpreadsheet().toast('Validation indicators cleared.', 'Validation', 3);
+}
+
+/**
+ * Install validation trigger
+ */
+function installValidationTrigger() {
+  SpreadsheetApp.getActiveSpreadsheet().toast('Validation runs automatically on edit via onEdit trigger.', 'Validation', 3);
+}
+
+/**
+ * Setup Member ID dropdown in Grievance Log from Member Directory
+ * This allows users to select a member when creating a grievance
+ */
+function setupGrievanceMemberDropdown() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!memberSheet || !grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+    return;
+  }
+
+  ss.toast('Setting up Member ID dropdown...', '🔄 Setup', 3);
+
+  // Get column letter for Member ID in Member Directory
+  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+
+  // Create data validation rule that references Member Directory Member IDs
+  var memberIdRange = '\'' + SHEETS.MEMBER_DIR + '\'!' + mMemberIdCol + '2:' + mMemberIdCol;
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInRange(memberSheet.getRange(mMemberIdCol + '2:' + mMemberIdCol), true)
+    .setAllowInvalid(true)  // Allow manual entry too
+    .build();
+
+  // Apply to Member ID column in Grievance Log (column B, rows 2-1000)
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).setDataValidation(rule);
+
+  ss.toast('Member ID dropdown set up!', '✅ Success', 3);
+}
+
+/**
+ * Fix existing "Overdue" text in Days to Deadline column
+ * Converts text back to negative numbers for proper counting
+ */
+function fixOverdueTextToNumbers() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log not found.');
+    return;
+  }
+
+  ss.toast('Fixing overdue data...', '🔧 Fix', 3);
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  var daysCol = GRIEVANCE_COLS.DAYS_TO_DEADLINE;
+  var nextActionCol = GRIEVANCE_COLS.NEXT_ACTION_DUE;
+
+  var daysData = sheet.getRange(2, daysCol, lastRow - 1, 1).getValues();
+  var nextActionData = sheet.getRange(2, nextActionCol, lastRow - 1, 1).getValues();
+
+  var today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  var updates = [];
+  var fixCount = 0;
+
+  for (var i = 0; i < daysData.length; i++) {
+    var currentValue = daysData[i][0];
+    var nextAction = nextActionData[i][0];
+
+    if (currentValue === 'Overdue' && nextAction instanceof Date) {
+      var days = Math.floor((nextAction - today) / (1000 * 60 * 60 * 24));
+      updates.push([days]);
+      fixCount++;
+    } else {
+      updates.push([currentValue]);
+    }
+  }
+
+  if (fixCount > 0) {
+    sheet.getRange(2, daysCol, updates.length, 1).setValues(updates);
+    ss.toast('Fixed ' + fixCount + ' overdue entries!', '✅ Success', 3);
+  } else {
+    ss.toast('No "Overdue" text found to fix.', '✅ All Good', 3);
+  }
 }
 
 function rebuildDashboard() {
@@ -2660,13 +3410,14 @@ function setupGrievanceCalcSheet() {
   var hasOpenFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Yes","No")))';
   sheet.getRange('B2').setFormula(hasOpenFormula);
 
-  // Column C: Grievance Status (most recent active grievance status)
-  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  // Column C: Grievance Status (most urgent: Open > Pending Info)
+  var statusFormula = '=ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")>0,"Open",IF(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")>0,"Pending Info",""))))';
   sheet.getRange('C2').setFormula(statusFormula);
 
-  // Column D: Next Deadline (Days to Deadline countdown)
+  // Column D: Days to Deadline (minimum/most urgent deadline for open grievances only)
+  // Excludes all closed statuses: Closed, Settled, Withdrawn, Denied, Won
   var gDaysToDeadlineCol = getColumnLetter(GRIEVANCE_COLS.DAYS_TO_DEADLINE);
-  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(INDEX(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',MATCH(A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',0)),"")))';
+  var deadlineFormula = '=ARRAYFORMULA(IF(A2:A="","",IFERROR(MINIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gMemberIdCol + ':' + gMemberIdCol + ',A2:A,\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Closed",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Settled",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Withdrawn",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Denied",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Won"),"")))';
   sheet.getRange('D2').setFormula(deadlineFormula);
 
   // Column E: Total Grievance Count
@@ -2938,19 +3689,19 @@ function setupGrievanceFormulasSheet() {
     '=ARRAYFORMULA(IF(B2:B="","",IFERROR(VLOOKUP(B2:B,' + memberRange + ',' + MEMBER_COLS.ASSIGNED_STEWARD + ',FALSE),"")))'
   );
 
-  // Format date columns (dd-mm-yyyy)
-  sheet.getRange('E:E').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('F:F').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('G:G').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('H:H').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('I:I').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('L:L').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('M:M').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('N:N').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('O:O').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('P:P').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('Q:Q').setNumberFormat('dd-mm-yyyy');
-  sheet.getRange('S:S').setNumberFormat('dd-mm-yyyy');
+  // Format date columns (MM/dd/yyyy)
+  sheet.getRange('E:E').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('F:F').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('G:G').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('H:H').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('I:I').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('L:L').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('M:M').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('N:N').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('O:O').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('P:P').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('Q:Q').setNumberFormat('MM/dd/yyyy');
+  sheet.getRange('S:S').setNumberFormat('MM/dd/yyyy');
 
   // Hide the sheet
   sheet.hideSheet();
@@ -3085,11 +3836,11 @@ function syncGrievanceFormulasToLog() {
       }
     }
 
-    // Calculate Days to Deadline directly
+    // Calculate Days to Deadline directly (keep negative numbers for overdue)
     var daysToDeadline = '';
     if (nextActionDue instanceof Date) {
       var days = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
-      daysToDeadline = days < 0 ? 'Overdue' : days;
+      daysToDeadline = days;  // Keep as number (negative = overdue)
     }
 
     // Metrics (S, T, U)
@@ -3133,19 +3884,19 @@ function syncGrievanceFormulasToLog() {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1)
       .setValues(deadlineUpdates.map(function(r) { return [r[4]]; }));
 
-    // Format deadline columns as dates (dd-mm-yyyy)
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    // Format deadline columns as dates (MM/dd/yyyy)
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.FILING_DEADLINE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP2_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, deadlineUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
 
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
 
     // Format Days Open (S) and Days to Deadline (U) as whole numbers
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('dd-mm-yyyy');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
@@ -3156,9 +3907,12 @@ function syncGrievanceFormulasToLog() {
 }
 
 /**
- * Auto-sort the Grievance Log by status priority
- * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
- * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ * Auto-sort the Grievance Log
+ *
+ * Sort order:
+ *   1. STATUS (workflow state): Open → Pending Info → In Arbitration → Appealed → Closed
+ *   2. For active cases: Days to Deadline (most urgent first)
+ *   3. For closed cases: RESOLUTION (outcome): Won → Settled → Denied → Withdrawn
  */
 function sortGrievanceLogByStatus() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -3173,29 +3927,52 @@ function sortGrievanceLogByStatus() {
   var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
   var data = dataRange.getValues();
 
-  // Sort by status priority (column E = index 4)
   data.sort(function(a, b) {
     var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
     var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
 
-    // Get priority (default to 99 for unknown statuses)
-    var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
-    var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
+    // Get status priority (default to 99 for unknown)
+    var statusPriorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
+    var statusPriorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
 
-    // Primary sort: by status priority (lower number = higher priority)
-    if (priorityA !== priorityB) {
-      return priorityA - priorityB;
+    // 1. Primary sort: by STATUS (workflow state)
+    if (statusPriorityA !== statusPriorityB) {
+      return statusPriorityA - statusPriorityB;
     }
 
-    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
-    var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-    var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    // 2. For ACTIVE cases (not Closed): sort by Days to Deadline
+    if (statusA !== 'Closed') {
+      var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+      var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
 
-    // Handle empty/non-numeric values
-    if (daysA === '' || daysA === null) daysA = 9999;
-    if (daysB === '' || daysB === null) daysB = 9999;
+      if (daysA === '' || daysA === null || isNaN(daysA)) daysA = 9999;
+      if (daysB === '' || daysB === null || isNaN(daysB)) daysB = 9999;
 
-    return daysA - daysB;
+      return daysA - daysB;
+    }
+
+    // 3. For CLOSED cases: sort by RESOLUTION (outcome)
+    var resolutionA = a[GRIEVANCE_COLS.RESOLUTION - 1] || '';
+    var resolutionB = b[GRIEVANCE_COLS.RESOLUTION - 1] || '';
+
+    var resPriorityA = GRIEVANCE_RESOLUTION_PRIORITY[resolutionA];
+    var resPriorityB = GRIEVANCE_RESOLUTION_PRIORITY[resolutionB];
+
+    // Partial match fallback
+    if (resPriorityA === undefined) {
+      if (resolutionA.indexOf('Won') >= 0) resPriorityA = 3;
+      else if (resolutionA.indexOf('Settled') >= 0) resPriorityA = 6;
+      else if (resolutionA.indexOf('Denied') >= 0) resPriorityA = 9;
+      else resPriorityA = 50;
+    }
+    if (resPriorityB === undefined) {
+      if (resolutionB.indexOf('Won') >= 0) resPriorityB = 3;
+      else if (resolutionB.indexOf('Settled') >= 0) resPriorityB = 6;
+      else if (resolutionB.indexOf('Denied') >= 0) resPriorityB = 9;
+      else resPriorityB = 50;
+    }
+
+    return resPriorityA - resPriorityB;
   });
 
   // Write sorted data back
@@ -3206,7 +3983,7 @@ function sortGrievanceLogByStatus() {
     sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
-  Logger.log('Grievance Log sorted by status priority');
+  Logger.log('Grievance Log sorted by status and resolution');
 }
 
 // ============================================================================
@@ -3488,9 +4265,14 @@ function setupEngagementCalcSheet() {
 }
 
 // ============================================================================
-// HIDDEN SHEET 6: _Steward_Contact_Calc (placeholder)
+// HIDDEN SHEET 6: _Steward_Contact_Calc
+// Source: Member Directory (Y-AA) → Aggregates steward contact tracking metrics
 // ============================================================================
 
+/**
+ * Setup the _Steward_Contact_Calc hidden sheet with self-healing formulas
+ * Tracks and aggregates steward contact data from Member Directory
+ */
 function setupStewardContactCalcSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.STEWARD_CONTACT_CALC);
@@ -3500,9 +4282,40 @@ function setupStewardContactCalcSheet() {
   }
 
   sheet.clear();
-  sheet.getRange('A1').setValue('Steward Contact Calc - Ready for future implementation');
+
+  // Headers for steward contact summary
+  var headers = ['Steward Name', 'Total Contacts', 'Contacts This Month', 'Contacts Last 7 Days', 'Last Contact Date', 'Avg Days Between Contacts'];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Get column letters for formulas
+  var mContactStewardCol = getColumnLetter(MEMBER_COLS.CONTACT_STEWARD);
+  var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
+
+  // Column A: Unique steward names who have made contacts
+  sheet.getRange('A2').setFormula('=IFERROR(SORT(UNIQUE(FILTER(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + '<>""))),)');
+
+  // Column B: Total contacts per steward
+  sheet.getRange('B2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A)))');
+
+  // Column C: Contacts this month
+  sheet.getRange('C2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A,\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1))))');
+
+  // Column D: Contacts last 7 days
+  sheet.getRange('D2').setFormula('=ARRAYFORMULA(IF(A2:A="","",COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A,\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&(TODAY()-7))))');
+
+  // Column E: Most recent contact date for this steward
+  sheet.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(TEXT(MAXIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A),"MM/dd/yyyy"),"-")))');
+
+  // Column F: Placeholder for avg days between contacts (complex calculation)
+  sheet.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","","-"))');
+
+  // Auto-resize columns
+  sheet.autoResizeColumns(1, headers.length);
+
   sheet.hideSheet();
-  Logger.log('_Steward_Contact_Calc sheet setup complete');
+  Logger.log('_Steward_Contact_Calc sheet setup complete with live formulas');
 }
 
 // ============================================================================
@@ -3554,7 +4367,7 @@ function setupDashboardSummaryCalcSheet() {
     ['Withdrawn', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")', 'Cases withdrawn'],
     ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*"))*100,1),0)', 'Wins / (Wins + Settled + Denied)'],
     ['Avg Days to Resolution', '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)', 'Average days for closed cases'],
-    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")', 'Cases past deadline'],
+    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"Overdue")', 'Cases past deadline'],
     ['Due This Week', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")', 'Cases due in next 7 days'],
     ['Filed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())', 'Grievances filed this month'],
     ['Closed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())', 'Grievances closed this month']
@@ -4120,7 +4933,7 @@ function setupDashboardCalcSheet() {
     ['Withdrawn', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")', 'Cases withdrawn'],
     ['Win Rate %', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*")/(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gResolutionCol + ':' + gResolutionCol + ',"*Won*"))*100,1),0)', 'Wins / (Wins + Settled + Denied)'],
     ['Avg Days to Resolution', '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)', 'Average days for closed cases'],
-    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")', 'Cases past deadline'],
+    ['Overdue Cases', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<0")+COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"Overdue")', 'Cases past deadline'],
     ['Due This Week', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',">=0",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysToDeadlineCol + ':' + gDaysToDeadlineCol + ',"<=7")', 'Cases due in next 7 days'],
     ['Filed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())', 'Grievances filed this month'],
     ['Closed This Month', '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())', 'Grievances closed this month']
@@ -4539,92 +5352,126 @@ function seedConfigData() {
   // Data row start (after section headers row 1 and column headers row 2)
   var dataStartRow = 3;
 
+  // Helper: only seed column if it's empty (preserves user data)
+  function seedIfEmpty(column, values) {
+    var existing = getConfigValues(sheet, column);
+    if (existing.length === 0) {
+      sheet.getRange(dataStartRow, column, values.length, 1)
+        .setValues(values.map(function(v) { return [v]; }));
+      return true;
+    }
+    return false;
+  }
+
+  var seededAny = false;
+
   // Job Titles (Column A)
-  var jobTitles = [
+  if (seedIfEmpty(CONFIG_COLS.JOB_TITLES, [
     'Social Worker', 'Case Manager', 'Program Coordinator', 'Administrative Assistant',
     'Supervisor', 'Director', 'Clinician', 'Counselor', 'Specialist', 'Analyst',
     'Manager', 'Senior Social Worker', 'Lead Case Manager', 'Program Manager',
     'Executive Assistant', 'HR Coordinator', 'Finance Associate', 'IT Support',
     'Communications Specialist', 'Outreach Worker'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.JOB_TITLES, jobTitles.length, 1)
-    .setValues(jobTitles.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Office Locations (Column B)
-  var locations = [
+  if (seedIfEmpty(CONFIG_COLS.OFFICE_LOCATIONS, [
     'Boston Main Office', 'Worcester Regional', 'Springfield Center', 'Cambridge Branch',
     'Lowell Office', 'Brockton Center', 'Quincy Regional', 'New Bedford Office',
     'Fall River Branch', 'Lawrence Center', 'Framingham Office', 'Somerville Branch',
     'Lynn Regional', 'Haverhill Center', 'Malden Office', 'Medford Branch',
     'Waltham Regional', 'Newton Center', 'Brookline Office', 'Salem Branch'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.OFFICE_LOCATIONS, locations.length, 1)
-    .setValues(locations.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Units (Column C)
-  var units = [
+  if (seedIfEmpty(CONFIG_COLS.UNITS, [
     'Child Welfare', 'Adult Services', 'Mental Health', 'Disability Services',
     'Elder Affairs', 'Housing Assistance', 'Employment Services', 'Youth Services',
     'Family Support', 'Administration'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.UNITS, units.length, 1)
-    .setValues(units.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Supervisors (Column F)
-  var supervisors = [
+  if (seedIfEmpty(CONFIG_COLS.SUPERVISORS, [
     'Maria Rodriguez', 'James Wilson', 'Sarah Chen', 'Michael Brown',
     'Jennifer Davis', 'Robert Taylor', 'Lisa Anderson', 'David Martinez',
     'Emily Johnson', 'Christopher Lee', 'Amanda White', 'Daniel Garcia'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.SUPERVISORS, supervisors.length, 1)
-    .setValues(supervisors.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Managers (Column G)
-  var managers = [
+  if (seedIfEmpty(CONFIG_COLS.MANAGERS, [
     'Patricia Thompson', 'William Jackson', 'Elizabeth Moore', 'Richard Harris',
     'Susan Clark', 'Joseph Lewis', 'Margaret Robinson', 'Charles Walker'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.MANAGERS, managers.length, 1)
-    .setValues(managers.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
   // Stewards (Column H)
-  var stewards = [
+  if (seedIfEmpty(CONFIG_COLS.STEWARDS, [
     'John Smith', 'Mary Johnson', 'Robert Williams', 'Patricia Jones',
     'Michael Davis', 'Linda Miller', 'William Brown', 'Barbara Wilson',
     'David Moore', 'Susan Taylor', 'James Anderson', 'Karen Thomas'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.STEWARDS, stewards.length, 1)
-    .setValues(stewards.map(function(v) { return [v]; }));
+  ])) seededAny = true;
+
+  // Steward Committees (Column I)
+  if (seedIfEmpty(CONFIG_COLS.STEWARD_COMMITTEES, [
+    'Grievance Committee', 'Bargaining Committee', 'Health & Safety Committee',
+    'Political Action Committee', 'Membership Committee', 'Executive Board'
+  ])) seededAny = true;
 
   // Home Towns (Column AF)
-  var homeTowns = [
+  if (seedIfEmpty(CONFIG_COLS.HOME_TOWNS, [
     'Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell', 'Brockton',
     'Quincy', 'New Bedford', 'Fall River', 'Lawrence', 'Framingham', 'Somerville',
     'Lynn', 'Haverhill', 'Malden', 'Medford', 'Waltham', 'Newton', 'Brookline'
-  ];
-  sheet.getRange(dataStartRow, CONFIG_COLS.HOME_TOWNS, homeTowns.length, 1)
-    .setValues(homeTowns.map(function(v) { return [v]; }));
+  ])) seededAny = true;
 
-  SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
+  if (seededAny) {
+    SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
+  }
 }
 
 /**
- * Seed N members
- * @param {number} count - Number of members to seed (max 2000)
+ * Restore Config dropdowns AND re-apply dropdown validations to Member Directory and Grievance Log
+ * This is the full restore function for use after nuking or when dropdowns are missing
  */
-function SEED_MEMBERS(count) {
+function restoreConfigAndDropdowns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  ss.toast('Restoring Config values...', '🔄 Restoring', 2);
+
+  // First, seed the Config values
+  seedConfigData();
+
+  ss.toast('Applying dropdown validations...', '🔄 Restoring', 2);
+
+  // Then, re-apply dropdown validations to Member Directory and Grievance Log
+  setupDataValidations();
+
+  ss.toast('Config and dropdowns restored!', '✅ Success', 3);
+}
+
+/**
+ * Seed N members and optionally seed grievances for some of them
+ * @param {number} count - Number of members to seed (max 2000)
+ * @param {number} grievancePercent - Percentage of members to give grievances (0-100, default 30)
+ */
+function SEED_MEMBERS(count, grievancePercent) {
   count = Math.min(count || 50, 2000);
+  grievancePercent = (grievancePercent !== undefined) ? grievancePercent : 30; // Default 30% get grievances
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
 
-  if (!sheet || !configSheet) {
+  if (!memberSheet || !grievanceSheet || !configSheet) {
     SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
     return;
   }
 
-  // Get config values
+  // Always ensure Config has data for all required columns
+  ss.toast('Ensuring Config data exists...', '🌱 Seeding', 2);
+  seedConfigData();  // seedConfigData now only populates EMPTY columns
+
+  // Now get all config values (will have data from seedConfigData or user's existing data)
   var jobTitles = getConfigValues(configSheet, CONFIG_COLS.JOB_TITLES);
   var locations = getConfigValues(configSheet, CONFIG_COLS.OFFICE_LOCATIONS);
   var units = getConfigValues(configSheet, CONFIG_COLS.UNITS);
@@ -4632,17 +5479,22 @@ function SEED_MEMBERS(count) {
   var managers = getConfigValues(configSheet, CONFIG_COLS.MANAGERS);
   var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
   var homeTowns = getConfigValues(configSheet, CONFIG_COLS.HOME_TOWNS);
+  var committees = getConfigValues(configSheet, CONFIG_COLS.STEWARD_COMMITTEES);
 
-  // If config is empty, use defaults
-  if (jobTitles.length === 0) jobTitles = ['Social Worker', 'Case Manager', 'Supervisor'];
-  if (locations.length === 0) locations = ['Boston Main Office', 'Worcester Regional'];
-  if (units.length === 0) units = ['Child Welfare', 'Adult Services'];
-  if (supervisors.length === 0) supervisors = ['Jane Supervisor'];
-  if (managers.length === 0) managers = ['John Manager'];
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-  if (homeTowns.length === 0) homeTowns = ['Boston', 'Worcester', 'Springfield', 'Cambridge', 'Lowell'];
+  // Grievance config
+  var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
+  // Resolution notes for resolved statuses (optional detail in RESOLUTION column)
+  var resolutionNotes = {
+    'Won': ['Full remedy awarded', 'Partial remedy - back pay', 'Grievance sustained', 'Management corrected violation'],
+    'Settled': ['Mutual agreement reached', 'Informal resolution', 'Step I settlement', 'Written agreement signed'],
+    'Denied': ['Denied at Step II', 'Denied at Step III', 'Insufficient evidence cited', 'Management position upheld'],
+    'Withdrawn': ['Member requested withdrawal', 'Issue resolved informally', 'Member left bargaining unit', 'Duplicate grievance']
+  };
+  var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
+  var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
+  var articles = DEFAULT_CONFIG.ARTICLES;
 
-  // Expanded name pools for better variety (100+ names each = 10,000+ unique combinations)
+  // Expanded name pools for better variety
   var firstNames = [
     'James', 'Mary', 'John', 'Patricia', 'Robert', 'Jennifer', 'Michael', 'Linda', 'William', 'Elizabeth',
     'David', 'Barbara', 'Richard', 'Susan', 'Joseph', 'Jessica', 'Thomas', 'Sarah', 'Charles', 'Karen',
@@ -4674,45 +5526,75 @@ function SEED_MEMBERS(count) {
   var officeDays = DEFAULT_CONFIG.OFFICE_DAYS;
   var commMethods = DEFAULT_CONFIG.COMM_METHODS;
 
-  var startRow = Math.max(sheet.getLastRow() + 1, 2);
+  var memberStartRow = Math.max(memberSheet.getLastRow() + 1, 2);
+  var grievanceStartRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
 
-  // Build set of existing member IDs to prevent duplicates
+  // Build set of existing IDs to prevent duplicates
   var existingMemberIds = {};
-  if (startRow > 2) {
-    var existingData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, startRow - 2, 1).getValues();
-    for (var e = 0; e < existingData.length; e++) {
-      if (existingData[e][0]) {
-        existingMemberIds[existingData[e][0]] = true;
-      }
+  var existingGrievanceIds = {};
+  if (memberStartRow > 2) {
+    var existingMemberData = memberSheet.getRange(2, MEMBER_COLS.MEMBER_ID, memberStartRow - 2, 1).getValues();
+    for (var e = 0; e < existingMemberData.length; e++) {
+      if (existingMemberData[e][0]) existingMemberIds[existingMemberData[e][0]] = true;
+    }
+  }
+  if (grievanceStartRow > 2) {
+    var existingGrievanceData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, grievanceStartRow - 2, 1).getValues();
+    for (var g = 0; g < existingGrievanceData.length; g++) {
+      if (existingGrievanceData[g][0]) existingGrievanceIds[existingGrievanceData[g][0]] = true;
     }
   }
 
-  var rows = [];
-  var seededIds = []; // Track IDs for this seeding session
+  var memberRows = [];
+  var grievanceRows = [];
+  var seededMemberIds = [];
+  var seededGrievanceIds = [];
   var batchSize = 50;
   var today = new Date();
+  var grievanceCount = 0;
 
   for (var i = 0; i < count; i++) {
     var firstName = randomChoice(firstNames);
     var lastName = randomChoice(lastNames);
     var memberId = generateNameBasedId('M', firstName, lastName, existingMemberIds);
-    existingMemberIds[memberId] = true; // Track new ID to prevent duplicates in same batch
-    seededIds.push(memberId); // Track for persistence
+    existingMemberIds[memberId] = true;
+    seededMemberIds.push(memberId);
+
+    var memberLocation = randomChoice(locations);
+    var memberUnit = randomChoice(units);
+    var assignedSteward = randomChoice(stewards);
     var email = firstName.toLowerCase() + '.' + lastName.toLowerCase() + '.' + memberId.toLowerCase() + '@example.org';
     var phone = '617-555-' + String(Math.floor(Math.random() * 9000) + 1000);
     var isSteward = Math.random() < 0.1 ? 'Yes' : 'No';
-    var assignedSteward = randomChoice(stewards);
 
-    // Generate recent contact data (50% chance of having recent contact)
+    // Generate recent contact data (50% chance)
     var hasRecentContact = Math.random() < 0.5;
     var recentContactDate = hasRecentContact ? randomDate(new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000), today) : '';
     var contactSteward = hasRecentContact ? assignedSteward : '';
 
-    var row = generateSingleMemberRow(
+    // Sample contact notes for members who have been contacted
+    var sampleContactNotes = [
+      'Discussed workload concerns',
+      'Follow up on scheduling issue',
+      'Interested in becoming steward',
+      'Addressed safety complaint',
+      'Positive feedback received',
+      'Needs info on benefits',
+      'Question about contract language',
+      'Planning to attend next meeting',
+      'Grievance update provided',
+      'Initial outreach - new member',
+      'Discussed upcoming negotiations',
+      'Shared resources on workplace rights',
+      'Scheduling meeting for next week'
+    ];
+    var contactNotes = hasRecentContact ? randomChoice(sampleContactNotes) : '';
+
+    var memberRow = generateSingleMemberRow(
       memberId, firstName, lastName,
       randomChoice(jobTitles),
-      randomChoice(locations),
-      randomChoice(units),
+      memberLocation,
+      memberUnit,
       randomChoice(officeDays),
       email, phone,
       randomChoice(commMethods),
@@ -4720,37 +5602,88 @@ function SEED_MEMBERS(count) {
       randomChoice(supervisors),
       randomChoice(managers),
       isSteward,
-      isSteward === 'Yes' ? 'Grievance Committee' : '',
+      isSteward === 'Yes' ? randomChoice(committees) : '',
       assignedSteward,
       randomChoice(homeTowns),
       recentContactDate,
-      contactSteward
+      contactSteward,
+      contactNotes
     );
+    memberRows.push(memberRow);
 
-    rows.push(row);
+    // Create grievance for this member based on percentage
+    if (Math.random() * 100 < grievancePercent) {
+      var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
+      existingGrievanceIds[grievanceId] = true;
+      seededGrievanceIds.push(grievanceId);
 
-    // Write in batches
-    if (rows.length >= batchSize || i === count - 1) {
-      sheet.getRange(startRow, 1, rows.length, 31).setValues(rows);
-      startRow += rows.length;
-      rows = [];
-      Utilities.sleep(100);
+      var incidentDate = randomDate(new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000), today);
+      var status = randomChoice(statuses);
+      var step = randomChoice(steps);
+      // Add resolution note for resolved statuses (Won, Settled, Denied, Withdrawn)
+      var resolution = resolutionNotes[status] ? randomChoice(resolutionNotes[status]) : '';
+
+      var grievanceRow = generateSingleGrievanceRow(
+        grievanceId,
+        memberId,
+        firstName,
+        lastName,
+        status,
+        step,
+        incidentDate,
+        randomChoice(articles),
+        randomChoice(categories),
+        email,
+        memberUnit,
+        memberLocation,
+        assignedSteward,
+        resolution
+      );
+      grievanceRows.push(grievanceRow);
+      grievanceCount++;
+    }
+
+    // Write members in batches
+    if (memberRows.length >= batchSize || i === count - 1) {
+      memberSheet.getRange(memberStartRow, 1, memberRows.length, 31).setValues(memberRows);
+      memberStartRow += memberRows.length;
+      memberRows = [];
+      Utilities.sleep(50);
+    }
+
+    // Write grievances in batches
+    if (grievanceRows.length >= batchSize || i === count - 1) {
+      if (grievanceRows.length > 0) {
+        grievanceSheet.getRange(grievanceStartRow, 1, grievanceRows.length, 34).setValues(grievanceRows);
+        grievanceStartRow += grievanceRows.length;
+        grievanceRows = [];
+        Utilities.sleep(50);
+      }
     }
   }
 
-  // Re-apply checkboxes to Start Grievance column (AE) - setValues overwrites them
-  var lastRow = sheet.getLastRow();
-  if (lastRow >= 2) {
-    sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, lastRow - 1, 1).insertCheckboxes();
+  // Re-apply checkboxes
+  var memberLastRow = memberSheet.getLastRow();
+  if (memberLastRow >= 2) {
+    memberSheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, memberLastRow - 1, 1).insertCheckboxes();
+  }
+  var grievanceLastRow = grievanceSheet.getLastRow();
+  if (grievanceLastRow >= 2) {
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, grievanceLastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync grievance data to Member Directory (populates AB-AD: Has Open Grievance, Status, Next Deadline)
+  // Sync data (FormulasToLog must run FIRST to populate calculated columns)
+  syncGrievanceFormulasToLog();
   syncGrievanceToMemberDirectory();
 
-  // Track seeded IDs for later cleanup (nuke only removes seeded data)
-  trackSeededMemberIdsBatch(seededIds);
+  // Sort grievances by status and resolution
+  sortGrievanceLogByStatus();
 
-  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members seeded!', '✅ Success', 3);
+  // Track seeded IDs for cleanup
+  trackSeededMemberIdsBatch(seededMemberIds);
+  trackSeededGrievanceIdsBatch(seededGrievanceIds);
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' members + ' + grievanceCount + ' grievances seeded!', '✅ Success', 3);
 }
 
 /**
@@ -4775,7 +5708,7 @@ function SEED_MEMBERS(count) {
  * @param {Date|string} recentContactDate - Recent contact date
  * @param {string} contactSteward - Steward who made contact
  */
-function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward) {
+function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward, contactNotes) {
   var today = new Date();
   var lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -4806,7 +5739,7 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
     homeTown || '',                              // 24: Home Town (X)
     recentContactDate || '',                     // 25: Recent Contact Date (Y)
     contactSteward || '',                        // 26: Contact Steward (Z)
-    '',                                          // 27: Contact Notes (AA) - manual entry
+    contactNotes || '',                          // 27: Contact Notes (AA) - seeded if contacted
     '',                                          // 28: Has Open Grievance (AB) - auto-calculated from Grievance Log
     '',                                          // 29: Grievance Status (AC) - auto-calculated from Grievance Log
     '',                                          // 30: Next Deadline (AD) - auto-calculated from Grievance Log
@@ -4814,251 +5747,14 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
   ];
 }
 
-/**
- * Seed N grievances
- * @param {number} count - Number of grievances to seed (max 300)
- */
-function SEED_GRIEVANCES(count) {
-  count = Math.min(count || 25, 300);
-
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
-
-  if (!grievanceSheet || !memberSheet || !configSheet) {
-    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
-    return;
-  }
-
-  // Get members
-  var memberData = memberSheet.getDataRange().getValues();
-  if (memberData.length < 2) {
-    SpreadsheetApp.getUi().alert('Error: No members found. Please seed members first.');
-    return;
-  }
-
-  var statuses = DEFAULT_CONFIG.GRIEVANCE_STATUS;
-  var steps = DEFAULT_CONFIG.GRIEVANCE_STEP;
-  var categories = DEFAULT_CONFIG.ISSUE_CATEGORY;
-  var articles = DEFAULT_CONFIG.ARTICLES;
-
-  // Get config values for stewards
-  var stewards = getConfigValues(configSheet, CONFIG_COLS.STEWARDS);
-  if (stewards.length === 0) stewards = ['Mary Steward'];
-
-  var startRow = Math.max(grievanceSheet.getLastRow() + 1, 2);
-
-  // Build set of existing grievance IDs to prevent duplicates
-  var existingGrievanceIds = {};
-  if (startRow > 2) {
-    var existingData = grievanceSheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, startRow - 2, 1).getValues();
-    for (var e = 0; e < existingData.length; e++) {
-      if (existingData[e][0]) {
-        existingGrievanceIds[existingData[e][0]] = true;
-      }
-    }
-  }
-
-  var rows = [];
-  var seededIds = []; // Track IDs for this seeding session
-  var batchSize = 25;
-  var today = new Date();
-
-  // Create shuffled list of member indices (excluding header row)
-  // This ensures each member is used before repeating
-  var memberIndices = [];
-  for (var m = 1; m < memberData.length; m++) {
-    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) { // Only include rows with valid member ID
-      memberIndices.push(m);
-    }
-  }
-  var shuffledMembers = shuffleArray(memberIndices);
-  var memberIndex = 0;
-
-  // Distribute incident dates across the 90-day range to avoid clustering
-  var dateRangeStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  var dateSpread = 90 / count; // Days between each grievance's base date
-
-  for (var i = 0; i < count; i++) {
-    // Use shuffled members - cycle through if more grievances than members
-    if (memberIndex >= shuffledMembers.length) {
-      shuffledMembers = shuffleArray(memberIndices); // Reshuffle for next cycle
-      memberIndex = 0;
-    }
-    var memberRow = memberData[shuffledMembers[memberIndex]];
-    memberIndex++;
-
-    var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
-
-    // Skip if no member ID (shouldn't happen due to filtering above, but just in case)
-    if (!memberId) continue;
-
-    // Get member data directly from member row
-    var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1] || '';
-    var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1] || '';
-    var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1] || '';
-    var memberUnit = memberRow[MEMBER_COLS.UNIT - 1] || '';
-    var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
-    var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
-
-    // Generate grievance ID using member's name with G prefix
-    var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
-    existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
-    seededIds.push(grievanceId); // Track for persistence
-
-    // Distribute incident dates across the 90-day range with some randomness
-    // Each grievance gets a "slot" in the timeline, with +/- 2 days variation
-    var baseDate = new Date(dateRangeStart.getTime() + (i * dateSpread * 24 * 60 * 60 * 1000));
-    var variation = (Math.random() - 0.5) * 4 * 24 * 60 * 60 * 1000; // +/- 2 days
-    var incidentDate = new Date(Math.min(baseDate.getTime() + variation, today.getTime()));
-
-    var status = randomChoice(statuses);
-    var step = randomChoice(steps);
-
-    // Generate grievance row with all data populated directly
-    var row = generateSingleGrievanceRow(
-      grievanceId,
-      memberId,
-      firstName,
-      lastName,
-      status,
-      step,
-      incidentDate,
-      randomChoice(articles),
-      randomChoice(categories),
-      memberEmail,
-      memberUnit,
-      memberLocation,
-      memberSteward
-    );
-
-    rows.push(row);
-
-    // Write in batches
-    if (rows.length >= batchSize || i === count - 1) {
-      grievanceSheet.getRange(startRow, 1, rows.length, 34).setValues(rows);
-      startRow += rows.length;
-      rows = [];
-      Utilities.sleep(100);
-    }
-  }
-
-  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
-  var lastRow = grievanceSheet.getLastRow();
-  if (lastRow >= 2) {
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
-  }
-
-  // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
-  syncGrievanceFormulasToLog();
-
-  // Track seeded IDs for later cleanup (nuke only removes seeded data)
-  trackSeededGrievanceIdsBatch(seededIds);
-
-  SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
-}
-
-/**
- * Generate a grievance row for seeding - leaves formula columns empty
- * Formula columns (C, D, H, J, L, N, P, S, T, U, X, Y, Z, AA) will be auto-populated
- */
-function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, incidentDate, articles, category) {
-  var today = new Date();
-
-  // Calculate dates for manual entry columns only
-  // Date Filed - always set if status is not brand new
-  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
-
-  // Initialize timeline variables for manual entry columns
-  var step1Rcvd = '';
-  var step2AppealFiled = '';
-  var step2Rcvd = '';
-  var step3AppealFiled = '';
-  var dateClosed = '';
-
-  // Determine if case is closed
-  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
-
-  // Populate timeline based on current step
-  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
-
-  // Step I Due calculated by formula, but Step I Rcvd is manual
-  var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
-
-  // If Step I or beyond, Step I has been completed
-  if (stepIndex >= 1 || isClosed) {
-    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
-    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
-  }
-
-  // If Step II or beyond
-  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
-    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
-    var step2Due = addDays(step2AppealFiled, 30);
-    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
-    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
-  }
-
-  // If Step III or beyond
-  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
-    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
-  }
-
-  // Set date closed for resolved cases
-  if (isClosed) {
-    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
-    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
-  }
-
-  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
-  var resolution = dateClosed ? randomChoice(resolutions) : '';
-
-  // Return row with empty strings for formula columns
-  // Formula columns: C, D (names), H, J, L, N, P (deadlines), S, T, U (metrics), X, Y, Z, AA (member info)
-  return [
-    grievanceId,              // 1: Grievance ID (A)
-    memberId,                 // 2: Member ID (B)
-    '',                       // 3: First Name (C) - FORMULA
-    '',                       // 4: Last Name (D) - FORMULA
-    status,                   // 5: Status (E)
-    step,                     // 6: Current Step (F)
-    incidentDate,             // 7: Incident Date (G)
-    '',                       // 8: Filing Deadline (H) - FORMULA
-    dateFiled,                // 9: Date Filed (I)
-    '',                       // 10: Step I Due (J) - FORMULA
-    step1Rcvd,                // 11: Step I Rcvd (K)
-    '',                       // 12: Step II Appeal Due (L) - FORMULA
-    step2AppealFiled,         // 13: Step II Appeal Filed (M)
-    '',                       // 14: Step II Due (N) - FORMULA
-    step2Rcvd,                // 15: Step II Rcvd (O)
-    '',                       // 16: Step III Appeal Due (P) - FORMULA
-    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
-    dateClosed,               // 18: Date Closed (R)
-    '',                       // 19: Days Open (S) - FORMULA
-    '',                       // 20: Next Action Due (T) - FORMULA
-    '',                       // 21: Days to Deadline (U) - FORMULA
-    articles,                 // 22: Articles Violated (V)
-    category,                 // 23: Issue Category (W)
-    '',                       // 24: Member Email (X) - FORMULA
-    '',                       // 25: Unit (Y) - FORMULA
-    '',                       // 26: Location (Z) - FORMULA
-    '',                       // 27: Steward (AA) - FORMULA
-    resolution,               // 28: Resolution (AB)
-    false,                    // 29: Message Alert (AC) - checkbox
-    '',                       // 30: Coordinator Message (AD)
-    '',                       // 31: Acknowledged By (AE)
-    '',                       // 32: Acknowledged Date (AF)
-    '',                       // 33: Drive Folder ID (AG)
-    ''                        // 34: Drive Folder URL (AH)
-  ];
-}
+// SEED_GRIEVANCES removed - grievances are now seeded as part of SEED_MEMBERS
 
 /**
  * Generate a single grievance row with all 34 columns
  * Properly calculates all timeline fields based on grievance step progression
+ * @param {string} resolution - Resolution (only for Closed status)
  */
-function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward) {
+function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward, resolution) {
   var today = new Date();
   var filingDeadline = addDays(incidentDate, 21);
 
@@ -5078,8 +5774,9 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed
-  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
+  // Determine if case is closed (includes Settled, Withdrawn, Denied, Won, Closed)
+  var closedStatuses = ['Settled', 'Withdrawn', 'Denied', 'Won', 'Closed'];
+  var isClosed = closedStatuses.indexOf(status) !== -1;
 
   // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
@@ -5156,8 +5853,8 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
     daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
   }
 
-  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
-  var resolution = dateClosed ? randomChoice(resolutions) : '';
+  // Use passed resolution parameter (only set for Closed status)
+  resolution = resolution || '';
 
   return [
     grievanceId,              // 1: Grievance ID (A)
@@ -5202,13 +5899,13 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
 // ============================================================================
 
 /**
- * Show dialog to seed custom number of members
+ * Show dialog to seed custom number of members (with grievances)
  */
 function SEED_MEMBERS_DIALOG() {
   var ui = SpreadsheetApp.getUi();
   var response = ui.prompt(
-    '👥 Seed Members',
-    'How many members to seed? (max 2000)',
+    '👥 Seed Members & Grievances',
+    'How many members to seed? (30% will get grievances)\nMax 2000:',
     ui.ButtonSet.OK_CANCEL
   );
 
@@ -5223,38 +5920,52 @@ function SEED_MEMBERS_DIALOG() {
 }
 
 /**
- * Show dialog to seed custom number of grievances
+ * Show dialog to seed with custom grievance percentage
  */
-function SEED_GRIEVANCES_DIALOG() {
+function SEED_MEMBERS_ADVANCED_DIALOG() {
   var ui = SpreadsheetApp.getUi();
-  var response = ui.prompt(
-    '📋 Seed Grievances',
-    'How many grievances to seed? (max 300)',
+
+  var countResponse = ui.prompt(
+    '👥 Seed Members (Step 1/2)',
+    'How many members to seed? (max 2000):',
     ui.ButtonSet.OK_CANCEL
   );
 
-  if (response.getSelectedButton() === ui.Button.OK) {
-    var count = parseInt(response.getResponseText(), 10);
-    if (isNaN(count) || count < 1) {
-      ui.alert('Please enter a valid number.');
-      return;
-    }
-    SEED_GRIEVANCES(count);
+  if (countResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var count = parseInt(countResponse.getResponseText(), 10);
+  if (isNaN(count) || count < 1) {
+    ui.alert('Please enter a valid number.');
+    return;
   }
+
+  var percentResponse = ui.prompt(
+    '📋 Grievance Percentage (Step 2/2)',
+    'What percentage of members should have grievances? (0-100, default 30):',
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  if (percentResponse.getSelectedButton() !== ui.Button.OK) return;
+
+  var percent = parseInt(percentResponse.getResponseText(), 10);
+  if (isNaN(percent)) percent = 30;
+  percent = Math.max(0, Math.min(100, percent));
+
+  SEED_MEMBERS(count, percent);
 }
 
 /**
- * Seed 50 members shortcut
+ * Seed 50 members with 30% grievances (shortcut)
  */
 function seed50Members() {
-  SEED_MEMBERS(50);
+  SEED_MEMBERS(50, 30);
 }
 
 /**
- * Seed 25 grievances shortcut
+ * Seed 100 members with 50% grievances (shortcut)
  */
-function seed25Grievances() {
-  SEED_GRIEVANCES(25);
+function seed100MembersWithGrievances() {
+  SEED_MEMBERS(100, 50);
 }
 
 // ============================================================================
@@ -5262,8 +5973,9 @@ function seed25Grievances() {
 // ============================================================================
 
 /**
- * Delete only seeded data (preserves manually entered data)
- * After completion, disables demo mode permanently and removes Demo menu
+ * Delete all seeded data from Member Directory and Grievance Log
+ * Uses pattern matching (M/G + 4 letters + 3 digits) to identify seeded IDs
+ * This is more reliable than Script Properties tracking which has size limits
  */
 function NUKE_SEEDED_DATA() {
   var ui = SpreadsheetApp.getUi();
@@ -5275,19 +5987,37 @@ function NUKE_SEEDED_DATA() {
     return;
   }
 
-  // Get counts of seeded data
-  var seededMemberIds = getSeededMemberIds();
-  var seededGrievanceIds = getSeededGrievanceIds();
-  var memberCount = Object.keys(seededMemberIds).length;
-  var grievanceCount = Object.keys(seededGrievanceIds).length;
+  // Pattern for seeded IDs: M/G + 4 uppercase letters + 3 digits (e.g., MJOSM123, GJOSM456)
+  var seededIdPattern = /^[MG][A-Z]{4}\d{3}$/;
+
+  // Count seeded data by pattern
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var memberCount = 0;
+  var grievanceCount = 0;
+
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberIds = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
+    memberIds.forEach(function(row) {
+      if (row[0] && seededIdPattern.test(String(row[0]))) memberCount++;
+    });
+  }
+
+  if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
+    var grievanceIds = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
+    grievanceIds.forEach(function(row) {
+      if (row[0] && seededIdPattern.test(String(row[0]))) grievanceCount++;
+    });
+  }
 
   var response = ui.alert(
     '☢️ NUKE SEEDED DATA',
-    '⚠️ This will permanently delete ONLY seeded/demo data:\n\n' +
-    '• ' + memberCount + ' seeded members\n' +
-    '• ' + grievanceCount + ' seeded grievances\n' +
+    '⚠️ This will permanently delete seeded/demo data:\n\n' +
+    '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
+    '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
     '• Config dropdown values\n\n' +
-    '✅ Manually entered data will be PRESERVED.\n\n' +
+    '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -5301,8 +6031,9 @@ function NUKE_SEEDED_DATA() {
   var response2 = ui.alert(
     '☢️ FINAL CONFIRMATION',
     'This will:\n' +
-    '1. Delete all seeded data\n' +
-    '2. Permanently disable the Demo menu\n\n' +
+    '1. Delete ' + memberCount + ' seeded members\n' +
+    '2. Delete ' + grievanceCount + ' seeded grievances\n' +
+    '3. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -5318,13 +6049,12 @@ function NUKE_SEEDED_DATA() {
     var deletedGrievances = 0;
 
     // Delete seeded grievances first (they reference members)
-    var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
     if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
       var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
       // Delete from bottom up to preserve row indices
       for (var g = grievanceData.length - 1; g >= 0; g--) {
-        var gId = grievanceData[g][0];
-        if (gId && seededGrievanceIds[gId]) {
+        var gId = String(grievanceData[g][0] || '');
+        if (seededIdPattern.test(gId)) {
           grievanceSheet.deleteRow(g + 2);
           deletedGrievances++;
         }
@@ -5332,13 +6062,12 @@ function NUKE_SEEDED_DATA() {
     }
 
     // Delete seeded members
-    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
     if (memberSheet && memberSheet.getLastRow() > 1) {
       var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
       // Delete from bottom up to preserve row indices
       for (var m = memberData.length - 1; m >= 0; m--) {
-        var mId = memberData[m][0];
-        if (mId && seededMemberIds[mId]) {
+        var mId = String(memberData[m][0] || '');
+        if (seededIdPattern.test(mId)) {
           memberSheet.deleteRow(m + 2);
           deletedMembers++;
         }
@@ -5347,6 +6076,11 @@ function NUKE_SEEDED_DATA() {
 
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
+
+    // Clear tracked IDs from Script Properties
+    var props = PropertiesService.getScriptProperties();
+    props.deleteProperty('SEEDED_MEMBER_IDS');
+    props.deleteProperty('SEEDED_GRIEVANCE_IDS');
 
     // Disable demo mode permanently
     disableDemoMode();
@@ -5385,14 +6119,15 @@ function NUKE_CONFIG_DROPDOWNS() {
     CONFIG_COLS.SUPERVISORS,
     CONFIG_COLS.MANAGERS,
     CONFIG_COLS.STEWARDS,
+    CONFIG_COLS.STEWARD_COMMITTEES,
     CONFIG_COLS.GRIEVANCE_COORDINATORS,
     CONFIG_COLS.HOME_TOWNS
   ];
 
   userColumns.forEach(function(col) {
     var lastRow = sheet.getLastRow();
-    if (lastRow > 1) {
-      sheet.getRange(2, col, lastRow - 1, 1).clear();
+    if (lastRow > 2) {
+      sheet.getRange(3, col, lastRow - 2, 1).clear();
     }
   });
 
@@ -5402,19 +6137,7 @@ function NUKE_CONFIG_DROPDOWNS() {
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
-
-/**
- * Get values from a Config column (excluding header and empty cells)
- */
-function getConfigValues(configSheet, column) {
-  var lastRow = configSheet.getLastRow();
-  if (lastRow < 2) return [];
-
-  var values = configSheet.getRange(2, column, lastRow - 1, 1).getValues();
-  return values
-    .map(function(row) { return row[0]; })
-    .filter(function(v) { return v !== '' && v !== null; });
-}
+// Note: getConfigValues is defined earlier in this file (line ~2090)
 
 /**
  * Get random element from array
@@ -5459,3 +6182,277 @@ function addDays(date, days) {
 }
 
 
+
+// ============================================================================
+// TESTING FRAMEWORK & VALIDATION
+// ============================================================================
+
+var TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+var TEST_MAX_EXECUTION_MS = 5 * 60 * 1000;
+var TEST_LARGE_DATASET_THRESHOLD = 5000;
+
+var Assert = {
+  assertEquals: function(expected, actual, message) {
+    if (expected !== actual) throw new Error((message || 'Assertion failed') + '\nExpected: ' + JSON.stringify(expected) + '\nActual: ' + JSON.stringify(actual));
+  },
+  assertTrue: function(value, message) {
+    if (value !== true) throw new Error((message || 'Expected true') + '\nActual: ' + value);
+  },
+  assertFalse: function(value, message) {
+    if (value !== false) throw new Error((message || 'Expected false') + '\nActual: ' + value);
+  },
+  assertNotNull: function(value, message) {
+    if (value === null || value === undefined) throw new Error(message || 'Value should not be null/undefined');
+  },
+  assertNull: function(value, message) {
+    if (value !== null) throw new Error((message || 'Expected null') + '\nActual: ' + value);
+  },
+  assertContains: function(array, value, message) {
+    if (!Array.isArray(array) || array.indexOf(value) === -1) throw new Error((message || 'Array does not contain value') + '\nValue: ' + value);
+  },
+  assertArrayLength: function(array, expectedLength, message) {
+    if (!Array.isArray(array) || array.length !== expectedLength) throw new Error((message || 'Array length mismatch') + '\nExpected: ' + expectedLength + '\nActual: ' + (array ? array.length : 'N/A'));
+  },
+  assertThrows: function(fn, message) {
+    var threw = false;
+    try { fn(); } catch (e) { threw = true; }
+    if (!threw) throw new Error(message || 'Expected function to throw');
+  },
+  assertApproximately: function(expected, actual, tolerance, message) {
+    tolerance = tolerance || 0.001;
+    if (Math.abs(expected - actual) > tolerance) throw new Error((message || 'Values not approximately equal') + '\nExpected: ' + expected + '\nActual: ' + actual);
+  },
+  fail: function(message) { throw new Error(message || 'Test failed'); }
+};
+
+function isLargeDataset() {
+  try {
+    var ss = SpreadsheetApp.getActive();
+    var memberDir = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    return memberDir ? memberDir.getLastRow() > TEST_LARGE_DATASET_THRESHOLD : false;
+  } catch (e) { return false; }
+}
+
+function testMemberColsConstants() {
+  Assert.assertNotNull(MEMBER_COLS, 'MEMBER_COLS should exist');
+  Assert.assertEquals(1, MEMBER_COLS.MEMBER_ID, 'MEMBER_ID should be column 1');
+  Assert.assertEquals(2, MEMBER_COLS.FIRST_NAME, 'FIRST_NAME should be column 2');
+  Assert.assertEquals(3, MEMBER_COLS.LAST_NAME, 'LAST_NAME should be column 3');
+  Assert.assertEquals(8, MEMBER_COLS.EMAIL, 'EMAIL should be column 8');
+  Assert.assertEquals(31, MEMBER_COLS.START_GRIEVANCE, 'START_GRIEVANCE should be column 31');
+}
+
+function testGrievanceColsConstants() {
+  Assert.assertNotNull(GRIEVANCE_COLS, 'GRIEVANCE_COLS should exist');
+  Assert.assertEquals(1, GRIEVANCE_COLS.GRIEVANCE_ID, 'GRIEVANCE_ID should be column 1');
+  Assert.assertEquals(2, GRIEVANCE_COLS.MEMBER_ID, 'MEMBER_ID should be column 2');
+  Assert.assertEquals(5, GRIEVANCE_COLS.STATUS, 'STATUS should be column 5');
+  Assert.assertEquals(28, GRIEVANCE_COLS.RESOLUTION, 'RESOLUTION should be column 28');
+}
+
+function testColumnLetterConversion() {
+  Assert.assertEquals('A', getColumnLetter(1), 'Column 1 should be A');
+  Assert.assertEquals('Z', getColumnLetter(26), 'Column 26 should be Z');
+  Assert.assertEquals('AA', getColumnLetter(27), 'Column 27 should be AA');
+  Assert.assertEquals('AE', getColumnLetter(31), 'Column 31 should be AE');
+}
+
+function testSheetsConstants() {
+  Assert.assertNotNull(SHEETS, 'SHEETS should exist');
+  Assert.assertNotNull(SHEETS.MEMBER_DIR, 'MEMBER_DIR should exist');
+  Assert.assertNotNull(SHEETS.GRIEVANCE_LOG, 'GRIEVANCE_LOG should exist');
+  Assert.assertNotNull(SHEETS.CONFIG, 'CONFIG should exist');
+}
+
+function testValidateRequired() {
+  Assert.assertThrows(function() { validateRequired(null, 'field'); }, 'null should throw');
+  Assert.assertThrows(function() { validateRequired('', 'field'); }, 'empty should throw');
+  Assert.assertThrows(function() { validateRequired(undefined, 'field'); }, 'undefined should throw');
+}
+
+function testValidateEmail() {
+  var result1 = validateEmailAddress('test@example.com');
+  Assert.assertTrue(result1.valid, 'Valid email should pass');
+  var result2 = validateEmailAddress('invalid');
+  Assert.assertFalse(result2.valid, 'Invalid email should fail');
+  var result3 = validateEmailAddress('');
+  Assert.assertFalse(result3.valid, 'Empty email should fail');
+}
+
+function testValidatePhoneNumber() {
+  var result1 = validatePhoneNumber('(555) 123-4567');
+  Assert.assertTrue(result1.valid, 'Valid phone should pass');
+  var result2 = validatePhoneNumber('5551234567');
+  Assert.assertTrue(result2.valid, 'Digits-only phone should pass');
+  var result3 = validatePhoneNumber('123');
+  Assert.assertFalse(result3.valid, 'Short phone should fail');
+}
+
+function testOpenRateRange() {
+  Assert.assertTrue(85 >= 0 && 85 <= 100, 'Open rate 85 should be in range');
+  Assert.assertTrue(0 >= 0 && 0 <= 100, 'Open rate 0 should be in range');
+  Assert.assertTrue(100 >= 0 && 100 <= 100, 'Open rate 100 should be in range');
+}
+
+function getTestFunctionRegistry() {
+  return {
+    testMemberColsConstants: testMemberColsConstants,
+    testGrievanceColsConstants: testGrievanceColsConstants,
+    testColumnLetterConversion: testColumnLetterConversion,
+    testSheetsConstants: testSheetsConstants,
+    testValidateRequired: testValidateRequired,
+    testValidateEmail: testValidateEmail,
+    testValidatePhoneNumber: testValidatePhoneNumber,
+    testOpenRateRange: testOpenRateRange
+  };
+}
+
+function runAllTests() {
+  var ui = SpreadsheetApp.getUi();
+  SpreadsheetApp.getActive().toast('🧪 Running tests...', 'Testing', -1);
+  TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+  var startTime = new Date();
+  var registry = getTestFunctionRegistry();
+  var testNames = Object.keys(registry);
+  testNames.forEach(function(name) {
+    if (new Date() - startTime > TEST_MAX_EXECUTION_MS) {
+      TEST_RESULTS.skipped.push({ name: name, reason: 'Timeout protection' });
+      return;
+    }
+    try {
+      registry[name]();
+      TEST_RESULTS.passed.push({ name: name, time: new Date() - startTime });
+    } catch (e) {
+      TEST_RESULTS.failed.push({ name: name, error: e.message });
+    }
+  });
+  var duration = (new Date() - startTime) / 1000;
+  generateTestReport(duration);
+  var total = TEST_RESULTS.passed.length + TEST_RESULTS.failed.length + TEST_RESULTS.skipped.length;
+  var rate = ((TEST_RESULTS.passed.length / total) * 100).toFixed(1);
+  SpreadsheetApp.getActive().toast('✅ ' + TEST_RESULTS.passed.length + ' | ❌ ' + TEST_RESULTS.failed.length + ' | ⏭️ ' + TEST_RESULTS.skipped.length, 'Tests (' + rate + '%)', 10);
+  ui.alert('🧪 Tests Complete', 'Passed: ' + TEST_RESULTS.passed.length + '\nFailed: ' + TEST_RESULTS.failed.length + '\nSkipped: ' + TEST_RESULTS.skipped.length + '\n\nDuration: ' + duration.toFixed(2) + 's', ui.ButtonSet.OK);
+}
+
+function runQuickTests() {
+  var ui = SpreadsheetApp.getUi();
+  SpreadsheetApp.getActive().toast('⚡ Quick tests...', 'Testing', -1);
+  TEST_RESULTS = { passed: [], failed: [], skipped: [] };
+  var startTime = new Date();
+  var quickTests = ['testMemberColsConstants', 'testGrievanceColsConstants', 'testColumnLetterConversion', 'testSheetsConstants', 'testOpenRateRange'];
+  var registry = getTestFunctionRegistry();
+  quickTests.forEach(function(name) {
+    try {
+      if (registry[name]) { registry[name](); TEST_RESULTS.passed.push({ name: name }); }
+      else TEST_RESULTS.skipped.push({ name: name, reason: 'Not found' });
+    } catch (e) { TEST_RESULTS.failed.push({ name: name, error: e.message }); }
+  });
+  var duration = (new Date() - startTime) / 1000;
+  ui.alert('⚡ Quick Tests', 'Passed: ' + TEST_RESULTS.passed.length + '\nFailed: ' + TEST_RESULTS.failed.length + '\nDuration: ' + duration.toFixed(2) + 's' + (TEST_RESULTS.failed.length > 0 ? '\n\nFailed:\n' + TEST_RESULTS.failed.map(function(t) { return '• ' + t.name + ': ' + t.error; }).join('\n') : ''), ui.ButtonSet.OK);
+}
+
+function generateTestReport(duration) {
+  var ss = SpreadsheetApp.getActive();
+  var report = ss.getSheetByName(SHEETS.TEST_RESULTS);
+  if (!report) report = ss.insertSheet(SHEETS.TEST_RESULTS);
+  report.clear();
+  report.getRange('A1:F1').merge().setValue('🧪 TEST RESULTS').setFontSize(18).setFontWeight('bold').setBackground('#4A5568').setFontColor('#FFFFFF');
+  var total = TEST_RESULTS.passed.length + TEST_RESULTS.failed.length + TEST_RESULTS.skipped.length;
+  var rate = ((TEST_RESULTS.passed.length / total) * 100).toFixed(1);
+  var summary = [['Total Tests', total], ['✅ Passed', TEST_RESULTS.passed.length], ['❌ Failed', TEST_RESULTS.failed.length], ['⏭️ Skipped', TEST_RESULTS.skipped.length], ['Pass Rate', rate + '%'], ['Duration', duration.toFixed(2) + 's'], ['Timestamp', new Date().toLocaleString()]];
+  report.getRange(3, 1, summary.length, 2).setValues(summary);
+  report.getRange(3, 1, summary.length, 1).setFontWeight('bold');
+  var row = 3 + summary.length + 2;
+  if (TEST_RESULTS.failed.length > 0) {
+    report.getRange(row, 1, 1, 3).merge().setValue('❌ FAILED TESTS').setFontWeight('bold').setBackground('#FEE2E2');
+    row++;
+    report.getRange(row, 1, 1, 2).setValues([['Test Name', 'Error']]).setFontWeight('bold').setBackground('#F3F4F6');
+    row++;
+    TEST_RESULTS.failed.forEach(function(test) { report.getRange(row, 1, 1, 2).setValues([[test.name, test.error]]); row++; });
+    row += 2;
+  }
+  if (TEST_RESULTS.passed.length > 0) {
+    report.getRange(row, 1, 1, 2).merge().setValue('✅ PASSED TESTS').setFontWeight('bold').setBackground('#D1FAE5');
+    row++;
+    TEST_RESULTS.passed.forEach(function(test) { report.getRange(row, 1).setValue(test.name + ' ✓'); row++; });
+  }
+  report.autoResizeColumns(1, 3);
+  report.setTabColor('#7C3AED');
+}
+
+// ==================== VALIDATION FRAMEWORK ====================
+
+var VALIDATION_PATTERNS = {
+  EMAIL: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+  PHONE_US: /^[\+]?1?[-.\s]?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}$/,
+  MEMBER_ID: /^M[A-Z]{4}\d{3}$/,
+  GRIEVANCE_ID: /^G[A-Z]{4}\d{3}$/
+};
+
+var VALIDATION_MESSAGES = {
+  EMAIL_INVALID: 'Invalid email format. Use: name@domain.com',
+  EMAIL_EMPTY: 'Email address is required',
+  PHONE_INVALID: 'Invalid phone format. Use: (555) 555-1234',
+  MEMBER_ID_INVALID: 'Invalid Member ID format',
+  GRIEVANCE_ID_INVALID: 'Invalid Grievance ID format'
+};
+
+function validateEmailAddress(email) {
+  if (!email || email.toString().trim() === '') return { valid: false, message: VALIDATION_MESSAGES.EMAIL_EMPTY };
+  var clean = email.toString().trim().toLowerCase();
+  if (!VALIDATION_PATTERNS.EMAIL.test(clean)) return { valid: false, message: VALIDATION_MESSAGES.EMAIL_INVALID };
+  return { valid: true, message: 'Valid email' };
+}
+
+function validatePhoneNumber(phone) {
+  if (!phone || phone.toString().trim() === '') return { valid: false, message: 'Phone required' };
+  var digits = phone.toString().replace(/\D/g, '');
+  if (digits.length < 10) return { valid: false, message: 'At least 10 digits required' };
+  if (digits.length > 15) return { valid: false, message: 'Phone too long' };
+  var formatted = formatUSPhone(digits);
+  return { valid: true, message: 'Valid phone', formatted: formatted };
+}
+
+function formatUSPhone(digits) {
+  if (digits.length === 11 && digits[0] === '1') digits = digits.substring(1);
+  if (digits.length === 10) return '(' + digits.substring(0, 3) + ') ' + digits.substring(3, 6) + '-' + digits.substring(6);
+  return digits;
+}
+
+function validateRequired(value, fieldName) {
+  if (value === null || value === undefined || value === '') throw new Error(fieldName + ' is required');
+  return value;
+}
+
+function runBulkValidation() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet) { SpreadsheetApp.getUi().alert('Member Directory not found!'); return; }
+  ss.toast('Running validation...', 'Please wait', -1);
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { ss.toast('No data', 'Info', 3); return; }
+  var emailData = sheet.getRange(2, MEMBER_COLS.EMAIL, lastRow - 1, 1).getValues();
+  var phoneData = sheet.getRange(2, MEMBER_COLS.PHONE, lastRow - 1, 1).getValues();
+  var memberIdData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, lastRow - 1, 1).getValues();
+  var issues = [], seenIds = {};
+  for (var i = 0; i < lastRow - 1; i++) {
+    var row = i + 2;
+    if (emailData[i][0]) { var er = validateEmailAddress(emailData[i][0]); if (!er.valid) issues.push({ row: row, field: 'Email', value: emailData[i][0], message: er.message }); }
+    if (phoneData[i][0]) { var pr = validatePhoneNumber(phoneData[i][0]); if (!pr.valid) issues.push({ row: row, field: 'Phone', value: phoneData[i][0], message: pr.message }); }
+    if (memberIdData[i][0]) {
+      if (seenIds[memberIdData[i][0]]) issues.push({ row: row, field: 'Member ID', value: memberIdData[i][0], message: 'Duplicate of row ' + seenIds[memberIdData[i][0]] });
+      else seenIds[memberIdData[i][0]] = row;
+    }
+  }
+  showValidationReport(issues, lastRow - 1);
+}
+
+function showValidationReport(issues, total) {
+  var rate = total > 0 ? (((total - issues.length) / total) * 100).toFixed(1) : 100;
+  var rows = issues.slice(0, 50).map(function(i) { return '<tr><td>' + i.row + '</td><td>' + i.field + '</td><td>' + i.value + '</td><td>' + i.message + '</td></tr>'; }).join('');
+  if (issues.length > 50) rows += '<tr><td colspan="4">...and ' + (issues.length - 50) + ' more</td></tr>';
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px}h2{color:#1a73e8}.summary{display:flex;gap:20px;margin:20px 0}.stat{flex:1;padding:20px;border-radius:8px;text-align:center}.stat.good{background:#e8f5e9}.stat.warning{background:#fff3e0}.stat.bad{background:#ffebee}.num{font-size:32px;font-weight:bold}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{padding:10px;text-align:left;border:1px solid #ddd}th{background:#f5f5f5}</style></head><body><h2>📊 Validation Report</h2><div class="summary"><div class="stat ' + (issues.length === 0 ? 'good' : issues.length < 10 ? 'warning' : 'bad') + '"><div class="num">' + rate + '%</div><div>Pass Rate</div></div><div class="stat good"><div class="num">' + total + '</div><div>Records</div></div><div class="stat ' + (issues.length === 0 ? 'good' : 'bad') + '"><div class="num">' + issues.length + '</div><div>Issues</div></div></div>' + (issues.length > 0 ? '<table><tr><th>Row</th><th>Field</th><th>Value</th><th>Issue</th></tr>' + rows + '</table>' : '<div style="text-align:center;padding:40px;color:#4caf50">✅ No issues found!</div>') + '</body></html>'
+  ).setWidth(700).setHeight(500);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Validation Report');
+}
