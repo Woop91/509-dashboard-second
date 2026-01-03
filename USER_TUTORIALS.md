@@ -190,8 +190,13 @@ After entering, these columns auto-populate:
 
 ### Accessing Interactive Dashboard
 
-1. Click the **🎯 Interactive (Your Custom View)** sheet tab
-2. Or: **👤 Dashboard** → **📊 Dashboards** → **✨ Interactive Dashboard**
+**Option 1: Modal Popup** (⚠️ PROTECTED)
+- Click **👤 Dashboard** → **🎯 Interactive Dashboard**
+- Opens a tabbed popup with Overview, Members, Grievances, Analytics
+
+**Option 2: Sheet Tab**
+- Click the **🎯 Interactive** sheet tab directly
+- Use dropdowns to customize metrics and charts
 
 ### Selecting Metrics
 

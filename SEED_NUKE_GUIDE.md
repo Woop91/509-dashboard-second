@@ -268,14 +268,15 @@ This enables:
 - Real-time dashboard updates
 - Member snapshot updates
 
-### 5. Customize Interactive Dashboard
+### 5. Use Interactive Dashboard
 
-**Menu**: `509 Tools > 🎯 Interactive Dashboard > Setup Controls`
+**Option 1: Modal Popup** (⚠️ PROTECTED)
+- **Menu**: `👤 Dashboard > 🎯 Interactive Dashboard`
+- Opens tabbed popup with Overview, Members, Grievances, Analytics
 
-Create custom views for:
-- Key metrics you track
-- Charts you need most
-- Your preferred layout
+**Option 2: Sheet Tab**
+- Click the **🎯 Interactive** sheet tab
+- Use dropdowns to customize metrics and charts
 
 ### 6. Test Grievance Workflow (Optional)
 
