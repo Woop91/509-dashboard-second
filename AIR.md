@@ -762,6 +762,26 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
    - Example: `SEED_MEMBERS(100, 50)` seeds 100 members + ~50 grievances (50%)
    - Example: `SEED_MEMBERS(100, 0)` seeds members only, no grievances
 
+4. **Automatic Timeline Column Grouping**
+   - Grievance Log now automatically sets up collapsible column groups during creation
+   - Step I columns (J-K) grouped together
+   - Step II columns (L-O) grouped together
+   - Step III columns (P-Q) grouped together
+   - Click +/- controls to expand/collapse step details
+   - Previously required manual setup via View menu
+
+5. **Simplified Demo Menu**
+   - Removed redundant "Seed Data" submenu
+   - Single "🚀 Seed All Sample Data" option for seeding
+   - Cleaner menu structure
+
+6. **Member Directory Days to Deadline Fix**
+   - Fixed Member Directory column AD not populating from Grievance Log
+   - Root cause: MINIFS formula in _Grievance_Calc ignored "Overdue" text values
+   - Solution: `syncGrievanceToMemberDirectory()` now calculates directly from Grievance Log
+   - Properly handles both numeric deadlines and "Overdue" text
+   - Shows minimum deadline when member has multiple open grievances
+
 **New Functions:**
 - `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
 - `getDesktopSearchLocations()` - Get unique locations for filter dropdown
@@ -771,6 +791,8 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 **Code Changes:**
 - `Code.gs`: Updated `searchMembers()` to call `showDesktopSearch()`
 - `ConsolidatedDashboard.gs`: Added desktop search functions
+- `ConsolidatedDashboard.gs`: `createGrievanceLog()` now auto-creates column groups
+- `ConsolidatedDashboard.gs`: Rewrote `syncGrievanceToMemberDirectory()` to calculate directly
 - `Constants.gs`: Updated `GRIEVANCE_STATUS` comment for clarity
 - `HiddenSheets.gs`: Fixed Dashboard formulas to use STATUS column for outcome counts
 - `SeedNuke.gs`: Merged grievance seeding into SEED_MEMBERS function
