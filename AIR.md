@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.6.0 (Desktop Search & Unified Seeding)
+**Version:** 1.7.0 (Dashboard Restructure & Bug Fixes)
 **Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -33,7 +33,7 @@
 
 The following code sections are **USER APPROVED** and should **NOT be modified or removed**:
 
-### Interactive Dashboard Modal Popup
+### Custom View Modal Popup
 
 **Location:** `ConsolidatedDashboard.gs` (lines 7536-8160) and `MobileQuickActions.gs` (lines 540-1164)
 
@@ -91,7 +91,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~3733 lines) - Main entry point with Drive/Calendar/Email/Audit
+**Code.gs** (~3900 lines) - Main entry point with Drive/Calendar/Email/Audit
 - `onOpen()` - Creates menu system
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
@@ -154,7 +154,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~2207 lines)
+**HiddenSheets.gs** (~2150 lines)
 - `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
 - Hidden Sheet Setup Functions (5 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -527,7 +527,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ```
 👤 Dashboard
 ├── 📊 Smart Dashboard (Auto-Detect)
-├── 🎯 Interactive Dashboard
+├── 🎯 Custom View
 ├── 🔍 Search Members
 ├── 📋 View Active Grievances
 ├── 📱 Mobile Dashboard
@@ -726,6 +726,47 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.7.0 (2026-01-03) - Dashboard Restructure & Bug Fixes
+
+**Major Features:**
+
+1. **Dashboard Restructure**
+   - Removed unused columns G onwards - Dashboard now uses only columns A-F
+   - Moved Steward Performance section to near bottom for better visual hierarchy
+   - Added new **Top 30 Busiest Stewards** section showing stewards with most active cases
+   - Compact Status Legend now fits in single row (A-F)
+   - All numbers now formatted with comma separators (1,000)
+
+2. **Overdue Cases Bug Fix**
+   - Fixed Dashboard showing 0 for Overdue Cases
+   - Root cause: Formula was looking for `<0` but Days to Deadline shows "Overdue" text
+   - Changed formula to count cells containing "Overdue" text
+   - Also fixed in hidden sheet Steward Workload, Location Analytics calculations
+
+3. **Member Directory Enhancements**
+   - Added collapsible column groups for Engagement Metrics (Q-T) and Member Interests (U-X)
+   - Both groups are collapsed/hidden by default for cleaner view
+   - Added conditional formatting: Has Open Grievance = "Yes" shows red background
+   - Added comma formatting for numeric columns (Open Rate, Volunteer Hours)
+
+4. **Tab Rename: Interactive → Custom View**
+   - Renamed "🎯 Interactive" tab to "🎯 Custom View" for clarity
+   - Updated SHEETS constant and all string references
+
+5. **Code Cleanup**
+   - Removed orphaned `setupInteractiveDashboardCalcSheet()` function (defined but never called)
+   - Removed orphaned `setupEngagementCalcSheet()` function (used undefined constant)
+   - Fixed hidden sheet number comments for accuracy
+
+**Code Changes:**
+- Code.gs: ~150 lines added for Dashboard restructure and Member Directory enhancements
+- HiddenSheets.gs: Fixed 5 Overdue Cases formulas (changed `"<0"` to `"Overdue"`)
+- HiddenSheets.gs: Removed 2 orphaned functions (~60 lines)
+- Constants.gs: Changed `INTERACTIVE: '🎯 Interactive'` to `INTERACTIVE: '🎯 Custom View'`
+- MobileQuickActions.gs: Updated "Interactive Dashboard" text references
+
+---
 
 ### Version 1.6.0 (2026-01-03) - Desktop Search & Unified Seeding
 
@@ -1007,7 +1048,7 @@ Grievance Log ──────────────┘
 
 - Re-added dashboard sheets from original 509dashboard project
 - Created unified 💼 Dashboard (merged Executive Dashboard + Dashboard themes)
-- Added 🎯 Interactive Dashboard with customizable metric selection
+- Added 🎯 Custom View with customizable metric selection
 - Added `_Dashboard_Calc` hidden sheet with 15 self-healing metric formulas
 
 **New Sheets (2):**
