@@ -762,6 +762,19 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
    - Example: `SEED_MEMBERS(100, 50)` seeds 100 members + ~50 grievances (50%)
    - Example: `SEED_MEMBERS(100, 0)` seeds members only, no grievances
 
+4. **Automatic Timeline Column Grouping**
+   - Grievance Log now automatically sets up collapsible column groups during creation
+   - Step I columns (J-K) grouped together
+   - Step II columns (L-O) grouped together
+   - Step III columns (P-Q) grouped together
+   - Click +/- controls to expand/collapse step details
+   - Previously required manual setup via View menu
+
+5. **Simplified Demo Menu**
+   - Removed redundant "Seed Data" submenu
+   - Single "🚀 Seed All Sample Data" option for seeding
+   - Cleaner menu structure
+
 **New Functions:**
 - `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
 - `getDesktopSearchLocations()` - Get unique locations for filter dropdown
