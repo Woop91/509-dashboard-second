@@ -325,7 +325,8 @@ Features include:
 - Supervisors (empty - populate with supervisor names)
 - Managers (empty - populate with manager names)
 - Stewards (empty - populate with steward/organizer names)
-- Grievance Status (Open, Pending Info, Settled, Withdrawn, Closed, Appealed)
+- Grievance Status (Open, Pending Info, In Arbitration, Appealed, Closed) - **Workflow states only**
+- Grievance Resolution (Won - Full, Won - Partial, Settled - Favorable, Settled - Neutral, Denied - Appealing, Denied - Final, Withdrawn) - **Outcomes for closed cases**
 - Grievance Step (Informal, Step I, Step II, Step III, Mediation, Arbitration)
 - Issue Category (Discipline, Workload, Scheduling, Pay, Discrimination, Safety, Benefits, etc.)
 - Articles Violated (Contract articles: Art. 1-30)
@@ -471,28 +472,27 @@ Features include:
 
 **Purpose**: Generate realistic test data for training and testing
 
-**SEED_FULL_DEMO()** - Seeds complete demo dataset (max 2K members + 300 grievances)
-- Config dropdown values
-- 2,000 members with ALL fields populated
-- 300 grievances with ALL fields populated
-- Batch writes 50 members / 25 grievances at a time
-
-**SEED_2K_MEMBERS()** - Generates 2,000 member records
+**SEED_MEMBERS(count, grievancePercent)** - Seeds members with optional grievances
+- `count` - Number of members to seed (max 2,000)
+- `grievancePercent` - Percentage of members to give grievances (0-100, default 30%)
+- All grievances are directly linked to member data (Member ID, Name, Email, etc.)
 - Realistic names, job titles, locations, units
-- Contact tracking (last contact, notes, followup dates)
-- Committee assignments and skills
-- Steward contact history
-- Batch writes 50 rows at a time with 1s delay
+- Batch writes 50 rows at a time
 
-**SEED_300_GRIEVANCES()** - Generates 300 grievance records
-- Links to existing members via Member ID
-- Step dates, deadlines, management responses
-- Coordinator messages and resolution notes
-- Batch writes 25 rows at a time with 1s delay
+**Menu Options:**
+- **Seed Members & Grievances (Custom)** - Prompts for member count (30% get grievances)
+- **Seed Members (Advanced)** - Prompts for count AND grievance percentage
+- **Seed 50 Members (30% Grievances)** - Quick seed option
+- **Seed 100 Members (50% Grievances)** - Quick seed with more grievances
 
-**NUKE_ALL_DATA()** - Clears all member and grievance data
+**NUKE_SEEDED_DATA()** - Clears all member and grievance data
 
-**Limits**: Max 2,000 members, 300 grievances (prevents timeout)
+**Limits**: Max 2,000 members per call (prevents timeout)
+
+**Example Usage:**
+- `SEED_MEMBERS(100)` - Seeds 100 members, ~30 grievances
+- `SEED_MEMBERS(100, 50)` - Seeds 100 members, ~50 grievances
+- `SEED_MEMBERS(100, 0)` - Seeds 100 members only, no grievances
 
 ### 6. Hidden Sheet Architecture (v3.40+)
 
@@ -618,23 +618,26 @@ System improvement tracking
 
 ## Data Seeding
 
-Generate realistic test data using the toggle-based approach:
+Generate realistic test data with members and grievances in a single operation:
 
-### Member Seeding
-- **Toggle 1-4**: Generate 5,000 members each (20,000 total maximum)
-- Each batch includes diverse names, locations, job titles, engagement history
-- Access via: **⚙️ Administrator > Seed Functions > Seed Members**
+### Unified Member & Grievance Seeding
+- `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances
+- Grievances are directly linked to member data (no orphaned grievances)
+- Access via: **🎭 Demo > Seed Data > Seed Members & Grievances**
 
-### Grievance Seeding
-- **Toggle 1-2**: Generate 2,500 grievances each (5,000 total maximum)
-- Linked to existing members with various statuses and realistic timelines
-- Access via: **⚙️ Administrator > Seed Functions > Seed Grievances**
+### Quick Seed Options
+- **Seed 50 Members (30% Grievances)** - Quick test data
+- **Seed 100 Members (50% Grievances)** - More test data with higher grievance ratio
 
-### Benefits of Toggle-Based Approach
-- Avoids Google Apps Script timeout limits
-- Allows incremental data generation
-- Better performance for large datasets
-- Legacy functions (Seed All 20k/5k) still available for backward compatibility
+### Advanced Seeding
+- **Seed Members (Advanced)** - Set exact count AND grievance percentage
+- Control how many members get grievances (0-100%)
+
+### Benefits of Merged Approach
+- All grievances are directly linked to actual member data
+- No orphaned grievances with missing member info
+- Single operation seeds both members and their grievances
+- Avoids Google Apps Script timeout limits (max 2,000 members per call)
 
 ### Clear Data Options
 - **Nuke Seed Data (Exit Demo Mode)**: Removes core test data, sets SEED_NUKED flag, shows post-nuke guidance

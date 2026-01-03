@@ -404,5 +404,20 @@ Your dashboard is **production-ready**! 🚀
 
 ---
 
-**Last Updated**: 2025-12-09
-**Version**: 3.28
+**Last Updated**: 2026-01-03
+**Version**: 1.6.0
+
+---
+
+## Version 1.6.0 Notes
+
+In version 1.6.0, the seed functionality was simplified:
+
+- **SEED_GRIEVANCES was merged into SEED_MEMBERS** - Use `SEED_MEMBERS(count, grievancePercent)` to seed members with optional grievances
+- **All seeded grievances are directly linked to members** - No orphaned grievances with missing member info
+- **Separate SEED_GRIEVANCES function removed** - Use the merged approach instead
+
+**Example:**
+- `SEED_MEMBERS(100)` - Seeds 100 members, ~30 grievances (30% default)
+- `SEED_MEMBERS(100, 50)` - Seeds 100 members, ~50 grievances (50%)
+- `SEED_MEMBERS(100, 0)` - Seeds 100 members only, no grievances
