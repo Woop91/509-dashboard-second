@@ -766,20 +766,10 @@ function onOpen() {
     .addToUi();
 
   // Demo Menu - only show if demo mode is not disabled
+  // Simplified in v1.6.0: removed Seed Data submenu, keeping only Seed All Sample Data
   if (!isDemoModeDisabled()) {
     ui.createMenu('🎭 Demo')
       .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
-      .addSeparator()
-      .addSubMenu(ui.createMenu('🌱 Seed Data')
-        .addItem('⚙️ Seed Config Dropdowns Only', 'seedConfigData')
-        .addSeparator()
-        .addItem('👥 Seed Members & Grievances (Custom)', 'SEED_MEMBERS_DIALOG')
-        .addItem('👥 Seed Members (Advanced - Set % Grievances)', 'SEED_MEMBERS_ADVANCED_DIALOG')
-        .addSeparator()
-        .addItem('👥 Seed 50 Members (30% Grievances)', 'seed50Members')
-        .addItem('👥 Seed 100 Members (50% Grievances)', 'seed100MembersWithGrievances')
-        .addSeparator()
-        .addItem('📋 Seed Grievances Only (existing members)', 'SEED_GRIEVANCES_DIALOG'))
       .addSeparator()
       .addSubMenu(ui.createMenu('🗑️ Nuke Data')
         .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
