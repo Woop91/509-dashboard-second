@@ -29,13 +29,15 @@ When you execute the **Nuke Seed Data** function, the system will:
 
 ### Code Removal (Zero Trace Guarantee)
 5. **Delete ALL Seed Functions**: Uses Apps Script API to permanently remove:
-   - All SEED_MEMBERS_TOGGLE functions from Code.gs
-   - All SEED_GRIEVANCES_TOGGLE functions from Code.gs
-   - All seed helper functions (seedMembersWithCount, etc.)
-   - SEED_FULL_DEMO, SEED_2K_MEMBERS, SEED_300_GRIEVANCES functions
+   - `SEED_SAMPLE_DATA()` - main seed entry point
+   - `SEED_MEMBERS(count, grievancePercent)` - member + grievance seeding
+   - `SEED_GRIEVANCES(count)` - standalone grievance seeding
+   - `seedConfigData()` - config dropdown seeding
+   - All seed helper functions (generateSingleMemberRow, generateSingleGrievanceRow, etc.)
+   - All seed dialog functions (SEED_MEMBERS_DIALOG, SEED_MEMBERS_ADVANCED_DIALOG, etc.)
 6. **COMPLETELY DELETE SeedNuke.gs**: The entire file is removed (not just replaced)
-7. **Remove Seed Menu**: Deletes the "🌱 Seed Demo Data" menu from ReorganizedMenu.gs
-8. **Remove Nuke Menu Item**: Deletes the "🚨 Nuke All Data" menu item itself
+7. **Remove Demo Menu**: Deletes the "🎭 Demo" menu from the menu bar
+8. **Remove Nuke Menu Item**: Deletes the "☢️ NUKE SEEDED DATA" menu item itself
 
 ### Preserved Items
 9. **Preserve Organization Info**: Keep your real organization settings:
@@ -83,7 +85,7 @@ Before nuking seed data, make sure you:
 
 ### Step 1: Access the Nuke Function
 
-**Menu**: `509 Tools > 📊 Data Management > 🚨 Nuke Seed Data (Exit Demo Mode)`
+**Menu**: `🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA`
 
 *Note: This menu item only appears if seed data hasn't been nuked yet.*
 
@@ -152,8 +154,8 @@ After nuking, a comprehensive guide will appear with:
    - No overdue grievances
 
 3. **Menu Changes**:
-   - "🌱 Seed Demo Data" menu completely removed
-   - Cleaner Data Management menu
+   - "🎭 Demo" menu completely removed
+   - Cleaner menu structure
    - Focus on production tools
 
 4. **Code Changes** (if Apps Script API enabled):
@@ -189,7 +191,7 @@ Enter:
 - **Row 3**: Steward Email
 - **Row 4**: Steward Phone
 
-Or use: `509 Tools > ⚖️ Grievance Tools > ⚙️ Setup Steward Contact Info`
+Or use: `👤 Dashboard > 📋 Grievance Tools > ➕ Start New Grievance` (then configure steward info in Config sheet)
 
 ### 2. Review Config Dropdown Lists
 
@@ -221,7 +223,7 @@ Required fields:
 
 ### 4. Set Up Triggers
 
-**Menu**: `509 Tools > ⚙️ Utilities > Setup Triggers`
+**Menu**: `⚙️ Administrator > 🔧 Setup & Triggers > ⚡ Install Auto-Sync Trigger`
 
 This enables:
 - Automatic deadline calculations
@@ -230,7 +232,7 @@ This enables:
 
 ### 5. Customize Interactive Dashboard
 
-**Menu**: `509 Tools > 🎯 Interactive Dashboard > Setup Controls`
+**Menu**: `👤 Dashboard > 🎯 Interactive Dashboard`
 
 Create custom views for:
 - Key metrics you track
@@ -268,14 +270,15 @@ The nuke not only deletes seed data but also **permanently removes all seed code
 ### Problem: Dashboards Still Show Data
 
 **Solution**:
-- Go to `509 Tools > 📊 Data Management > Rebuild Dashboard`
+- Go to `📊 Sheet Manager > 📊 Rebuild Dashboard`
 - This recalculates all metrics
 
-### Problem: Seed Menu Still Visible
+### Problem: Demo Menu Still Visible
 
 **Solution**:
 - Close and reopen the spreadsheet
 - The menu is rebuilt on open
+- The 🎭 Demo menu only shows when demo mode is enabled
 
 ### Problem: Need to Re-Seed for Training
 
@@ -355,7 +358,7 @@ If the Apps Script API is not enabled:
 
 ### Menu Location (Before Nuke)
 ```
-509 Tools > 📊 Data Management > 🚨 Nuke Seed Data (Exit Demo Mode)
+🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA
 ```
 
 ### What Gets Deleted
@@ -397,10 +400,10 @@ Your dashboard is **production-ready**! 🚀
 
 ## See Also
 
-- **`nukeAllSheetData()`** - Comprehensive clear that also removes analytics, surveys, feedback, archive
-  - Menu: `509 Tools > Data Management > 🗑️ Nuke ALL Sheet Data (Comprehensive)`
-- **`clearAllData()`** - Basic clear that only removes Member Directory and Grievance Log
-  - Menu: `509 Tools > Data Management > ⚠️ Clear Core Data Only`
+- **`NUKE_SEEDED_DATA()`** - Smart nuke that removes only seeded data (pattern-matched IDs)
+  - Menu: `🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA`
+- **`NUKE_CONFIG_DROPDOWNS()`** - Clears only Config dropdown values
+  - Menu: `🎭 Demo > 🗑️ Nuke Data > 🧹 Clear Config Dropdowns Only`
 
 ---
 

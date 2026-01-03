@@ -117,14 +117,18 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~500 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 25 grievances
+- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%)
 - `seedConfigData()` - Populate Config dropdowns
-- `SEED_MEMBERS(count)` - Seed N members (max 2000)
-- `SEED_GRIEVANCES(count)` - Seed N grievances (max 300)
-- `SEED_MEMBERS_DIALOG()` - Prompt for member count
+- `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
+  - Default grievancePercent is 30% if not specified
+  - Example: `SEED_MEMBERS(100)` seeds 100 members + ~30 grievances
+  - Example: `SEED_MEMBERS(100, 50)` seeds 100 members + ~50 grievances
+- `SEED_GRIEVANCES(count)` - Seed N grievances for existing members (max 300)
+- `SEED_MEMBERS_DIALOG()` - Prompt for member count (uses 30% grievances)
+- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for member count AND grievance percentage
 - `SEED_GRIEVANCES_DIALOG()` - Prompt for grievance count
-- `seed50Members()` - Shortcut: seed 50 members
-- `seed25Grievances()` - Shortcut: seed 25 grievances
+- `seed50Members()` - Shortcut: seed 50 members + 15 grievances (30%)
+- `seed100MembersWithGrievances()` - Shortcut: seed 100 members + 50 grievances (50%)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
 - `NUKE_ALL_DATA()` - Clear all data with confirmation
@@ -561,16 +565,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 └── Setup Data Validations
 
 🎭 Demo
-├── Seed All Sample Data
-├── Seed Data (submenu)
-│   ├── Seed Config Dropdowns Only
-│   ├── Seed Members (Custom Count)
-│   ├── Seed Grievances (Custom Count)
-│   ├── Seed 50 Members
-│   └── Seed 25 Grievances
-└── Nuke Data (submenu)
-    ├── NUKE ALL DATA
-    └── Clear Config Dropdowns Only
+├── 🚀 Seed All Sample Data (1,000 members + 300 grievances)
+└── 🗑️ Nuke Data (submenu)
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
 
 ⚙️ Administrator
 ├── DIAGNOSE SETUP
