@@ -1,6 +1,31 @@
-# 509 Dashboard - Google Apps Script v3.44
+# 509 Dashboard - Google Apps Script v3.45
 
 Complete union member database and grievance tracking system for Local 509.
+
+## 🆕 What's New in v3.45
+
+### Mobile Web App (January 2026) ⭐ NEW
+
+**Problem:** Google Sheets mobile app doesn't show Apps Script menus, so you couldn't access the dashboard or search on your phone.
+
+**Solution:** New standalone web app you can access via URL on any mobile browser!
+
+**Features:**
+- 📊 **Dashboard** - Stats cards (Total, Active, Pending, Overdue)
+- 🔍 **Search** - Find members or grievances instantly
+- 📋 **Grievance List** - Filter by status (Open, Pending, Resolved)
+- 📱 **Home Screen** - Add to your phone's home screen for app-like access
+
+**How to Deploy:**
+1. Go to Extensions → Apps Script
+2. Click Deploy → New deployment → Web app
+3. Set "Who has access" appropriately
+4. Copy URL and open on your phone
+5. (iOS) Tap Share → Add to Home Screen
+
+**New Menu Item:** Dashboard → 📱 Get Mobile App URL
+
+---
 
 ## 🆕 What's New in v3.44
 
@@ -182,6 +207,7 @@ Dashboard (Real-time metrics and visualizations)
 ✅ **Workflow Management** - State machine for grievance lifecycle tracking
 ✅ **Knowledge Base** - FAQ system with search functionality
 ✅ **Mobile Optimization** - Mobile-friendly dashboards and views
+✅ **Mobile Web App** - Standalone web app accessible via URL on any mobile browser (NEW v3.45)
 ✅ **Undo/Redo System** - Full history tracking with keyboard shortcuts
 
 ### v2.6 Features (NEW)

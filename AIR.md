@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.6.0 (Merged Seed Functions & Status/Resolution Separation)
+**Version:** 1.5.1 (Mobile Web App for Phone Access)
 **Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -27,7 +27,7 @@
 
 ## File Architecture
 
-### Project Structure (9 Files)
+### Project Structure (10 Files)
 
 ```
 509-dashboard/
@@ -40,6 +40,7 @@
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
+├── WebApp.gs              # Standalone web app for mobile phone access
 └── AIR.md                 # This document
 ```
 
@@ -91,16 +92,14 @@
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
 
 **SeedNuke.gs** (~500 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + ~15 grievances
+- `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 25 grievances
 - `seedConfigData()` - Populate Config dropdowns
-- `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
-  - `count` - Number of members to seed
-  - `grievancePercent` - Percentage of members to give grievances (0-100, default 30%)
-  - Grievances are directly linked to member data (Member ID, Name, Email, etc.)
-- `SEED_MEMBERS_DIALOG()` - Prompt for member count (30% get grievances)
-- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for member count AND grievance percentage
-- `seed50Members()` - Shortcut: seed 50 members (30% grievances)
-- `seed100MembersWithGrievances()` - Shortcut: seed 100 members (50% grievances)
+- `SEED_MEMBERS(count)` - Seed N members (max 2000)
+- `SEED_GRIEVANCES(count)` - Seed N grievances (max 300)
+- `SEED_MEMBERS_DIALOG()` - Prompt for member count
+- `SEED_GRIEVANCES_DIALOG()` - Prompt for grievance count
+- `seed50Members()` - Shortcut: seed 50 members
+- `seed25Grievances()` - Shortcut: seed 25 grievances
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
 - `NUKE_ALL_DATA()` - Clear all data with confirmation
@@ -109,8 +108,6 @@
 - `randomChoice()` - Helper: pick random array element
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
-
-**Note:** SEED_GRIEVANCES was merged into SEED_MEMBERS in v1.6.0. This ensures all seeded grievances are directly linked to actual seeded members with correct data.
 
 **HiddenSheets.gs** (~1500 lines)
 - `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
@@ -239,6 +236,23 @@
   - `showMemberGrievanceHistory()` - Member's grievance history
   - `openGrievanceFormForMember()` - Start grievance for member
   - `syncSingleGrievanceToCalendar()` - Sync single grievance to calendar
+
+**WebApp.gs** (~510 lines) - Standalone Web App for Mobile Access
+- Web App Entry Point:
+  - `doGet(e)` - Web app entry point, routes to dashboard/search/grievances pages
+- Dashboard Page:
+  - `getWebAppDashboardHtml()` - Main dashboard with stats cards and quick actions
+- Search Page:
+  - `getWebAppSearchHtml()` - Full-text search across members and grievances
+  - `getWebAppSearchResults(query, tab)` - API endpoint for search (reuses getMobileSearchData)
+- Grievance List Page:
+  - `getWebAppGrievanceListHtml()` - Filterable grievance list by status
+  - `getWebAppGrievanceList()` - API endpoint for grievance data
+- Utility:
+  - `showWebAppUrl()` - Menu function to display web app URL after deployment
+
+**Deployment:** Extensions → Apps Script → Deploy → Web app
+**Access:** Bookmark URL on mobile device or add to home screen
 
 ---
 
@@ -489,8 +503,13 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 
 ```
 👤 Dashboard
-├── Search Members
-├── View Active Grievances
+├── 📊 Smart Dashboard (Auto-Detect)
+├── 🎯 Interactive Dashboard
+├── 🔍 Search Members
+├── 📋 View Active Grievances
+├── 📱 Mobile Dashboard
+├── 📱 Get Mobile App URL        ← NEW: Shows web app URL for mobile access
+├── ⚡ Quick Actions
 └── Grievance Tools
     ├── Start New Grievance
     ├── Refresh Grievance Formulas
@@ -519,13 +538,13 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 🎭 Demo
 ├── Seed All Sample Data
 ├── Seed Data (submenu)
-│   ├── ⚙️ Seed Config Dropdowns Only
-│   ├── 👥 Seed Members & Grievances (Custom)
-│   ├── 👥 Seed Members (Advanced - Set % Grievances)
-│   ├── 👥 Seed 50 Members (30% Grievances)
-│   └── 👥 Seed 100 Members (50% Grievances)
+│   ├── Seed Config Dropdowns Only
+│   ├── Seed Members (Custom Count)
+│   ├── Seed Grievances (Custom Count)
+│   ├── Seed 50 Members
+│   └── Seed 25 Grievances
 └── Nuke Data (submenu)
-    ├── ☢️ NUKE SEEDED DATA
+    ├── NUKE ALL DATA
     └── Clear Config Dropdowns Only
 
 ⚙️ Administrator
@@ -548,17 +567,13 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 | F | Supervisors | User populates |
 | G | Managers | User populates |
 | H | Stewards | User populates |
-| I | Grievance Status | Open, Pending Info, In Arbitration, Appealed, Closed (preset) - **Workflow states only** |
+| I | Grievance Status | Open, Pending Info, Settled, etc. (preset) |
 | J | Grievance Step | Informal, Step I, Step II, etc. (preset) |
 | K | Issue Category | Discipline, Workload, etc. (preset) |
 | L | Articles Violated | Art. 1 - Art. 26 (preset) |
 | M | Communication Methods | Email, Phone, Text, In Person (preset) |
 | O | Grievance Coordinators | User populates |
 | AF | Home Towns | User populates |
-
-**Note on Status vs Resolution (v1.6.0):**
-- **Status** = Workflow state (where the case is in the process): Open, Pending Info, In Arbitration, Appealed, Closed
-- **Resolution** = Outcome (how the case ended, only when Status = Closed): Won - Full, Won - Partial, Settled - Favorable, Settled - Neutral, Denied - Appealing, Denied - Final, Withdrawn
 
 ---
 
@@ -616,14 +631,10 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Seed Data Limits
 
-| Function | Max Count | Batch Size | Notes |
-|----------|-----------|------------|-------|
-| SEED_MEMBERS(count, grievancePercent) | 2,000 members | 50 rows | grievancePercent default 30% |
-
-**Example Usage:**
-- `SEED_MEMBERS(100)` - Seeds 100 members, ~30 grievances
-- `SEED_MEMBERS(100, 50)` - Seeds 100 members, ~50 grievances
-- `SEED_MEMBERS(100, 0)` - Seeds 100 members, 0 grievances
+| Function | Max Count | Batch Size |
+|----------|-----------|------------|
+| SEED_MEMBERS() | 2,000 | 50 rows |
+| SEED_GRIEVANCES() | 300 | 25 rows |
 
 ---
 
@@ -698,48 +709,36 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
-### Version 1.6.0 (2026-01-03) - Merged Seed Functions & Status/Resolution Separation
+### Version 1.5.1 (2026-01-03) - Mobile Web App for Phone Access
 
-**Major Changes:**
+**Problem Solved:**
+Google Sheets mobile app does not support Apps Script custom menus, making the dashboard and search features inaccessible on phones.
 
-1. **Status/Resolution Separation:**
-   - **Status** now represents only workflow states: Open, Pending Info, In Arbitration, Appealed, Closed
-   - **Resolution** now represents outcomes (only when Status = Closed): Won - Full, Won - Partial, Settled - Favorable, Settled - Neutral, Denied - Appealing, Denied - Final, Withdrawn
-   - Removed duplicated values (Won, Denied, Settled, Withdrawn) from Status
-   - Updated `GRIEVANCE_STATUS_PRIORITY` constant (now 5 values instead of 9)
-   - Added new `GRIEVANCE_RESOLUTION_PRIORITY` constant for closed case sorting
+**Solution:**
+Added standalone web app deployment that can be accessed via URL on any mobile browser.
 
-2. **Merged Seed Functions:**
-   - `SEED_GRIEVANCES` merged into `SEED_MEMBERS`
-   - New signature: `SEED_MEMBERS(count, grievancePercent)`
-   - `grievancePercent` parameter controls what percentage of members get grievances (default 30%)
-   - All seeded grievances are now directly linked to member data (Member ID, Name, Email, etc.)
-   - Menu updated with new options:
-     - "Seed Members & Grievances (Custom)" - prompts for count
-     - "Seed Members (Advanced - Set % Grievances)" - prompts for count AND percentage
-     - "Seed 50 Members (30% Grievances)" - quick seed
-     - "Seed 100 Members (50% Grievances)" - quick seed with more grievances
+**New File:**
+- `WebApp.gs` (~510 lines) - Standalone web app with doGet() entry point
 
-3. **Updated Sort Logic:**
-   - Active cases (Open, Pending Info, In Arbitration, Appealed) sorted by Days to Deadline
-   - Closed cases sorted by Resolution priority (wins first, denials last)
-   - `sortGrievanceLogByStatus()` updated with new logic
+**Features:**
+- **Dashboard Page**: Stats cards (Total, Active, Pending, Overdue grievances) + quick action buttons
+- **Search Page**: Full-text search across members and grievances with tabbed filtering
+- **Grievance List Page**: Filterable list by status (All, Open, Pending, Resolved)
+- **Bottom Navigation**: Touch-friendly navigation bar
+- **iOS Home Screen Support**: apple-mobile-web-app meta tags for app-like experience
 
-4. **Testing Framework:**
-   - Added testing framework directly to ConsolidatedDashboard.gs
-   - Includes Assert library, test functions, and validation framework
-   - No longer requires separate TestingValidation.gs file
+**New Menu Item:**
+- Dashboard → 📱 Get Mobile App URL - Shows deployment URL after web app is deployed
 
-5. **Interactive Dashboard Enhancements:**
-   - Dropdown cells (A6:F6) now have yellow background with orange border highlighting
-   - Unused columns (I onwards) are automatically hidden
+**Deployment Instructions:**
+1. Extensions → Apps Script → Deploy → New deployment
+2. Select "Web app"
+3. Set access permissions
+4. Copy URL and bookmark on mobile device
 
 **Code Changes:**
-- `ConsolidatedDashboard.gs`: Updated DEFAULT_CONFIG, GRIEVANCE_STATUS_PRIORITY, added GRIEVANCE_RESOLUTION_PRIORITY
-- `ConsolidatedDashboard.gs`: Rewrote `SEED_MEMBERS()` to include grievance seeding
-- `ConsolidatedDashboard.gs`: Removed separate `SEED_GRIEVANCES()` function
-- `ConsolidatedDashboard.gs`: Updated `sortGrievanceLogByStatus()` with new sorting logic
-- `ConsolidatedDashboard.gs`: Added testing framework functions
+- `WebApp.gs`: New file with doGet(), getWebAppDashboardHtml(), getWebAppSearchHtml(), getWebAppGrievanceListHtml(), getWebAppSearchResults(), getWebAppGrievanceList(), showWebAppUrl()
+- `Code.gs`: Added menu item "📱 Get Mobile App URL" calling showWebAppUrl()
 
 ---
 
@@ -794,33 +793,18 @@ Grievance Log ──────────────┘
 - Primary sort: Status priority (active cases first, resolved cases last)
 - Secondary sort: Days to deadline (most urgent first within each status)
 
-**Status Priority Order (Workflow States):**
+**Status Priority Order:**
 | Priority | Status | Type |
 |----------|--------|------|
 | 1 | Open | Active |
 | 2 | Pending Info | Active |
 | 3 | In Arbitration | Active |
 | 4 | Appealed | Active |
-| 5 | Closed | Resolved |
-
-**Resolution Priority Order (Outcomes for Closed Cases):**
-| Priority | Resolution | Category |
-|----------|------------|----------|
-| 1 | Won - Full | Win |
-| 2 | Won - Partial | Win |
-| 3 | Won | Win |
-| 4 | Settled - Favorable | Settled |
-| 5 | Settled - Neutral | Settled |
-| 6 | Settled | Settled |
-| 7 | Denied - Appealing | Denied |
-| 8 | Denied - Final | Denied |
-| 9 | Denied | Denied |
-| 10 | Withdrawn | Other |
-
-**Sort Logic:**
-1. Primary sort: Status priority (active cases first, closed cases last)
-2. For active cases: Sort by Days to Deadline (most urgent first)
-3. For closed cases: Sort by Resolution priority (wins first, denials last)
+| 5 | Settled | Resolved |
+| 6 | Won | Resolved |
+| 7 | Denied | Resolved |
+| 8 | Withdrawn | Resolved |
+| 9 | Closed | Resolved |
 
 **Seed Data Improvements:**
 - Expanded name pools from 20 to 120 names each (14,400+ unique combinations)
