@@ -8613,7 +8613,9 @@ function trackSeededGrievanceIdsBatch(grievanceIds) {
 // ============================================================================
 
 /**
- * Seed all sample data: Config + 50 members + 25 grievances
+ * Seed all sample data: Config + 1,000 members + 300 grievances
+ * Grievances are randomly distributed - some members may have multiple
+ * Auto-installs the sync trigger for live updates between sheets
  */
 function SEED_SAMPLE_DATA() {
   var ui = SpreadsheetApp.getUi();
@@ -8623,8 +8625,11 @@ function SEED_SAMPLE_DATA() {
     '🚀 Seed Sample Data',
     'This will seed:\n' +
     '• Config dropdowns (Job Titles, Locations, etc.)\n' +
-    '• 50 sample members\n' +
-    '• 25 sample grievances\n\n' +
+    '• 1,000 sample members\n' +
+    '• 300 sample grievances (30%)\n' +
+    '• Auto-sync trigger for live updates\n\n' +
+    'Note: Some members may have multiple grievances.\n' +
+    'Member Directory will auto-update when Grievance Log changes.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -8636,17 +8641,20 @@ function SEED_SAMPLE_DATA() {
   ss.toast('Seeding config data...', '🌱 Seeding', 3);
   seedConfigData();
 
-  ss.toast('Seeding members...', '🌱 Seeding', 3);
-  SEED_MEMBERS(50);
+  ss.toast('Seeding 1,000 members + 300 grievances (this may take a moment)...', '🌱 Seeding', 10);
+  SEED_MEMBERS(1000, 30);
 
-  ss.toast('Seeding grievances...', '🌱 Seeding', 3);
-  SEED_GRIEVANCES(25);
+  ss.toast('Installing auto-sync trigger...', '🔧 Setup', 3);
+  installAutoSyncTriggerQuick();
 
   ss.toast('Sample data seeded successfully!', '✅ Success', 5);
   ui.alert('✅ Success', 'Sample data has been seeded!\n\n' +
     '• Config dropdowns populated\n' +
-    '• 50 members added\n' +
-    '• 25 grievances added', ui.ButtonSet.OK);
+    '• 1,000 members added\n' +
+    '• 300 grievances added (30%)\n' +
+    '• Auto-sync trigger installed\n\n' +
+    'Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) ' +
+    'will now auto-update when you edit the Grievance Log.', ui.ButtonSet.OK);
 }
 
 /**
