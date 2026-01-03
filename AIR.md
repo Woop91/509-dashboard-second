@@ -210,12 +210,10 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 **ConsolidatedDashboard.gs** (~7000 lines) - Complete Standalone Version
 - Contains ALL functionality from Code.gs, SeedNuke.gs, HiddenSheets.gs, etc. in one file
 - Intended for users who want to deploy without multiple file dependencies
-- **Enhanced Seeding**: `SEED_MEMBERS(count, grievancePercent)` - combined member + grievance seeding
-  - `SEED_MEMBERS_DIALOG()` - Prompt for count (30% grievances auto-created)
-  - `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompt for count AND grievance percentage
-  - `seed50Members()` - 50 members with 30% grievances
-  - `seed100MembersWithGrievances()` - 100 members with 50% grievances
-  - `SEED_GRIEVANCES(count)` - Seed grievances for existing members only
+- **Simplified Seeding**: `SEED_SAMPLE_DATA()` - seeds 1,000 members + 300 grievances + auto-sync trigger
+  - `SEED_MEMBERS_ONLY(count)` - Seed members without auto-seeding grievances
+  - `SEED_GRIEVANCES(count)` - Seed grievances for existing members (randomly distributed)
+- **Live Wiring**: Member Directory auto-updates when Grievance Log is edited
 - Includes `createMenuChecklistSheet_()` for auto-creating Menu Checklist on REPAIR_DASHBOARD
 
 **WebApp.gs** (~500 lines) - Web App Deployment for Mobile Access
@@ -941,14 +939,13 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 **Unified Seeding Architecture:**
 
-All seeding now uses combined member + grievance approach across all files:
+Seeding simplified to single-action approach:
 
-- `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances (default 30%)
-- `SEED_MEMBERS_DIALOG()` - Prompts for count, auto-creates 30% grievances
-- `SEED_MEMBERS_ADVANCED_DIALOG()` - Prompts for both count AND grievance percentage
-- `seed50Members()` - 50 members with 30% grievances (~15 grievances)
-- `seed100MembersWithGrievances()` - 100 members with 50% grievances (~50 grievances)
-- `SEED_GRIEVANCES_DIALOG()` - Seeds grievances for existing members only
+- `SEED_SAMPLE_DATA()` - Seeds 1,000 members + 300 grievances + installs auto-sync trigger
+- `SEED_MEMBERS_ONLY(count)` - Seeds members without auto-seeding grievances
+- `SEED_GRIEVANCES(count)` - Seeds grievances for existing members (randomly distributed)
+- Grievances randomly distributed - some members may have multiple
+- Auto-sync trigger installed for live updates between sheets
 
 **Demo Menu Simplified:**
 

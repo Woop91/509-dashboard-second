@@ -115,7 +115,7 @@ Runtime validation tests for the 509 Dashboard. These tests verify functionality
 
 ## Performance Benchmarks
 
-For a spreadsheet with 20K members and 5K grievances:
+For a spreadsheet with 1K members and 300 grievances:
 
 | Operation | Expected Time |
 |-----------|---------------|

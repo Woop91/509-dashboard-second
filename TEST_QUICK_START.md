@@ -130,7 +130,7 @@ runSingleTest('testFilingDeadlineCalculation');
 ```
 
 ### Tip 5: Test Before Seeding
-Run tests on empty sheets before seeding 20k members to ensure setup is correct.
+Run tests on empty sheets before seeding to ensure setup is correct.
 
 ---
 
