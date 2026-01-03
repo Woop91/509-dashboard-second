@@ -84,8 +84,8 @@
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~2900 lines)
-- `onOpen()` - Creates menu system (9 menus)
+**Code.gs** (~3700 lines)
+- `onOpen()` - Creates menu system (10 menus including View)
 - `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
 - `DIAGNOSE_SETUP()` - System health check
 - `REPAIR_DASHBOARD()` - Repair hidden sheets, triggers, and auto-create Menu Checklist
@@ -108,6 +108,9 @@
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - `createMenuChecklistSheet_()` - Auto-create Menu Checklist with 57 items in 13 testing phases
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
+- View Controls: `simplifyTimelineView()`, `showFullTimelineView()`, `setupTimelineColumnGroups()`, `applyStepHighlighting()`, `freezeKeyColumns()`, `unfreezeAllColumns()`
+- Steward Alerts: `sendStewardDeadlineAlerts()`, `sendStewardAlertsNow()`, `configureAlertSettings()`
+- Audit Logging: `setupAuditLogSheet()`, `logAuditEvent()`, `onEditAudit()`, `installAuditTrigger()`, `removeAuditTrigger()`, `viewAuditLog()`, `clearOldAuditEntries()`, `getAuditHistory()`
 
 **SeedNuke.gs** (~1200 lines)
 - `SEED_SAMPLE_DATA()` - Seeds Config + 50 members + 15 grievances (30%)
@@ -557,6 +560,16 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 🔍 Search
 └── 🔍 Search Members
 
+👁️ View
+├── 📅 Simplify Timeline (Hide Steps)
+├── 📅 Show Full Timeline
+├── ────────────────
+├── 🎨 Apply Step Highlighting
+├── 🔲 Setup Column Groups
+├── ────────────────
+├── ❄️ Freeze Key Columns
+└── 🔓 Unfreeze All Columns
+
 📊 Sheet Manager
 ├── 📊 Rebuild Dashboard
 ├── 📈 Refresh Interactive Charts
@@ -572,6 +585,9 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 │   └── 🗑️ Clear Calendar Events
 └── 📬 Notifications
     ├── ⚙️ Notification Settings
+    ├── ⚙️ Alert Settings
+    ├── ────────────────
+    ├── 📧 Send Steward Alerts Now
     └── 🧪 Test Notifications
 
 🔧 Tools
@@ -643,13 +659,21 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── ────────────────
 ├── 🩺 Data Quality
 │   ├── 🔍 Check Data Quality
-│   ├── 🔧 Fix Missing Member IDs
-│   └── 📋 Show Grievances Missing IDs
+│   └── 📋 View Missing Member IDs
 ├── ────────────────
-└── 🔄 Manual Sync
-    ├── 🔄 Sync All Data Now
-    ├── 🔄 Sync Grievance → Members
-    └── 🔄 Sync Members → Grievances
+├── 🔄 Manual Sync
+│   ├── 🔄 Sync All Data Now
+│   ├── 🔄 Sync Grievance → Members
+│   └── 🔄 Sync Members → Grievances
+├── ────────────────
+└── 📋 Audit Log
+    ├── 📋 View Audit Log
+    ├── 🔧 Setup Audit Log
+    ├── ────────────────
+    ├── ⚡ Enable Audit Tracking
+    ├── 🚫 Disable Audit Tracking
+    ├── ────────────────
+    └── 🗑️ Clear Old Entries (30+ days)
 ```
 
 ---
