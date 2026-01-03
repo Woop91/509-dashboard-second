@@ -1,10 +1,22 @@
-# 509 Dashboard - Google Apps Script v3.44
+# 509 Dashboard - Google Apps Script v3.45
 
 Complete union member database and grievance tracking system for Local 509.
 
-## 🆕 What's New in v3.44
+## 🆕 What's New in v3.45
 
-### Latest Updates (v3.40-3.44 - December 2025)
+### Latest Updates (January 2026)
+
+**Desktop Unified Search** ⭐ NEW:
+- **Dashboard → 🔍 Search Members** - Full search across members and grievances
+- **Advanced Filters** - Filter by status, location, is steward
+- **Searchable Fields** - Name, ID, Email, Job Title, Location, Issue Type, Steward
+- **Click-to-Navigate** - Click any result to jump directly to that row
+- **Desktop Optimized** - 900x700 modal with responsive grid layout
+- **Tabbed Interface** - All, Members, Grievances tabs
+
+---
+
+### Previous Updates (v3.40-3.44 - December 2025)
 
 **Hidden Sheet Architecture** ⭐ NEW:
 - **4 Hidden Calculation Sheets** - Auto-synchronize data between sheets invisibly

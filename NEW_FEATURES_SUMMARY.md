@@ -2,6 +2,44 @@
 
 This document summarizes the new features added to the 509 Dashboard.
 
+---
+
+## Desktop Unified Search (January 2026)
+
+**File:** `Code.gs`
+
+**Description:**
+Comprehensive desktop search functionality that allows searching across both Members and Grievances with advanced filtering options. Accessible via **Dashboard → 🔍 Search Members**.
+
+**Features:**
+- **Unified Search** - Search both members and grievances in one interface
+- **Tabbed Interface** - All, Members, Grievances tabs
+- **Advanced Filters** - Status (grievances), Location (all), Is Steward (members)
+- **Searchable Fields** - Name, ID, Email, Job Title, Location, Issue Type, Steward Name
+- **Click-to-Navigate** - Click any result to jump directly to that row in the spreadsheet
+- **Desktop Optimized** - 900x700 modal with responsive grid layout
+- **Debounced Input** - Searches after 300ms of typing for performance
+
+**Functions:**
+- `searchMembers()` - Menu entry point (calls showDesktopSearch)
+- `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
+- `getDesktopSearchLocations()` - Get unique locations for filter dropdown
+- `getDesktopSearchData(query, tab, filters)` - Backend search handler
+- `navigateToSearchResult(type, id, row)` - Navigate to search result row
+
+**Menu Location:**
+- Dashboard → 🔍 Search Members
+
+**Mobile vs Desktop:**
+| Aspect | Mobile | Desktop |
+|--------|--------|---------|
+| Search Fields | ID, Name, Email, Status | ID, Name, Email, Job Title, Location, Issue Type, Steward |
+| Filters | Tab only | Status, Location, Is Steward |
+| Result Limit | 20 | 50 |
+| Navigation | No | Yes - click to jump to row |
+
+---
+
 ## 1. Grievance Float/Sort Toggle Feature
 
 **File:** `GrievanceFloatToggle.gs`
