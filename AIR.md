@@ -775,6 +775,13 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
    - Single "🚀 Seed All Sample Data" option for seeding
    - Cleaner menu structure
 
+6. **Member Directory Days to Deadline Fix**
+   - Fixed Member Directory column AD not populating from Grievance Log
+   - Root cause: MINIFS formula in _Grievance_Calc ignored "Overdue" text values
+   - Solution: `syncGrievanceToMemberDirectory()` now calculates directly from Grievance Log
+   - Properly handles both numeric deadlines and "Overdue" text
+   - Shows minimum deadline when member has multiple open grievances
+
 **New Functions:**
 - `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
 - `getDesktopSearchLocations()` - Get unique locations for filter dropdown
@@ -784,6 +791,8 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 **Code Changes:**
 - `Code.gs`: Updated `searchMembers()` to call `showDesktopSearch()`
 - `ConsolidatedDashboard.gs`: Added desktop search functions
+- `ConsolidatedDashboard.gs`: `createGrievanceLog()` now auto-creates column groups
+- `ConsolidatedDashboard.gs`: Rewrote `syncGrievanceToMemberDirectory()` to calculate directly
 - `Constants.gs`: Updated `GRIEVANCE_STATUS` comment for clarity
 - `HiddenSheets.gs`: Fixed Dashboard formulas to use STATUS column for outcome counts
 - `SeedNuke.gs`: Merged grievance seeding into SEED_MEMBERS function

@@ -4470,32 +4470,82 @@ function setupGrievanceCalcSheet() {
 }
 
 /**
- * Sync grievance data from hidden sheet to Member Directory
+ * Sync grievance data directly from Grievance Log to Member Directory
+ * Calculates Has Open Grievance, Status, and Days to Deadline per member
+ * Fixed in v1.6.0: Now calculates directly instead of using MINIFS (which ignores "Overdue" text)
  */
 function syncGrievanceToMemberDirectory() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var calcSheet = ss.getSheetByName(SHEETS.GRIEVANCE_CALC);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
   var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
 
-  if (!calcSheet || !memberSheet) {
+  if (!grievanceSheet || !memberSheet) {
     Logger.log('Required sheets not found for grievance sync');
     return;
   }
 
-  // Get data from hidden sheet
-  var calcData = calcSheet.getDataRange().getValues();
-  if (calcData.length < 2) return;
+  // Get grievance data
+  var grievanceData = grievanceSheet.getDataRange().getValues();
+  if (grievanceData.length < 2) return;
 
-  // Create lookup map: memberId -> {hasOpen, status, deadline}
+  // Closed statuses - grievances with these statuses don't count as "open"
+  var closedStatuses = ['Closed', 'Settled', 'Withdrawn', 'Denied', 'Won'];
+
+  // Build lookup map: memberId -> {hasOpen, status, deadline}
+  // Calculate directly from grievance data (handles "Overdue" text properly)
   var lookup = {};
-  for (var i = 1; i < calcData.length; i++) {
-    var memberId = calcData[i][0];
-    if (memberId) {
+
+  for (var i = 1; i < grievanceData.length; i++) {
+    var row = grievanceData[i];
+    var memberId = row[GRIEVANCE_COLS.MEMBER_ID - 1];
+    if (!memberId) continue;
+
+    var status = row[GRIEVANCE_COLS.STATUS - 1] || '';
+    var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var isClosed = closedStatuses.indexOf(status) !== -1;
+
+    // Initialize member entry if not exists
+    if (!lookup[memberId]) {
       lookup[memberId] = {
-        hasOpen: calcData[i][1],
-        status: calcData[i][2],
-        deadline: calcData[i][3]
+        hasOpen: 'No',
+        status: '',
+        deadline: '',
+        minDeadline: Infinity,  // Track minimum numeric deadline
+        hasOverdue: false       // Track if any grievance is overdue
       };
+    }
+
+    // Check if this grievance is open/pending
+    if (!isClosed) {
+      lookup[memberId].hasOpen = 'Yes';
+
+      // Set status priority: Open > Pending Info
+      if (status === 'Open') {
+        lookup[memberId].status = 'Open';
+      } else if (status === 'Pending Info' && lookup[memberId].status !== 'Open') {
+        lookup[memberId].status = 'Pending Info';
+      }
+
+      // Handle Days to Deadline (can be number or "Overdue" text)
+      if (daysToDeadline === 'Overdue') {
+        lookup[memberId].hasOverdue = true;
+      } else if (typeof daysToDeadline === 'number' && daysToDeadline < lookup[memberId].minDeadline) {
+        lookup[memberId].minDeadline = daysToDeadline;
+      }
+    }
+  }
+
+  // Finalize deadline values
+  for (var mid in lookup) {
+    var data = lookup[mid];
+    if (data.hasOpen === 'Yes') {
+      if (data.minDeadline !== Infinity) {
+        // Has a numeric deadline - use the minimum
+        data.deadline = data.minDeadline;
+      } else if (data.hasOverdue) {
+        // All open grievances are overdue
+        data.deadline = 'Overdue';
+      }
     }
   }
 
@@ -4503,12 +4553,12 @@ function syncGrievanceToMemberDirectory() {
   var memberData = memberSheet.getDataRange().getValues();
   if (memberData.length < 2) return;
 
-  // Update columns AB-AD
+  // Update columns AB-AD (Has Open Grievance?, Grievance Status, Days to Deadline)
   var updates = [];
   for (var j = 1; j < memberData.length; j++) {
     var memberId = memberData[j][MEMBER_COLS.MEMBER_ID - 1];
-    var data = lookup[memberId] || {hasOpen: 'No', status: '', deadline: ''};
-    updates.push([data.hasOpen, data.status, data.deadline]);
+    var memberInfo = lookup[memberId] || {hasOpen: 'No', status: '', deadline: ''};
+    updates.push([memberInfo.hasOpen, memberInfo.status, memberInfo.deadline]);
   }
 
   if (updates.length > 0) {
