@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.0 (Enhanced Analytics Dashboard)
-**Last Updated:** 2025-12-18
+**Version:** 1.5.1 (Mobile Web App for Phone Access)
+**Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -27,7 +27,7 @@
 
 ## File Architecture
 
-### Project Structure (9 Files)
+### Project Structure (10 Files)
 
 ```
 509-dashboard/
@@ -40,6 +40,7 @@
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
+├── WebApp.gs              # Standalone web app for mobile phone access
 └── AIR.md                 # This document
 ```
 
@@ -235,6 +236,23 @@
   - `showMemberGrievanceHistory()` - Member's grievance history
   - `openGrievanceFormForMember()` - Start grievance for member
   - `syncSingleGrievanceToCalendar()` - Sync single grievance to calendar
+
+**WebApp.gs** (~510 lines) - Standalone Web App for Mobile Access
+- Web App Entry Point:
+  - `doGet(e)` - Web app entry point, routes to dashboard/search/grievances pages
+- Dashboard Page:
+  - `getWebAppDashboardHtml()` - Main dashboard with stats cards and quick actions
+- Search Page:
+  - `getWebAppSearchHtml()` - Full-text search across members and grievances
+  - `getWebAppSearchResults(query, tab)` - API endpoint for search (reuses getMobileSearchData)
+- Grievance List Page:
+  - `getWebAppGrievanceListHtml()` - Filterable grievance list by status
+  - `getWebAppGrievanceList()` - API endpoint for grievance data
+- Utility:
+  - `showWebAppUrl()` - Menu function to display web app URL after deployment
+
+**Deployment:** Extensions → Apps Script → Deploy → Web app
+**Access:** Bookmark URL on mobile device or add to home screen
 
 ---
 
@@ -485,8 +503,13 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 
 ```
 👤 Dashboard
-├── Search Members
-├── View Active Grievances
+├── 📊 Smart Dashboard (Auto-Detect)
+├── 🎯 Interactive Dashboard
+├── 🔍 Search Members
+├── 📋 View Active Grievances
+├── 📱 Mobile Dashboard
+├── 📱 Get Mobile App URL        ← NEW: Shows web app URL for mobile access
+├── ⚡ Quick Actions
 └── Grievance Tools
     ├── Start New Grievance
     ├── Refresh Grievance Formulas
@@ -685,6 +708,39 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.5.1 (2026-01-03) - Mobile Web App for Phone Access
+
+**Problem Solved:**
+Google Sheets mobile app does not support Apps Script custom menus, making the dashboard and search features inaccessible on phones.
+
+**Solution:**
+Added standalone web app deployment that can be accessed via URL on any mobile browser.
+
+**New File:**
+- `WebApp.gs` (~510 lines) - Standalone web app with doGet() entry point
+
+**Features:**
+- **Dashboard Page**: Stats cards (Total, Active, Pending, Overdue grievances) + quick action buttons
+- **Search Page**: Full-text search across members and grievances with tabbed filtering
+- **Grievance List Page**: Filterable list by status (All, Open, Pending, Resolved)
+- **Bottom Navigation**: Touch-friendly navigation bar
+- **iOS Home Screen Support**: apple-mobile-web-app meta tags for app-like experience
+
+**New Menu Item:**
+- Dashboard → 📱 Get Mobile App URL - Shows deployment URL after web app is deployed
+
+**Deployment Instructions:**
+1. Extensions → Apps Script → Deploy → New deployment
+2. Select "Web app"
+3. Set access permissions
+4. Copy URL and bookmark on mobile device
+
+**Code Changes:**
+- `WebApp.gs`: New file with doGet(), getWebAppDashboardHtml(), getWebAppSearchHtml(), getWebAppGrievanceListHtml(), getWebAppSearchResults(), getWebAppGrievanceList(), showWebAppUrl()
+- `Code.gs`: Added menu item "📱 Get Mobile App URL" calling showWebAppUrl()
+
+---
 
 ### Version 1.5.0 (2025-12-18) - Enhanced Analytics Dashboard
 
