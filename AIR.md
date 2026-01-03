@@ -782,6 +782,12 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
    - Properly handles both numeric deadlines and "Overdue" text
    - Shows minimum deadline when member has multiple open grievances
 
+7. **SEED_SAMPLE_DATA Corrected**
+   - Fixed to seed 1,000 members + 300 grievances (was incorrectly 50/25)
+   - Uses merged approach: `SEED_MEMBERS(1000, 30)` for linked data
+   - Automatically installs auto-sync trigger for live updates
+   - Matches specification from SeedNuke.gs
+
 **New Functions:**
 - `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
 - `getDesktopSearchLocations()` - Get unique locations for filter dropdown
@@ -793,6 +799,7 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 - `ConsolidatedDashboard.gs`: Added desktop search functions
 - `ConsolidatedDashboard.gs`: `createGrievanceLog()` now auto-creates column groups
 - `ConsolidatedDashboard.gs`: Rewrote `syncGrievanceToMemberDirectory()` to calculate directly
+- `ConsolidatedDashboard.gs`: Fixed `SEED_SAMPLE_DATA()` to seed 1000 members + 300 grievances
 - `Constants.gs`: Updated `GRIEVANCE_STATUS` comment for clarity
 - `HiddenSheets.gs`: Fixed Dashboard formulas to use STATUS column for outcome counts
 - `SeedNuke.gs`: Merged grievance seeding into SEED_MEMBERS function
