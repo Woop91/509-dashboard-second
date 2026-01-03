@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.5.1 (Mobile Web App for Phone Access)
+**Version:** 1.6.0 (Desktop Search & Unified Seeding)
 **Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -18,10 +18,35 @@
 
 ## Quick Start
 
-1. Deploy the 9 `.gs` files to Google Apps Script
+> ⚠️ **IMPORTANT: Deploy ONLY `ConsolidatedDashboard.gs`**
+> The modular `.gs` files are source files used to generate ConsolidatedDashboard.gs.
+> Deploying multiple files will cause function conflicts and trigger errors.
+
+1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
 2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
+
+---
+
+## ⚠️ Protected Code - DO NOT MODIFY
+
+The following code sections are **USER APPROVED** and should **NOT be modified or removed**:
+
+### Interactive Dashboard Modal Popup
+
+**Location:** `ConsolidatedDashboard.gs` (lines 7536-8160) and `MobileQuickActions.gs` (lines 540-1164)
+
+**Protected Functions:**
+| Function | Purpose |
+|----------|---------|
+| `showInteractiveDashboardTab()` | Opens the modal dialog popup |
+| `getInteractiveDashboardHtml()` | Returns the HTML/CSS/JS for the tabbed UI |
+| `getInteractiveOverviewData()` | Fetches overview statistics |
+| `getInteractiveGrievanceData()` | Fetches grievance list data |
+| `getInteractiveMemberData()` | Fetches member list data |
+
+**Why Protected:** This modal provides essential dashboard functionality that users rely on for quick access to data.
 
 ---
 
@@ -708,6 +733,57 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.6.0 (2026-01-03) - Desktop Search & Unified Seeding
+
+**Major Features:**
+
+1. **Desktop Search with Advanced Filtering**
+   - Comprehensive search across Members and Grievances in one interface
+   - Accessible via **Dashboard → 🔍 Search Members**
+   - Tabbed interface: All, Members, Grievances
+   - Advanced filters: Status (grievances), Location (all), Is Steward (members)
+   - Searchable fields: Name, ID, Email, Job Title, Location, Issue Type, Steward
+   - Click-to-navigate: Jump directly to any result row in the spreadsheet
+   - Desktop optimized: 900x700 modal with responsive grid layout
+   - Debounced search (300ms) for performance
+
+2. **Dashboard STATUS Column Fix**
+   - Fixed Dashboard metrics to use STATUS column for Win/Settled/Denied counts
+   - Previously incorrectly referenced RESOLUTION column for some metrics
+   - Status now includes both workflow states AND outcomes (single column design)
+   - Ensures accurate grievance outcome tracking
+
+3. **Unified Seed Function**
+   - SEED_GRIEVANCES merged into SEED_MEMBERS function
+   - Use `SEED_MEMBERS(count, grievancePercent)` to seed members with optional grievances
+   - All seeded grievances are directly linked to members (no orphaned data)
+   - Example: `SEED_MEMBERS(100)` seeds 100 members + ~30 grievances (30% default)
+   - Example: `SEED_MEMBERS(100, 50)` seeds 100 members + ~50 grievances (50%)
+   - Example: `SEED_MEMBERS(100, 0)` seeds members only, no grievances
+
+**New Functions:**
+- `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
+- `getDesktopSearchLocations()` - Get unique locations for filter dropdown
+- `getDesktopSearchData(query, tab, filters)` - Backend search handler
+- `navigateToSearchResult(type, id, row)` - Navigate to search result row
+
+**Code Changes:**
+- `Code.gs`: Updated `searchMembers()` to call `showDesktopSearch()`
+- `ConsolidatedDashboard.gs`: Added desktop search functions
+- `Constants.gs`: Updated `GRIEVANCE_STATUS` comment for clarity
+- `HiddenSheets.gs`: Fixed Dashboard formulas to use STATUS column for outcome counts
+- `SeedNuke.gs`: Merged grievance seeding into SEED_MEMBERS function
+
+**Desktop vs Mobile Search Comparison:**
+| Aspect | Mobile | Desktop |
+|--------|--------|---------|
+| Search Fields | ID, Name, Email, Status | ID, Name, Email, Job Title, Location, Issue Type, Steward |
+| Filters | Tab only | Status, Location, Is Steward |
+| Result Limit | 20 | 50 |
+| Navigation | No | Yes - click to jump to row |
+
+---
 
 ### Version 1.5.1 (2026-01-03) - Mobile Web App for Phone Access
 
