@@ -27,28 +27,20 @@ When you execute the **Nuke Seed Data** function, the system will:
 
    > **NOTE (v3.11+):** These fields are now LEFT EMPTY during CREATE_509_DASHBOARD. Users populate them with their own data. If no user data was added, there's nothing to clear.
 
-### Code Removal (Zero Trace Guarantee)
-5. **Delete ALL Seed Functions**: Uses Apps Script API to permanently remove:
-   - `SEED_SAMPLE_DATA()` - main seed entry point
-   - `SEED_MEMBERS(count, grievancePercent)` - member + grievance seeding
-   - `SEED_GRIEVANCES(count)` - standalone grievance seeding
-   - `seedConfigData()` - config dropdown seeding
-   - All seed helper functions (generateSingleMemberRow, generateSingleGrievanceRow, etc.)
-   - All seed dialog functions (SEED_MEMBERS_DIALOG, SEED_MEMBERS_ADVANCED_DIALOG, etc.)
-6. **COMPLETELY DELETE SeedNuke.gs**: The entire file is removed (not just replaced)
-7. **Remove Demo Menu**: Deletes the "🎭 Demo" menu from the menu bar
-8. **Remove Nuke Menu Item**: Deletes the "☢️ NUKE SEEDED DATA" menu item itself
+### Demo Mode Disabling
+5. **Disable Demo Menu**: Sets a flag (`DEMO_MODE_DISABLED`) to hide the "🎭 Demo" menu on next refresh
+6. **Clear Tracking**: Removes the tracked seeded ID lists from Script Properties
 
 ### Preserved Items
-9. **Preserve Organization Info**: Keep your real organization settings:
+7. **Preserve Organization Info**: Keep your real organization settings:
    - Organization Name, Local Number, Main Address, Phone
    - Union Parent, State/Region, Website
    - Main Fax, Toll Free numbers
    - All deadline and contract reference columns
-10. **Preserve Structure**: Keep all headers, formulas, and sheet structure intact
-11. **Show Setup Guide**: Display getting started instructions
+8. **Preserve Structure**: Keep all headers, formulas, and sheet structure intact
+9. **Preserve Manually Entered Data**: Only rows with seeded ID patterns (M/G + 4 letters + 3 digits) are deleted
 
-> **🔴 IMPORTANT**: After the nuke completes, there will be **ZERO trace** that seed OR nuke functionality ever existed in your spreadsheet or script code. The SeedNuke.gs file is completely deleted, not just emptied. This is a permanent, irreversible operation.
+> **🔴 IMPORTANT**: The nuke operation only deletes **seeded data rows** (matching the pattern `MJOSM123` or `GJOSM456`). Manually entered data with different ID formats is preserved. The Demo menu is hidden but the seed functions remain in the code.
 
 ---
 
@@ -250,16 +242,20 @@ If using the grievance workflow:
 
 ## 🔄 Can I Undo the Nuke?
 
-**No, the nuke is permanent and irreversible.**
+**No, the data deletion is permanent and irreversible.**
 
-The nuke not only deletes seed data but also **permanently removes all seed code** from the script itself. After nuking:
-- Seed functions no longer exist in the code
-- SeedNuke.gs is replaced with a minimal stub
-- The seed menu is completely removed
-- There is **zero trace** of seed functionality
+After nuking:
+- Seeded data rows are permanently deleted from Member Directory and Grievance Log
+- The Demo menu is hidden (based on a Script Property flag)
+- Config dropdowns are cleared
+
+**Note**: The seed functions remain in the code - only the data is deleted. To re-seed:
+1. Clear the `DEMO_MODE_DISABLED` Script Property manually, or
+2. Redeploy from fresh source code
 
 **Recovery options:**
-- **Restore from backup**: If you made a copy of the spreadsheet AND script before nuking
+- **Re-enable Demo menu**: Script Properties → Delete `DEMO_MODE_DISABLED`
+- **Restore from backup**: If you made a copy of the spreadsheet before nuking
 - **Fresh deployment**: Deploy a new copy from the original source code
 - **Import data**: Add your real data to start fresh (recommended approach)
 

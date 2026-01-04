@@ -235,27 +235,37 @@ Dashboard (Real-time metrics and visualizations)
 ### File Structure
 
 ```
-Code.gs
-├── Configuration Constants (SHEETS object)
-├── Main Setup Function (CREATE_509_DASHBOARD)
-├── Sheet Creation Functions
-│   ├── createConfigTab()
+Project Files (9 source files → 1 consolidated deployment)
+├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS, SATISFACTION_COLS, FEEDBACK_COLS
+├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
+├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
+├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
+├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
+├── TestingValidation.gs   # Test framework & data validation
+├── PerformanceUndo.gs     # Caching layer & undo/redo system
+├── MobileQuickActions.gs  # Mobile interface & quick actions menu
+├── WebApp.gs              # Standalone web app for mobile phone access
+└── ConsolidatedDashboard.gs  # AUTO-GENERATED - Deploy this file only!
+
+Key Functions:
+├── CREATE_509_DASHBOARD() - Main setup function
+├── Sheet Creation (7 sheets)
+│   ├── createConfigSheet()
 │   ├── createMemberDirectory()
 │   ├── createGrievanceLog()
-│   ├── createMainDashboard()
-│   ├── createAnalyticsDataSheet()
-│   ├── createMemberSatisfactionSheet()
+│   ├── createDashboard()
+│   ├── createInteractiveDashboard()
+│   ├── createSatisfactionSheet()
 │   └── createFeedbackSheet()
 ├── Data Management
 │   ├── setupDataValidations()
-│   ├── setupFormulasAndCalculations()
-│   ├── SEED_FULL_DEMO() - Seeds 2K members + 300 grievances
-│   └── NUKE_ALL_DATA() - Clears all data
+│   ├── setupHiddenSheets()
+│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances
+│   └── NUKE_SEEDED_DATA() - Clears seeded data only
 └── User Interface
     ├── onOpen() - Menu creation
-    ├── refreshCalculations()
-    ├── goToDashboard()
-    └── showHelp()
+    ├── refreshAllFormulas()
+    └── showSmartDashboard()
 ```
 
 ### Technical Details
@@ -547,9 +557,7 @@ Features include:
 
 ---
 
-### 7. Member Satisfaction Tracking
-
-> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
+### 7. Member Satisfaction Tracking (📊 Member Satisfaction)
 
 **Purpose**: Track and analyze member satisfaction surveys
 
@@ -571,9 +579,7 @@ Features include:
 - Average Communication
 - % Would Recommend (percentage of Yes responses)
 
-### 8. Feedback & Development
-
-> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
+### 8. Feedback & Development (💡 Feedback & Development)
 
 **Purpose**: Track system improvements and feature requests
 
