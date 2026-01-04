@@ -132,9 +132,11 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `viewAuditLog()` - View audit entries
   - `getAuditHistory()` - Get history for a record
 
-**SeedNuke.gs** (~1353 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%)
+**SeedNuke.gs** (~1400 lines)
+- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%) + 50 survey responses + 3 feedback entries
 - `seedConfigData()` - Populate Config dropdowns
+- `seedSatisfactionData()` - Seed 50 sample survey responses with realistic branching logic
+- `seedFeedbackData()` - Seed 3 sample feedback entries (bug, feature request, improvement)
 - `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
   - Default grievancePercent is 30% if not specified
   - Example: `SEED_MEMBERS(100)` seeds 100 members + ~30 grievances
@@ -147,7 +149,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `seed100MembersWithGrievances()` - Shortcut: seed 100 members + 50 grievances (50%)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
-- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries)
+- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries), clears survey responses, deletes Feedback & Menu Checklist sheets
 - `NUKE_CONFIG_DROPDOWNS()` - Clear only Config dropdowns
 - `getConfigValues()` - Helper: get values from Config column
 - `randomChoice()` - Helper: pick random array element
@@ -401,20 +403,56 @@ var GRIEVANCE_COLS = {
 };
 ```
 
-### SATISFACTION_COLS (10 columns: A-J)
+### SATISFACTION_COLS (68-Question Google Form Response + Summary)
+
+**Form Response Area (A-BP):** Auto-populated by linked Google Form (68 questions + timestamp)
+**Summary/Chart Data Area (BT-CD):** Section averages for charts and dashboards
 
 ```javascript
 var SATISFACTION_COLS = {
-  SURVEY_ID: 1,                // A - Auto-generated unique ID
-  MEMBER_ID: 2,                // B - Links to Member Directory
-  MEMBER_NAME: 3,              // C - Auto-populated from Member Directory
-  DATE_SENT: 4,                // D - Date survey was sent
-  DATE_COMPLETED: 5,           // E - Date survey was completed
-  OVERALL_SATISFACTION: 6,     // F - 1-5 scale
-  STEWARD_SUPPORT: 7,          // G - 1-5 scale
-  COMMUNICATION: 8,            // H - 1-5 scale
-  WOULD_RECOMMEND: 9,          // I - Yes/No
-  COMMENTS: 10                 // J - Free text
+  // Form Response Columns (auto-created by Google Form)
+  TIMESTAMP: 1,                   // A - Auto by Google Forms
+
+  // Work Context (Q1-5)
+  Q1_WORKSITE: 2,                 // B - Worksite/Program/Region
+  Q2_ROLE: 3,                     // C - Role/Job Group
+  Q3_SHIFT: 4,                    // D - Day/Evening/Night/Rotating
+  Q4_TIME_IN_ROLE: 5,             // E - Tenure range
+  Q5_STEWARD_CONTACT: 6,          // F - Yes/No (branching)
+
+  // Overall Satisfaction Q6-9, Steward Ratings Q10-17, etc.
+  // ... (68 total questions, see Constants.gs for full list)
+
+  // Summary/Chart Data Area (BT onwards)
+  SUMMARY_START: 72,              // BT
+  AVG_OVERALL_SAT: 72,            // BT - Avg of Q6-Q9
+  AVG_STEWARD_RATING: 73,         // BU - Avg of Q10-Q16
+  AVG_STEWARD_ACCESS: 74,         // BV - Avg of Q18-Q20
+  AVG_CHAPTER: 75,                // BW - Avg of Q21-Q25
+  AVG_LEADERSHIP: 76,             // BX - Avg of Q26-Q31
+  AVG_CONTRACT: 77,               // BY - Avg of Q32-Q35
+  AVG_REPRESENTATION: 78,         // BZ - Avg of Q37-Q40
+  AVG_COMMUNICATION: 79,          // CA - Avg of Q41-Q45
+  AVG_MEMBER_VOICE: 80,           // CB - Avg of Q46-Q50
+  AVG_VALUE_ACTION: 81,           // CC - Avg of Q51-Q55
+  AVG_SCHEDULING: 82              // CD - Avg of Q56-Q62
+};
+
+// Survey Section Definitions for Analysis
+var SATISFACTION_SECTIONS = {
+  WORK_CONTEXT: { name: 'Work Context', questions: [2,3,4,5,6], scale: false },
+  OVERALL_SAT: { name: 'Overall Satisfaction', questions: [7,8,9,10], scale: true },
+  STEWARD_3A: { name: 'Steward Ratings', questions: [11-17], scale: true },
+  STEWARD_3B: { name: 'Steward Access', questions: [19,20,21], scale: true },
+  CHAPTER: { name: 'Chapter Effectiveness', questions: [22-26], scale: true },
+  LEADERSHIP: { name: 'Local Leadership', questions: [27-32], scale: true },
+  CONTRACT: { name: 'Contract Enforcement', questions: [33-36], scale: true },
+  REPRESENTATION: { name: 'Representation Process', questions: [38-41], scale: true },
+  COMMUNICATION: { name: 'Communication Quality', questions: [42-46], scale: true },
+  MEMBER_VOICE: { name: 'Member Voice & Culture', questions: [47-51], scale: true },
+  VALUE_ACTION: { name: 'Value & Collective Action', questions: [52-56], scale: true },
+  SCHEDULING: { name: 'Scheduling/Office Days', questions: [57-63], scale: true },
+  PRIORITIES: { name: 'Priorities & Close', questions: [65-68], scale: false }
 };
 ```
 
@@ -438,7 +476,7 @@ var FEEDBACK_COLS = {
 
 ---
 
-## Sheet Structure (7 Visible + 6 Hidden)
+## Sheet Structure (8 Visible + 6 Hidden)
 
 ### Core Data Sheets
 
@@ -459,8 +497,9 @@ var FEEDBACK_COLS = {
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 6 | 📊 Member Satisfaction | Data | Survey tracking with satisfaction metrics (10 columns) |
+| 6 | 📊 Member Satisfaction | Data | 68-question Google Form survey with dashboard, charts (82 cols + dashboard) |
 | 7 | 💡 Feedback & Development | Data | Bug/feature tracking with priority (11 columns) |
+| 8 | ✅ Menu Checklist | Reference | Function reference guide organized by 13 phases |
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 
@@ -606,7 +645,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 └── Setup Data Validations
 
 🎭 Demo
-├── 🚀 Seed All Sample Data (1,000 members + 300 grievances)
+├── 🚀 Seed All Sample Data (1,000 members + 300 grievances + 50 surveys + 3 feedback)
 └── 🗑️ Nuke Data (submenu)
     ├── ☢️ NUKE SEEDED DATA
     ├── 🧹 Clear Config Dropdowns Only

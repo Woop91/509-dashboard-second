@@ -138,6 +138,8 @@ function SEED_SAMPLE_DATA() {
     '• Config dropdowns (Job Titles, Locations, etc.)\n' +
     '• 1,000 sample members\n' +
     '• 300 sample grievances (30%)\n' +
+    '• 50 sample survey responses\n' +
+    '• 3 sample feedback entries\n' +
     '• Auto-sync trigger for live updates\n\n' +
     'Note: Some members may have multiple grievances.\n' +
     'Member Directory will auto-update when Grievance Log changes.\n\n' +
@@ -155,6 +157,12 @@ function SEED_SAMPLE_DATA() {
   ss.toast('Seeding 1,000 members + 300 grievances (this may take a moment)...', '🌱 Seeding', 10);
   SEED_MEMBERS(1000, 30);
 
+  ss.toast('Seeding survey responses...', '🌱 Seeding', 2);
+  seedSatisfactionData();
+
+  ss.toast('Seeding feedback entries...', '🌱 Seeding', 2);
+  seedFeedbackData();
+
   ss.toast('Installing auto-sync trigger...', '🔧 Setup', 3);
   installAutoSyncTriggerQuick();
 
@@ -163,6 +171,8 @@ function SEED_SAMPLE_DATA() {
     '• Config dropdowns populated\n' +
     '• 1,000 members added\n' +
     '• 300 grievances added (30%)\n' +
+    '• 50 survey responses added\n' +
+    '• 3 feedback entries added\n' +
     '• Auto-sync trigger installed\n\n' +
     'Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) ' +
     'will now auto-update when you edit the Grievance Log.', ui.ButtonSet.OK);
@@ -258,6 +268,306 @@ function seedConfigData() {
   if (seededAny) {
     SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
   }
+}
+
+/**
+ * Seed 3 sample entries in the Feedback & Development sheet
+ * Demonstrates bug reports, feature requests, and improvements
+ */
+function seedFeedbackData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.FEEDBACK);
+
+  if (!sheet) {
+    Logger.log('Feedback sheet not found. Creating it...');
+    createFeedbackSheet(ss);
+    sheet = ss.getSheetByName(SHEETS.FEEDBACK);
+    if (!sheet) {
+      Logger.log('Could not create Feedback sheet');
+      return;
+    }
+  }
+
+  // Check if sheet already has data (skip if data exists)
+  if (sheet.getLastRow() > 1) {
+    Logger.log('Feedback sheet already has data. Skipping seed.');
+    return;
+  }
+
+  // Generate 3 sample feedback entries
+  var now = new Date();
+  var oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  var threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+  var sampleFeedback = [
+    // Entry 1: Bug report (resolved)
+    [
+      oneWeekAgo,                                    // A: Timestamp
+      'John Smith',                                  // B: Submitted By
+      'Dashboard',                                   // C: Category
+      'Bug',                                         // D: Type
+      'Medium',                                      // E: Priority
+      'Dashboard metrics not refreshing',            // F: Title
+      'The Quick Stats section sometimes shows stale data after editing the Grievance Log. Requires manual refresh to update.', // G: Description
+      'Resolved',                                    // H: Status
+      'Tech Team',                                   // I: Assigned To
+      'Added auto-refresh trigger on Grievance Log edit. Metrics now update within 30 seconds.', // J: Resolution
+      'User confirmed fix working'                   // K: Notes
+    ],
+    // Entry 2: Feature request (in progress)
+    [
+      threeDaysAgo,                                  // A: Timestamp
+      'Mary Johnson',                                // B: Submitted By
+      'Member Directory',                            // C: Category
+      'Feature Request',                             // D: Type
+      'High',                                        // E: Priority
+      'Bulk import members from CSV',                // F: Title
+      'Would like ability to import multiple members at once from a CSV file instead of entering one by one.', // G: Description
+      'In Progress',                                 // H: Status
+      'Tech Team',                                   // I: Assigned To
+      '',                                            // J: Resolution
+      'Targeting v2.2 release'                       // K: Notes
+    ],
+    // Entry 3: Improvement (new)
+    [
+      now,                                           // A: Timestamp
+      'Robert Williams',                             // B: Submitted By
+      'Reports',                                     // C: Category
+      'Improvement',                                 // D: Type
+      'Low',                                         // E: Priority
+      'Add PDF export for Dashboard',                // F: Title
+      'It would be helpful to export the Dashboard as a PDF for sharing with chapter leadership during meetings.', // G: Description
+      'New',                                         // H: Status
+      '',                                            // I: Assigned To
+      '',                                            // J: Resolution
+      ''                                             // K: Notes
+    ]
+  ];
+
+  // Write sample data
+  sheet.getRange(2, 1, sampleFeedback.length, sampleFeedback[0].length).setValues(sampleFeedback);
+
+  // Format timestamp column
+  sheet.getRange(2, FEEDBACK_COLS.TIMESTAMP, sampleFeedback.length, 1).setNumberFormat('MM/dd/yyyy HH:mm');
+
+  Logger.log('Seeded ' + sampleFeedback.length + ' sample feedback entries');
+}
+
+/**
+ * Seeds 50 sample survey responses in Member Satisfaction sheet
+ * Generates realistic distribution of ratings across all survey sections
+ * Demonstrates form response data with branching logic
+ */
+function seedSatisfactionData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!sheet) {
+    Logger.log('Satisfaction sheet not found. Creating it...');
+    createSatisfactionSheet(ss);
+    sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+    if (!sheet) {
+      Logger.log('Could not create Satisfaction sheet');
+      return;
+    }
+  }
+
+  // Check if sheet already has data (skip if data exists beyond header)
+  if (sheet.getLastRow() > 1) {
+    Logger.log('Satisfaction sheet already has data. Skipping seed.');
+    return;
+  }
+
+  // Sample data pools for realistic responses
+  var worksites = ['Downtown Office', 'North Regional', 'South Campus', 'West Branch', 'East Center', 'Central HQ'];
+  var roles = ['Social Worker', 'Case Manager', 'Counselor', 'Coordinator', 'Specialist', 'Analyst'];
+  var shifts = ['Day (8am-4pm)', 'Swing (4pm-12am)', 'Night (12am-8am)', 'Flex Schedule'];
+  var tenures = ['Less than 1 year', '1-3 years', '3-5 years', '5-10 years', 'More than 10 years'];
+
+  var priorities = [
+    'Better communication', 'Higher wages', 'Improved benefits', 'Workplace safety',
+    'Manageable caseloads', 'Professional development', 'Better management',
+    'More staff', 'Schedule flexibility', 'Union visibility'
+  ];
+
+  var stewardComments = [
+    'Very helpful and responsive', 'Could improve follow-up', 'Always available when needed',
+    'Great advocate', 'Would like more proactive outreach', 'Excellent communication',
+    'Needs to be more accessible', 'Very professional', '', ''
+  ];
+
+  var schedulingChallenges = [
+    'Balancing work and family obligations', 'Short notice for schedule changes',
+    'Inconsistent shift assignments', 'Difficulty getting preferred shifts',
+    'Overtime requirements', 'No major issues', '', ''
+  ];
+
+  var oneChanges = [
+    'More transparency in decision-making', 'Better contract enforcement',
+    'Faster grievance resolution', 'More member meetings', 'Improved communication',
+    'Stronger management accountability', 'Better training for stewards',
+    'More visibility of union leadership', '', ''
+  ];
+
+  var keepDoing = [
+    'Monthly newsletters', 'Quick response to grievances', 'Member appreciation events',
+    'Training opportunities', 'Contract education', 'Workplace visits',
+    'Fighting for better wages', 'Supporting members in meetings', '', ''
+  ];
+
+  // Generate 50 sample responses
+  var sampleData = [];
+  var now = new Date();
+
+  for (var i = 0; i < 50; i++) {
+    // Spread responses over last 60 days
+    var daysAgo = Math.floor(Math.random() * 60);
+    var timestamp = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+
+    // Branching: 70% had steward contact
+    var hadStewardContact = Math.random() < 0.7;
+    // Branching: 40% filed grievance
+    var filedGrievance = Math.random() < 0.4;
+
+    // Generate weighted random rating (skewed positive: 6-10 more likely)
+    function weightedRating() {
+      var r = Math.random();
+      if (r < 0.1) return Math.floor(Math.random() * 3) + 1;      // 1-3 (10%)
+      if (r < 0.3) return Math.floor(Math.random() * 2) + 4;      // 4-5 (20%)
+      if (r < 0.6) return Math.floor(Math.random() * 2) + 6;      // 6-7 (30%)
+      return Math.floor(Math.random() * 3) + 8;                    // 8-10 (40%)
+    }
+
+    function randomItem(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function randomPriorities() {
+      var shuffled = priorities.slice().sort(function() { return 0.5 - Math.random(); });
+      return shuffled.slice(0, 3).join(', ');
+    }
+
+    // Build row (68 columns: A-BP)
+    var row = [];
+
+    // A: Timestamp
+    row.push(timestamp);
+
+    // B-F: Work Context (Q1-5)
+    row.push(randomItem(worksites));           // Q1: Worksite
+    row.push(randomItem(roles));               // Q2: Role
+    row.push(randomItem(shifts));              // Q3: Shift
+    row.push(randomItem(tenures));             // Q4: Time in role
+    row.push(hadStewardContact ? 'Yes' : 'No'); // Q5: Steward contact
+
+    // G-J: Overall Satisfaction (Q6-9) - everyone answers
+    row.push(weightedRating());  // Q6: Satisfied with rep
+    row.push(weightedRating());  // Q7: Trust union
+    row.push(weightedRating());  // Q8: Feel protected
+    row.push(weightedRating());  // Q9: Recommend
+
+    // K-R: Steward Ratings 3A (Q10-17) - only if had contact
+    if (hadStewardContact) {
+      row.push(weightedRating());  // Q10: Timely response
+      row.push(weightedRating());  // Q11: Treated with respect
+      row.push(weightedRating());  // Q12: Explained options
+      row.push(weightedRating());  // Q13: Followed through
+      row.push(weightedRating());  // Q14: Advocated
+      row.push(weightedRating());  // Q15: Safe concerns
+      row.push(weightedRating());  // Q16: Confidentiality
+      row.push(randomItem(stewardComments)); // Q17: Improvement suggestions
+    } else {
+      row.push('', '', '', '', '', '', '', ''); // Empty if no contact
+    }
+
+    // S-U: Steward Access 3B (Q18-20) - only if NO contact
+    if (!hadStewardContact) {
+      row.push(weightedRating());  // Q18: Know how to contact
+      row.push(weightedRating());  // Q19: Confident would get help
+      row.push(weightedRating());  // Q20: Easy to find
+    } else {
+      row.push('', '', ''); // Empty if had contact
+    }
+
+    // V-Z: Chapter Effectiveness (Q21-25) - everyone
+    row.push(weightedRating());  // Q21: Reps understand issues
+    row.push(weightedRating());  // Q22: Chapter communication
+    row.push(weightedRating());  // Q23: Organizes effectively
+    row.push(weightedRating());  // Q24: Know chapter contact
+    row.push(weightedRating());  // Q25: Fair representation
+
+    // AA-AF: Local Leadership (Q26-31) - everyone
+    row.push(weightedRating());  // Q26: Decisions communicated
+    row.push(weightedRating());  // Q27: Understand process
+    row.push(weightedRating());  // Q28: Transparent finances
+    row.push(weightedRating());  // Q29: Accountable
+    row.push(weightedRating());  // Q30: Fair processes
+    row.push(weightedRating());  // Q31: Welcomes opinions
+
+    // AG-AK: Contract Enforcement (Q32-36) - everyone
+    row.push(weightedRating());  // Q32: Enforces contract
+    row.push(weightedRating());  // Q33: Realistic timelines
+    row.push(weightedRating());  // Q34: Clear updates
+    row.push(weightedRating());  // Q35: Frontline priority
+    row.push(filedGrievance ? 'Yes' : 'No'); // Q36: Filed grievance
+
+    // AL-AO: Representation 6A (Q37-40) - only if filed grievance
+    if (filedGrievance) {
+      row.push(weightedRating());  // Q37: Understood steps
+      row.push(weightedRating());  // Q38: Felt supported
+      row.push(weightedRating());  // Q39: Updates often enough
+      row.push(weightedRating());  // Q40: Outcome justified
+    } else {
+      row.push('', '', '', ''); // Empty if no grievance
+    }
+
+    // AP-AT: Communication (Q41-45) - everyone
+    row.push(weightedRating());  // Q41: Clear & actionable
+    row.push(weightedRating());  // Q42: Enough information
+    row.push(weightedRating());  // Q43: Find info easily
+    row.push(weightedRating());  // Q44: Reaches all shifts
+    row.push(weightedRating());  // Q45: Meetings worth attending
+
+    // AU-AY: Member Voice (Q46-50) - everyone
+    row.push(weightedRating());  // Q46: Voice matters
+    row.push(weightedRating());  // Q47: Seeks input
+    row.push(weightedRating());  // Q48: Dignity
+    row.push(weightedRating());  // Q49: Newer members supported
+    row.push(weightedRating());  // Q50: Conflict handled respectfully
+
+    // AZ-BD: Value & Action (Q51-55) - everyone
+    row.push(weightedRating());  // Q51: Good value for dues
+    row.push(weightedRating());  // Q52: Priorities reflect needs
+    row.push(weightedRating());  // Q53: Prepared to mobilize
+    row.push(weightedRating());  // Q54: Know how to get involved
+    row.push(weightedRating());  // Q55: Can win together
+
+    // BE-BL: Scheduling (Q56-63) - everyone
+    row.push(weightedRating());  // Q56: Understand changes
+    row.push(weightedRating());  // Q57: Adequately informed
+    row.push(weightedRating());  // Q58: Clear criteria
+    row.push(weightedRating());  // Q59: Work under expectations
+    row.push(weightedRating());  // Q60: Effective outcomes
+    row.push(weightedRating());  // Q61: Supports wellbeing
+    row.push(weightedRating());  // Q62: Concerns taken seriously
+    row.push(randomItem(schedulingChallenges)); // Q63: Scheduling challenge
+
+    // BM-BP: Priorities & Close (Q64-68) - everyone
+    row.push(randomPriorities());         // Q64: Top 3 priorities
+    row.push(randomItem(oneChanges));     // Q65: #1 change to make
+    row.push(randomItem(keepDoing));      // Q66: Keep doing
+    row.push('');                         // Q67: Additional comments (mostly empty)
+
+    sampleData.push(row);
+  }
+
+  // Write sample data starting at row 2
+  sheet.getRange(2, 1, sampleData.length, sampleData[0].length).setValues(sampleData);
+
+  // Format timestamp column
+  sheet.getRange(2, 1, sampleData.length, 1).setNumberFormat('MM/dd/yyyy HH:mm');
+
+  Logger.log('Seeded ' + sampleData.length + ' sample survey responses');
 }
 
 /**
@@ -1183,12 +1493,19 @@ function NUKE_SEEDED_DATA() {
     });
   }
 
+  // Check for Feedback sheet
+  var feedbackSheet = ss.getSheetByName(SHEETS.FEEDBACK);
+  var hasFeedback = feedbackSheet && feedbackSheet.getLastRow() > 1;
+
   var response = ui.alert(
     '☢️ NUKE SEEDED DATA',
     '⚠️ This will permanently delete seeded/demo data:\n\n' +
     '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
     '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
-    '• Config dropdown values\n\n' +
+    '• Config dropdown values\n' +
+    '• Survey responses (Member Satisfaction data cleared)\n' +
+    '• Feedback & Development sheet (entire sheet deleted)\n' +
+    '• Menu Checklist sheet (entire sheet deleted)\n\n' +
     '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
@@ -1205,7 +1522,10 @@ function NUKE_SEEDED_DATA() {
     'This will:\n' +
     '1. Delete ' + memberCount + ' seeded members\n' +
     '2. Delete ' + grievanceCount + ' seeded grievances\n' +
-    '3. Permanently disable the Demo menu\n\n' +
+    '3. Clear survey responses from Member Satisfaction\n' +
+    '4. Delete Feedback & Development sheet\n' +
+    '5. Delete Menu Checklist sheet\n' +
+    '6. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -1249,6 +1569,48 @@ function NUKE_SEEDED_DATA() {
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
 
+    // Clear Member Satisfaction survey data (keep headers and formulas)
+    var satisfactionSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+    var surveyCleared = false;
+    if (satisfactionSheet && satisfactionSheet.getLastRow() > 1) {
+      try {
+        // Clear only the response data rows (row 2 onwards), keep header row 1
+        // Clear columns A-BP (form responses) but preserve BT-CD (section average formulas)
+        var lastDataRow = satisfactionSheet.getLastRow();
+        satisfactionSheet.getRange(2, 1, lastDataRow - 1, 68).clearContent();
+        surveyCleared = true;
+        Logger.log('Survey response data cleared from Member Satisfaction');
+      } catch (e) {
+        Logger.log('Could not clear survey data: ' + e.message);
+      }
+    }
+
+    // Delete Feedback & Development sheet entirely
+    var feedbackToDelete = ss.getSheetByName(SHEETS.FEEDBACK);
+    var feedbackDeleted = false;
+    if (feedbackToDelete) {
+      try {
+        ss.deleteSheet(feedbackToDelete);
+        feedbackDeleted = true;
+        Logger.log('Feedback & Development sheet deleted');
+      } catch (e) {
+        Logger.log('Could not delete Feedback sheet: ' + e.message);
+      }
+    }
+
+    // Delete Menu Checklist sheet entirely
+    var menuChecklistToDelete = ss.getSheetByName(SHEETS.MENU_CHECKLIST);
+    var menuChecklistDeleted = false;
+    if (menuChecklistToDelete) {
+      try {
+        ss.deleteSheet(menuChecklistToDelete);
+        menuChecklistDeleted = true;
+        Logger.log('Menu Checklist sheet deleted');
+      } catch (e) {
+        Logger.log('Could not delete Menu Checklist sheet: ' + e.message);
+      }
+    }
+
     // Clear tracked IDs from Script Properties
     var props = PropertiesService.getScriptProperties();
     props.deleteProperty('SEEDED_MEMBER_IDS');
@@ -1261,8 +1623,11 @@ function NUKE_SEEDED_DATA() {
     ui.alert('☢️ Complete',
       'Seeded data has been deleted:\n' +
       '• ' + deletedMembers + ' members removed\n' +
-      '• ' + deletedGrievances + ' grievances removed\n\n' +
-      'Demo mode has been permanently disabled.\n' +
+      '• ' + deletedGrievances + ' grievances removed\n' +
+      (surveyCleared ? '• Survey responses cleared from Member Satisfaction\n' : '') +
+      (feedbackDeleted ? '• Feedback & Development sheet deleted\n' : '') +
+      (menuChecklistDeleted ? '• Menu Checklist sheet deleted\n' : '') +
+      '\nDemo mode has been permanently disabled.\n' +
       'Refresh the page to remove the Demo menu.',
       ui.ButtonSet.OK);
 

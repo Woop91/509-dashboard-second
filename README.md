@@ -249,19 +249,20 @@ Project Files (9 source files → 1 consolidated deployment)
 
 Key Functions:
 ├── CREATE_509_DASHBOARD() - Main setup function
-├── Sheet Creation (7 sheets)
+├── Sheet Creation (8 sheets)
 │   ├── createConfigSheet()
 │   ├── createMemberDirectory()
 │   ├── createGrievanceLog()
 │   ├── createDashboard()
 │   ├── createInteractiveDashboard()
 │   ├── createSatisfactionSheet()
-│   └── createFeedbackSheet()
+│   ├── createFeedbackSheet()
+│   └── createMenuChecklistSheet_()
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
-│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances
-│   └── NUKE_SEEDED_DATA() - Clears seeded data only
+│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 50 surveys + 3 feedback entries
+│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Menu Checklist sheets
 └── User Interface
     ├── onOpen() - Menu creation
     ├── refreshAllFormulas()
@@ -521,7 +522,7 @@ Features include:
 - **Seed 50 Members (30% Grievances)** - Quick seed option
 - **Seed 100 Members (50% Grievances)** - Quick seed with more grievances
 
-**NUKE_SEEDED_DATA()** - Clears all member and grievance data
+**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Menu Checklist sheets
 
 **Limits**: Max 2,000 members per call (prevents timeout)
 
@@ -559,25 +560,35 @@ Features include:
 
 ### 7. Member Satisfaction Tracking (📊 Member Satisfaction)
 
-**Purpose**: Track and analyze member satisfaction surveys
+**Purpose**: Track and analyze member satisfaction via 68-question Google Form survey
 
-**Columns**:
-- Survey ID
-- Member ID (links to Member Directory)
-- Member Name
-- Date Sent
-- Date Completed
-- Overall Satisfaction (1-5 scale)
-- Steward Support (1-5 scale)
-- Communication (1-5 scale)
-- Would Recommend Union (Y/N)
-- Comments (free text)
+**Structure**:
+- **Form Response Area (A-BP)**: Auto-populated by linked Google Form (68 questions)
+- **Section Averages (BT-CD)**: Auto-calculated averages per section for charts
+- **Dashboard Area (CF+)**: Summary metrics, demographics, chart data
 
-**Calculated Metrics**:
-- Average Overall Satisfaction
-- Average Steward Support
-- Average Communication
-- % Would Recommend (percentage of Yes responses)
+**Survey Sections (68 questions)**:
+1. Work Context (Q1-5): Worksite, Role, Shift, Tenure, Steward contact
+2. Overall Satisfaction (Q6-9): 4 scale questions (1-10)
+3. Steward Ratings 3A (Q10-17): 7 scale + 1 paragraph (for those with contact)
+4. Steward Access 3B (Q18-20): 3 scale questions (for those without contact)
+5. Chapter Effectiveness (Q21-25): 5 scale questions
+6. Local Leadership (Q26-31): 6 scale questions
+7. Contract Enforcement (Q32-36): 4 scale + branching
+8. Representation 6A (Q37-40): 4 scale questions (for those who filed grievance)
+9. Communication (Q41-45): 5 scale questions
+10. Member Voice (Q46-50): 5 scale questions
+11. Value & Action (Q51-55): 5 scale questions
+12. Scheduling (Q56-63): 7 scale + 1 paragraph
+13. Priorities & Close (Q64-68): Checkboxes + 3 paragraphs
+
+**Dashboard Features**:
+- Response Summary (total responses, date range)
+- Section Scores (11 category averages)
+- Demographics Breakdown (shift, tenure, steward contact, grievance filed)
+- Chart Data Table (for creating bar/column charts)
+- Google Form Setup Instructions
+- 68-Question Survey Outline (reference for form creation)
 
 ### 8. Feedback & Development (💡 Feedback & Development)
 
@@ -595,6 +606,25 @@ Features include:
 - Assigned To
 - Resolution
 - Notes
+
+### 9. Menu Checklist (✅ Menu Checklist)
+
+**Purpose**: Function reference guide organized by 13 phases
+
+**Phases**:
+1. Foundation & Setup
+2. Sync & Triggers
+3. Core Dashboards
+4. Search
+5. Grievance Management
+6. Google Drive
+7. Calendar
+8. Notifications
+9. Accessibility & Theming
+10. Productivity Tools
+11. Performance & Cache
+12. Validation
+13. Testing
 
 ## Sheet Structure
 
@@ -653,7 +683,13 @@ System improvement tracking
 
 ## Data Seeding
 
-Generate realistic test data with members and grievances in a single operation:
+Generate realistic test data for the dashboard:
+
+### Seed All Sample Data (Recommended)
+- `SEED_SAMPLE_DATA()` - Seeds complete demo environment
+- Access via: **🎭 Demo > 🚀 Seed All Sample Data**
+- Seeds: 1,000 members + 300 grievances + 50 survey responses + 3 feedback entries
+- Automatically installs auto-sync trigger
 
 ### Unified Member & Grievance Seeding
 - `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances
