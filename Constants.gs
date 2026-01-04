@@ -38,7 +38,10 @@ var SHEETS = {
   // Menu Checklist
   MENU_CHECKLIST: 'Menu Checklist',
   // Audit Log (hidden)
-  AUDIT_LOG: '_Audit_Log'
+  AUDIT_LOG: '_Audit_Log',
+  // Satisfaction & Feedback sheets
+  SATISFACTION: '📊 Member Satisfaction',
+  FEEDBACK: '💡 Feedback & Development'
 };
 
 // ============================================================================
@@ -270,6 +273,49 @@ var CONFIG_COLS = {
   MAIN_FAX: 41,               // AO
   MAIN_CONTACT_NAME: 42,      // AP
   MAIN_CONTACT_EMAIL: 43      // AQ
+};
+
+// ============================================================================
+// SATISFACTION SURVEY COLUMNS (10 columns: A-J)
+// ============================================================================
+
+/**
+ * Member Satisfaction Survey column positions (1-indexed)
+ * @const {Object}
+ */
+var SATISFACTION_COLS = {
+  SURVEY_ID: 1,                // A - Auto-generated unique ID
+  MEMBER_ID: 2,                // B - Links to Member Directory
+  MEMBER_NAME: 3,              // C - Auto-populated from Member Directory
+  DATE_SENT: 4,                // D - Date survey was sent
+  DATE_COMPLETED: 5,           // E - Date survey was completed
+  OVERALL_SATISFACTION: 6,     // F - 1-5 scale
+  STEWARD_SUPPORT: 7,          // G - 1-5 scale
+  COMMUNICATION: 8,            // H - 1-5 scale
+  WOULD_RECOMMEND: 9,          // I - Yes/No
+  COMMENTS: 10                 // J - Free text
+};
+
+// ============================================================================
+// FEEDBACK & DEVELOPMENT COLUMNS (11 columns: A-K)
+// ============================================================================
+
+/**
+ * Feedback & Development column positions (1-indexed)
+ * @const {Object}
+ */
+var FEEDBACK_COLS = {
+  TIMESTAMP: 1,                // A - Auto-generated timestamp
+  SUBMITTED_BY: 2,             // B - Who submitted the feedback
+  CATEGORY: 3,                 // C - Area of the system
+  TYPE: 4,                     // D - Bug, Feature Request, Improvement
+  PRIORITY: 5,                 // E - Low, Medium, High, Critical
+  TITLE: 6,                    // F - Short title
+  DESCRIPTION: 7,              // G - Detailed description
+  STATUS: 8,                   // H - New, In Progress, Resolved, Won't Fix
+  ASSIGNED_TO: 9,              // I - Who is working on it
+  RESOLUTION: 10,              // J - How it was resolved
+  NOTES: 11                    // K - Additional notes
 };
 
 // ============================================================================
