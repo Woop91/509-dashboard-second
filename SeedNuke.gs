@@ -380,8 +380,16 @@ function seedSatisfactionData() {
     }
   }
 
-  // Check if sheet already has data (skip if data exists beyond header)
-  if (sheet.getLastRow() > 1) {
+  // Check if column A (data area) already has data beyond header
+  var dataCol = sheet.getRange('A2:A10').getValues();
+  var hasData = false;
+  for (var i = 0; i < dataCol.length; i++) {
+    if (dataCol[i][0] !== '') {
+      hasData = true;
+      break;
+    }
+  }
+  if (hasData) {
     Logger.log('Satisfaction sheet already has data. Skipping seed.');
     return;
   }
