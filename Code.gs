@@ -193,8 +193,7 @@ function CREATE_509_DASHBOARD() {
     '• 💼 Dashboard (Executive metrics)\n' +
     '• 🎯 Custom View (Customizable metrics)\n' +
     '• 📊 Member Satisfaction (Survey tracking)\n' +
-    '• 💡 Feedback & Development (Bug/feature tracking)\n' +
-    '• Menu Checklist (function reference guide)\n\n' +
+    '• 💡 Feedback & Development (Bug/feature tracking)\n\n' +
     'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
@@ -236,10 +235,6 @@ function CREATE_509_DASHBOARD() {
     createFeedbackSheet(ss);
     ss.toast('Created Feedback & Development', '🏗️ Progress', 2);
 
-    // Create Menu Checklist (function reference guide)
-    createMenuChecklistSheet_();
-    ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
-
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
     setupDataValidations();
@@ -253,11 +248,10 @@ function CREATE_509_DASHBOARD() {
 
     ss.toast('Dashboard creation complete!', '✅ Success', 5);
     ui.alert('✅ Success', '509 Dashboard has been created successfully!\n\n' +
-      '8 sheets created:\n' +
+      '7 sheets created:\n' +
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Custom View (views)\n' +
-      '• 📊 Member Satisfaction, 💡 Feedback (tracking)\n' +
-      '• Menu Checklist (function reference)\n\n' +
+      '• 📊 Member Satisfaction, 💡 Feedback (tracking)\n\n' +
       'Plus 6 hidden calculation sheets with self-healing formulas.\n\n' +
       '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
       'update automatically when you edit the sheets.\n\n' +
