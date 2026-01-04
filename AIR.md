@@ -132,9 +132,10 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `viewAuditLog()` - View audit entries
   - `getAuditHistory()` - Get history for a record
 
-**SeedNuke.gs** (~1353 lines)
-- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%)
+**SeedNuke.gs** (~1400 lines)
+- `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%) + 3 feedback entries
 - `seedConfigData()` - Populate Config dropdowns
+- `seedFeedbackData()` - Seed 3 sample feedback entries (bug, feature request, improvement)
 - `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
   - Default grievancePercent is 30% if not specified
   - Example: `SEED_MEMBERS(100)` seeds 100 members + ~30 grievances
@@ -147,7 +148,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `seed100MembersWithGrievances()` - Shortcut: seed 100 members + 50 grievances (50%)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
-- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries)
+- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries), deletes Feedback sheet
 - `NUKE_CONFIG_DROPDOWNS()` - Clear only Config dropdowns
 - `getConfigValues()` - Helper: get values from Config column
 - `randomChoice()` - Helper: pick random array element

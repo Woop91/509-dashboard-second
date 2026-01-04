@@ -13,8 +13,9 @@ When you execute the **Nuke Seed Data** function, the system will:
 ### Data Removal
 1. **Remove ALL Members**: Delete all test members from Member Directory
 2. **Remove ALL Grievances**: Delete all test grievances from Grievance Log
-3. **Clear Steward Workload**: Remove all test steward assignments
-4. **Clear Config Demo Data**: Remove demo entries from Config tab (if any exist):
+3. **Delete Feedback Sheet**: Completely removes the Feedback & Development sheet
+4. **Clear Steward Workload**: Remove all test steward assignments
+5. **Clear Config Demo Data**: Remove demo entries from Config tab (if any exist):
    - Job Titles (Column A)
    - Office Locations (Column B)
    - Units (Column C)
@@ -28,19 +29,19 @@ When you execute the **Nuke Seed Data** function, the system will:
    > **NOTE (v3.11+):** These fields are now LEFT EMPTY during CREATE_509_DASHBOARD. Users populate them with their own data. If no user data was added, there's nothing to clear.
 
 ### Demo Mode Disabling
-5. **Disable Demo Menu**: Sets a flag (`DEMO_MODE_DISABLED`) to hide the "🎭 Demo" menu on next refresh
-6. **Clear Tracking**: Removes the tracked seeded ID lists from Script Properties
+6. **Disable Demo Menu**: Sets a flag (`DEMO_MODE_DISABLED`) to hide the "🎭 Demo" menu on next refresh
+7. **Clear Tracking**: Removes the tracked seeded ID lists from Script Properties
 
 ### Preserved Items
-7. **Preserve Organization Info**: Keep your real organization settings:
+8. **Preserve Organization Info**: Keep your real organization settings:
    - Organization Name, Local Number, Main Address, Phone
    - Union Parent, State/Region, Website
    - Main Fax, Toll Free numbers
    - All deadline and contract reference columns
-8. **Preserve Structure**: Keep all headers, formulas, and sheet structure intact
-9. **Preserve Manually Entered Data**: Only rows with seeded ID patterns (M/G + 4 letters + 3 digits) are deleted
+9. **Preserve Structure**: Keep all headers, formulas, and sheet structure intact
+10. **Preserve Manually Entered Data**: Only rows with seeded ID patterns (M/G + 4 letters + 3 digits) are deleted
 
-> **🔴 IMPORTANT**: The nuke operation only deletes **seeded data rows** (matching the pattern `MJOSM123` or `GJOSM456`). Manually entered data with different ID formats is preserved. The Demo menu is hidden but the seed functions remain in the code.
+> **🔴 IMPORTANT**: The nuke operation only deletes **seeded data rows** (matching the pattern `MJOSM123` or `GJOSM456`) and completely removes the **Feedback & Development sheet**. Manually entered data with different ID formats is preserved. The Demo menu is hidden but the seed functions remain in the code.
 
 ---
 

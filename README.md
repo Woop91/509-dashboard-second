@@ -260,8 +260,8 @@ Key Functions:
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
-│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances
-│   └── NUKE_SEEDED_DATA() - Clears seeded data only
+│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 3 feedback entries
+│   └── NUKE_SEEDED_DATA() - Clears seeded data + deletes Feedback sheet
 └── User Interface
     ├── onOpen() - Menu creation
     ├── refreshAllFormulas()
@@ -559,25 +559,35 @@ Features include:
 
 ### 7. Member Satisfaction Tracking (📊 Member Satisfaction)
 
-**Purpose**: Track and analyze member satisfaction surveys
+**Purpose**: Track and analyze member satisfaction via 68-question Google Form survey
 
-**Columns**:
-- Survey ID
-- Member ID (links to Member Directory)
-- Member Name
-- Date Sent
-- Date Completed
-- Overall Satisfaction (1-5 scale)
-- Steward Support (1-5 scale)
-- Communication (1-5 scale)
-- Would Recommend Union (Y/N)
-- Comments (free text)
+**Structure**:
+- **Form Response Area (A-BP)**: Auto-populated by linked Google Form (68 questions)
+- **Section Averages (BT-CD)**: Auto-calculated averages per section for charts
+- **Dashboard Area (CF+)**: Summary metrics, demographics, chart data
 
-**Calculated Metrics**:
-- Average Overall Satisfaction
-- Average Steward Support
-- Average Communication
-- % Would Recommend (percentage of Yes responses)
+**Survey Sections (68 questions)**:
+1. Work Context (Q1-5): Worksite, Role, Shift, Tenure, Steward contact
+2. Overall Satisfaction (Q6-9): 4 scale questions (1-10)
+3. Steward Ratings 3A (Q10-17): 7 scale + 1 paragraph (for those with contact)
+4. Steward Access 3B (Q18-20): 3 scale questions (for those without contact)
+5. Chapter Effectiveness (Q21-25): 5 scale questions
+6. Local Leadership (Q26-31): 6 scale questions
+7. Contract Enforcement (Q32-36): 4 scale + branching
+8. Representation 6A (Q37-40): 4 scale questions (for those who filed grievance)
+9. Communication (Q41-45): 5 scale questions
+10. Member Voice (Q46-50): 5 scale questions
+11. Value & Action (Q51-55): 5 scale questions
+12. Scheduling (Q56-63): 7 scale + 1 paragraph
+13. Priorities & Close (Q64-68): Checkboxes + 3 paragraphs
+
+**Dashboard Features**:
+- Response Summary (total responses, date range)
+- Section Scores (11 category averages)
+- Demographics Breakdown (shift, tenure, steward contact, grievance filed)
+- Chart Data Table (for creating bar/column charts)
+- Google Form Setup Instructions
+- 68-Question Survey Outline (reference for form creation)
 
 ### 8. Feedback & Development (💡 Feedback & Development)
 
