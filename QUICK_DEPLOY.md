@@ -1,20 +1,20 @@
 # 🚀 Quick Deploy - SEIU 509 Dashboard
 
-## One-File Deployment (Easiest Method)
+## One-File Deployment
 
-This guide shows you how to deploy the **entire 509 Dashboard** using a **single file**.
+Deploy the **entire 509 Dashboard** using a **single file**.
 
 ---
 
 ## 📦 What You Get
 
-- ✅ **All 59 modules** in one auto-generated file
-- ✅ **Complete functionality** - nothing missing
+- ✅ **9 modules** in one auto-generated file (~460 KB)
+- ✅ **5 visible sheets** + 6 hidden calculation sheets
 - ✅ **Copy/paste deployment** - no complex setup
-- ✅ **1,000 members + 300 grievances** demo seeding with auto-sync
-- ✅ **Terminal dashboard** with 26+ real-time metrics
+- ✅ **Demo data seeding** (members + grievances)
+- ✅ **12-section Dashboard** with real-time metrics
 - ✅ **ADHD-friendly** design and features
-- ✅ **Audit logging and RBAC** (v2.4)
+- ✅ **Mobile-optimized** quick actions and web app
 
 ---
 
@@ -26,12 +26,12 @@ This guide shows you how to deploy the **entire 509 Dashboard** using a **single
 ```bash
 git clone https://github.com/Woop91/509-dashboard.git
 cd 509-dashboard
-node build.js --production
-# ConsolidatedDashboard.gs is now ready
+npm run build
+# ConsolidatedDashboard.gs is now ready (~460 KB)
 ```
 
 **Option B: Download directly**
-Download `ConsolidatedDashboard.gs` from this repository's main branch.
+Download `ConsolidatedDashboard.gs` from the repository.
 
 ### **Step 2: Create a New Google Sheet**
 
@@ -42,109 +42,87 @@ Download `ConsolidatedDashboard.gs` from this repository's main branch.
 ### **Step 3: Open Apps Script Editor**
 
 1. In your Google Sheet, click **Extensions → Apps Script**
-2. You'll see a default `Code.gs` file with some starter code
-3. **Delete all the default code** (select all and delete)
+2. **Delete all the default code** (select all and delete)
 
 ### **Step 4: Paste the Consolidated File**
 
 1. Open `ConsolidatedDashboard.gs` in your text editor
 2. **Select ALL** (Ctrl+A / Cmd+A)
 3. **Copy** (Ctrl+C / Cmd+C)
-4. **Paste** into the Apps Script editor (Ctrl+V / Cmd+V)
-5. **Save** the project (Ctrl+S / Cmd+S or click 💾 icon)
+4. **Paste** into the Apps Script editor
+5. **Save** the project (Ctrl+S)
 
 ### **Step 5: Authorize the Script**
 
-1. In the Apps Script editor toolbar, find the function dropdown
-2. Select **`CREATE_509_DASHBOARD`** from the dropdown
-3. Click the **▶️ Run** button
-4. A dialog will appear asking for permissions:
-   - Click **"Review permissions"**
-   - Choose your Google account
-   - Click **"Advanced"**
-   - Click **"Go to 509 Dashboard Scripts (unsafe)"**
-   - Click **"Allow"**
+1. Select **`CREATE_509_DASHBOARD`** from the function dropdown
+2. Click the **▶️ Run** button
+3. Click **"Review permissions"** → Choose your account
+4. Click **"Advanced"** → **"Go to 509 Dashboard Scripts (unsafe)"**
+5. Click **"Allow"**
+6. The script creates all sheets (~10 seconds)
 
-5. The script will run and create all sheets (~10 seconds)
-
-### **Step 6: Close Apps Script & Refresh**
+### **Step 6: Refresh the Page**
 
 1. Close the Apps Script editor tab
 2. Go back to your Google Sheet
-3. **Refresh the page** (F5 or Ctrl+R / Cmd+R)
-4. You should see **6 menus**: **👤 Dashboard**, **📊 Sheet Manager**, **🔧 Setup**, **🎭 Demo**, **⚙️ Administrator**, and **🧪 Tests**
+3. **Refresh the page** (F5)
+4. You should see custom menus appear
 
-> ✅ **All set!** `CREATE_509_DASHBOARD` already configured all sheets, dropdowns, and validations.
-
-### **Step 7: Seed Test Data**
+### **Step 7: Seed Test Data (Optional)**
 
 1. Click **🎭 Demo → 🚀 Seed All Sample Data**
-2. Confirm when prompted
-3. Wait for seeding to complete (seeds 1,000 members + 300 grievances)
-
-**Note:** Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) auto-update when you edit the Grievance Log
-
-### **Step 8: Open the Terminal Dashboard**
-
-1. Click **👤 Dashboard → Dashboards → 🎯 Unified Operations Monitor**
-2. The terminal-themed dashboard opens in a new dialog
-3. Explore the 7 sections:
-   - Executive Status & Alerts
-   - Process Efficiency
-   - Network Health
-   - Active Grievance Log
-   - Follow-up Radar
-   - Predictive Alerts
-   - Systemic Risk Monitor
+2. Wait for seeding to complete
 
 ---
 
 ## ✅ You're Done!
 
 Your dashboard is fully operational with:
-- ✅ 1,000 test members
-- ✅ 300 test grievances
-- ✅ Real-time analytics
-- ✅ Terminal operations monitor
-- ✅ Interactive customizable views
-- ✅ All ADHD-friendly features
+- ✅ Config sheet (dropdown values)
+- ✅ Member Directory (31 columns)
+- ✅ Grievance Log (34 columns)
+- ✅ 💼 Dashboard (12 analytics sections)
+- ✅ 🎯 Custom View (interactive metrics)
+- ✅ 6 hidden calculation sheets (self-healing formulas)
 
 ---
 
-## 📚 Next Steps
+## 📁 What's Included in ConsolidatedDashboard.gs?
 
-### **Explore the Features:**
+**9 Modules (~460 KB total):**
 
-| Menu | What It Does |
-|------|-------------|
-| **👤 Dashboard** | Daily operations, search, grievances, reports, accessibility |
-| **📊 Sheet Manager** | Data management, backups, automations, analytics |
-| **🔧 Setup** | Dropdown configuration, dashboard setup |
-| **🎭 Demo** | Seed demo data, nuke/clear data management |
-| **⚙️ Administrator** | System health, workflow, column toggles, RBAC |
-| **🧪 Tests** | Unit, validation, integration, performance tests |
+| Module | Purpose |
+|--------|---------|
+| Constants.gs | SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS |
+| Code.gs | Main setup, menus, sheet creation, Dashboard |
+| HiddenSheets.gs | 6 self-healing calculation sheets |
+| ADHDFeatures.gs | Accessibility (themes, focus mode, pomodoro) |
+| MobileQuickActions.gs | Mobile UI, quick actions, modal popup |
+| PerformanceUndo.gs | Caching layer, undo/redo system |
+| SeedNuke.gs | Demo data seeding and clearing |
+| WebApp.gs | Standalone web app for mobile access |
+| TestingValidation.gs | Test framework and data validation |
 
-#### Quick Access:
-- **Refresh All**: 👤 Dashboard → 🔄 Refresh All
-- **Operations Monitor**: 👤 Dashboard → 📊 Dashboards → 🎯 Unified Operations Monitor
-- **Main Dashboard**: 👤 Dashboard → 📊 Dashboards → 📊 Main Dashboard
-- **Help**: 👤 Dashboard → ❓ Help & Support
-- **Clear Data**: 🎭 Demo → 🗑️ Data Management → Nuke All Data
+**Generated by:** `npm run build`
 
-### **Customize Your Data:**
+---
 
-1. Edit **Config** tab to change dropdown options
-2. Manually add/edit members in **Member Directory**
-3. Manually add/edit grievances in **Grievance Log**
-4. Use **Interactive Dashboard** for custom views
+## 📊 Dashboard Sections (12 Total)
 
-### **Read the Documentation:**
-
-- `README.md` - Complete feature documentation
-- `ADHD_FRIENDLY_GUIDE.md` - Accessibility features
-- `STEWARD_GUIDE.md` - Guide for union stewards
-- `INTERACTIVE_DASHBOARD_GUIDE.md` - Custom views
-- `GRIEVANCE_WORKFLOW_GUIDE.md` - Workflow automation
+| # | Section | What It Shows |
+|---|---------|---------------|
+| 1 | Quick Stats | Members, Stewards, Active Grievances, Win Rate |
+| 2 | Member Metrics | Totals, Stewards, Avg Open Rate |
+| 3 | Grievance Metrics | Open, Pending, Settled, Won, Denied |
+| 4 | Timeline & Performance | Avg Days, Filed/Closed This Month |
+| 5 | Type Analysis | 5 issue categories breakdown |
+| 6 | Location Breakdown | 5 locations breakdown |
+| 7 | Month-over-Month Trends | Filed/Closed/Won trends |
+| 8 | Status Legend | Color reference guide |
+| 9 | Steward Performance Summary | Aggregate steward stats |
+| 10 | Top 30 Busiest Stewards | Ranked by active cases |
+| 11 | Top 10 Performers | Highest Performance Scores |
+| 12 | Stewards Needing Support | Lowest Performance Scores |
 
 ---
 
@@ -152,90 +130,29 @@ Your dashboard is fully operational with:
 
 ### **Menus don't appear?**
 - Refresh the page (F5)
-- Ensure you see **six menus**: 👤 Dashboard, 📊 Sheet Manager, 🔧 Setup, 🎭 Demo, ⚙️ Administrator, 🧪 Tests
-- Or manually run `onOpen()` from Apps Script editor
+- Run `onOpen()` manually from Apps Script editor
 
 ### **Authorization error?**
-- Make sure you completed Step 5 fully
+- Complete Step 5 fully
 - Close and reopen the Google Sheet
-- Try running any function from Apps Script editor again
 
-### **Seeding takes forever?**
-- Normal for large datasets (2-3 minutes total)
-- Don't close the sheet while seeding
-- Check Apps Script logs if it fails: View → Execution log
-
-### **Dashboard shows "CONNECTION ERROR"?**
-- Make sure you opened it via menu, not directly
-- Refresh the sheet and try again
-- Verify `getUnifiedDashboardData()` function exists in your code
-
-### **Need help?**
-- Click **📊 509 Dashboard → ❓ Help** in your sheet
-- Check the GitHub issues page
-- Review documentation files
+### **Dashboard shows errors?**
+- Run `REPAIR_DASHBOARD()` from Administrator menu
+- Run `DIAGNOSE_SETUP()` to check system health
 
 ---
 
-## 📁 What's Included in ConsolidatedDashboard.gs?
+## 📚 Documentation
 
-The auto-generated file contains **59 modules** organized by dependency:
-
-**Core Infrastructure:**
-- Constants.gs - Configuration (SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS)
-- SecurityUtils.gs - Security roles, RBAC, audit logging
-- Code.gs - Main setup, menu creation, sheet creation
-
-**Feature Modules (50+):**
-- Unified Operations Monitor - Terminal-themed dashboard
-- Interactive Dashboard - Member-customizable views
-- ADHD Enhancements - Accessibility features
-- Grievance Workflow - Process automation
-- Google Drive Integration - Auto-folder creation
-- Gmail Integration - Email templates
-- Calendar Integration - Deadline syncing
-- Backup & Recovery - Automated backups
-- Predictive Analytics - Trend forecasting
-- Root Cause Analysis - Pattern identification
-- And 40+ more...
-
-**Testing (dev builds only):**
-- TestFramework.gs - Test infrastructure
-- Code.test.gs - Unit tests
-- Integration.test.gs - Integration tests
-
-**Generated by:** `node build.js --production`
+| File | Purpose |
+|------|---------|
+| README.md | Complete feature documentation |
+| AIR.md | Technical reference for developers |
+| USER_TUTORIALS.md | Step-by-step user guides |
+| ADHD_FRIENDLY_GUIDE.md | Accessibility features |
+| STEWARD_GUIDE.md | Guide for union stewards |
 
 ---
 
-## 🎉 Success!
-
-You now have a fully functional union management system with:
-- Real-time grievance tracking
-- Comprehensive analytics dashboard
-- Member engagement monitoring
-- ADHD-friendly interface
-- Deadline management
-- And much more!
-
-**Questions?** Open an issue on GitHub or check the documentation files.
-
----
-
-**Version:** 3.28
-**Last Updated:** 2025-12-09
-**GitHub:** https://github.com/Woop91/509-dashboard
-
-## 🆕 What's New in v3.27
-- **100% Dynamic Columns** - All column references use MEMBER_COLS and GRIEVANCE_COLS constants
-- **31-Column Member Directory** - Complete member tracking with engagement metrics
-- **34-Column Grievance Log** - Full grievance lifecycle with deadline tracking
-- **Row mapper functions** - mapMemberRow() and mapGrievanceRow() for cleaner code
-- **MAP/LAMBDA formulas** - Fixed Member Directory formulas for proper calculations
-- **6-Menu System** - Dashboard, Sheet Manager, Setup, Demo, Administrator, Tests
-- **Audit logging system** - Full audit trail for all data modifications
-- **Role-based access control (RBAC)** - Admin, Steward, Viewer roles
-- **DIAGNOSE_SETUP()** - Comprehensive system health check
-- Simplified seeding (1,000 members + 300 grievances) with auto-sync
-- Enhanced accessibility features (ADHD controls, dark mode, focus mode)
-- Advanced analytics and predictive insights
+**Version:** 2.1.0
+**Last Updated:** 2026-01-04

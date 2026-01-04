@@ -205,7 +205,7 @@ All grievance workflow features are in:
 
 - **🚀 Start New Grievance**: Open member selection dialog
 - **⚙️ Setup Steward Contact Info**: Configure steward details
-- **📖 Getting Started Guide**: View complete setup instructions
+- **📖 Help & Support**: Access documentation and tutorials
 
 ### Related Documentation
 

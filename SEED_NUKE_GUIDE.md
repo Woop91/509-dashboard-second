@@ -130,9 +130,9 @@ After confirming:
 - The process takes a few moments
 - **Do not close the spreadsheet** while processing
 
-### Step 4: Review Getting Started Guide
+### Step 4: Verify Clean State
 
-After nuking, a comprehensive guide will appear with:
+After nuking, verify the system is ready:
 - **Setup checklist**: Steps to configure your production environment
 - **Steward contact info reminder**: Enter your steward details
 - **Next actions**: What to do first

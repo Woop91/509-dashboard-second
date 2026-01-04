@@ -540,15 +540,16 @@ Features include:
 4. Calculated values sync to destination sheet as static values
 
 **Key Functions**:
-- `REPAIR_DASHBOARD()` - Recreates all 4 hidden sheets + installs all 4 triggers
+- `REPAIR_DASHBOARD()` - Recreates all 6 hidden sheets + reinstalls triggers
 - `VERIFY_HIDDEN_SHEETS()` - Diagnoses sync issues without changing anything
-- `setupEngagementTracking()` - Creates Meeting Attendance + Volunteer Hours + _Engagement_Calc
 
 **Menu Access**: Administrator → Setup & Triggers → Verify Hidden Sheets
 
 ---
 
 ### 7. Member Satisfaction Tracking
+
+> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
 
 **Purpose**: Track and analyze member satisfaction surveys
 
@@ -570,7 +571,9 @@ Features include:
 - Average Communication
 - % Would Recommend (percentage of Yes responses)
 
-### 7. Feedback & Development
+### 8. Feedback & Development
+
+> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
 
 **Purpose**: Track system improvements and feature requests
 
@@ -829,7 +832,7 @@ Generate realistic test data with members and grievances in a single operation:
 3. Filter **Status** = "Open"
 4. Filter **Assigned Steward** = specific steward name
 5. Count visible rows to see their caseload
-6. OR use **Analytics Data** sheet (if unhidden) which has pre-calculated steward workloads
+6. OR check the **💼 Dashboard** tab which shows Top 30 Busiest Stewards ranked by active cases
 
 ## 🐛 Troubleshooting
 
