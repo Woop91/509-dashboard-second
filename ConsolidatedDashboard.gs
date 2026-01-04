@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T19:49:16.687Z
+ * - Build Date: 2026-01-04T19:54:30.212Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -9226,6 +9226,7 @@ function SEED_SAMPLE_DATA() {
     '• Config dropdowns (Job Titles, Locations, etc.)\n' +
     '• 1,000 sample members\n' +
     '• 300 sample grievances (30%)\n' +
+    '• 3 sample feedback entries\n' +
     '• Auto-sync trigger for live updates\n\n' +
     'Note: Some members may have multiple grievances.\n' +
     'Member Directory will auto-update when Grievance Log changes.\n\n' +
@@ -9243,6 +9244,9 @@ function SEED_SAMPLE_DATA() {
   ss.toast('Seeding 1,000 members + 300 grievances (this may take a moment)...', '🌱 Seeding', 10);
   SEED_MEMBERS(1000, 30);
 
+  ss.toast('Seeding feedback entries...', '🌱 Seeding', 2);
+  seedFeedbackData();
+
   ss.toast('Installing auto-sync trigger...', '🔧 Setup', 3);
   installAutoSyncTriggerQuick();
 
@@ -9251,6 +9255,7 @@ function SEED_SAMPLE_DATA() {
     '• Config dropdowns populated\n' +
     '• 1,000 members added\n' +
     '• 300 grievances added (30%)\n' +
+    '• 3 feedback entries added\n' +
     '• Auto-sync trigger installed\n\n' +
     'Member Directory columns (Has Open Grievance?, Grievance Status, Days to Deadline) ' +
     'will now auto-update when you edit the Grievance Log.', ui.ButtonSet.OK);
@@ -9346,6 +9351,89 @@ function seedConfigData() {
   if (seededAny) {
     SpreadsheetApp.getActiveSpreadsheet().toast('Config data seeded!', '✅ Success', 3);
   }
+}
+
+/**
+ * Seed 3 sample entries in the Feedback & Development sheet
+ * Demonstrates bug reports, feature requests, and improvements
+ */
+function seedFeedbackData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.FEEDBACK);
+
+  if (!sheet) {
+    Logger.log('Feedback sheet not found. Creating it...');
+    createFeedbackSheet(ss);
+    sheet = ss.getSheetByName(SHEETS.FEEDBACK);
+    if (!sheet) {
+      Logger.log('Could not create Feedback sheet');
+      return;
+    }
+  }
+
+  // Check if sheet already has data (skip if data exists)
+  if (sheet.getLastRow() > 1) {
+    Logger.log('Feedback sheet already has data. Skipping seed.');
+    return;
+  }
+
+  // Generate 3 sample feedback entries
+  var now = new Date();
+  var oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  var threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+  var sampleFeedback = [
+    // Entry 1: Bug report (resolved)
+    [
+      oneWeekAgo,                                    // A: Timestamp
+      'John Smith',                                  // B: Submitted By
+      'Dashboard',                                   // C: Category
+      'Bug',                                         // D: Type
+      'Medium',                                      // E: Priority
+      'Dashboard metrics not refreshing',            // F: Title
+      'The Quick Stats section sometimes shows stale data after editing the Grievance Log. Requires manual refresh to update.', // G: Description
+      'Resolved',                                    // H: Status
+      'Tech Team',                                   // I: Assigned To
+      'Added auto-refresh trigger on Grievance Log edit. Metrics now update within 30 seconds.', // J: Resolution
+      'User confirmed fix working'                   // K: Notes
+    ],
+    // Entry 2: Feature request (in progress)
+    [
+      threeDaysAgo,                                  // A: Timestamp
+      'Mary Johnson',                                // B: Submitted By
+      'Member Directory',                            // C: Category
+      'Feature Request',                             // D: Type
+      'High',                                        // E: Priority
+      'Bulk import members from CSV',                // F: Title
+      'Would like ability to import multiple members at once from a CSV file instead of entering one by one.', // G: Description
+      'In Progress',                                 // H: Status
+      'Tech Team',                                   // I: Assigned To
+      '',                                            // J: Resolution
+      'Targeting v2.2 release'                       // K: Notes
+    ],
+    // Entry 3: Improvement (new)
+    [
+      now,                                           // A: Timestamp
+      'Robert Williams',                             // B: Submitted By
+      'Reports',                                     // C: Category
+      'Improvement',                                 // D: Type
+      'Low',                                         // E: Priority
+      'Add PDF export for Dashboard',                // F: Title
+      'It would be helpful to export the Dashboard as a PDF for sharing with chapter leadership during meetings.', // G: Description
+      'New',                                         // H: Status
+      '',                                            // I: Assigned To
+      '',                                            // J: Resolution
+      ''                                             // K: Notes
+    ]
+  ];
+
+  // Write sample data
+  sheet.getRange(2, 1, sampleFeedback.length, sampleFeedback[0].length).setValues(sampleFeedback);
+
+  // Format timestamp column
+  sheet.getRange(2, FEEDBACK_COLS.TIMESTAMP, sampleFeedback.length, 1).setNumberFormat('MM/dd/yyyy HH:mm');
+
+  Logger.log('Seeded ' + sampleFeedback.length + ' sample feedback entries');
 }
 
 /**
@@ -10271,12 +10359,17 @@ function NUKE_SEEDED_DATA() {
     });
   }
 
+  // Check for Feedback sheet
+  var feedbackSheet = ss.getSheetByName(SHEETS.FEEDBACK);
+  var hasFeedback = feedbackSheet && feedbackSheet.getLastRow() > 1;
+
   var response = ui.alert(
     '☢️ NUKE SEEDED DATA',
     '⚠️ This will permanently delete seeded/demo data:\n\n' +
     '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
     '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
-    '• Config dropdown values\n\n' +
+    '• Config dropdown values\n' +
+    '• Feedback & Development sheet (entire sheet deleted)\n\n' +
     '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
@@ -10293,7 +10386,8 @@ function NUKE_SEEDED_DATA() {
     'This will:\n' +
     '1. Delete ' + memberCount + ' seeded members\n' +
     '2. Delete ' + grievanceCount + ' seeded grievances\n' +
-    '3. Permanently disable the Demo menu\n\n' +
+    '3. Delete Feedback & Development sheet\n' +
+    '4. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -10337,6 +10431,19 @@ function NUKE_SEEDED_DATA() {
     // Clear Config dropdowns (keep headers and default values)
     NUKE_CONFIG_DROPDOWNS();
 
+    // Delete Feedback & Development sheet entirely
+    var feedbackToDelete = ss.getSheetByName(SHEETS.FEEDBACK);
+    var feedbackDeleted = false;
+    if (feedbackToDelete) {
+      try {
+        ss.deleteSheet(feedbackToDelete);
+        feedbackDeleted = true;
+        Logger.log('Feedback & Development sheet deleted');
+      } catch (e) {
+        Logger.log('Could not delete Feedback sheet: ' + e.message);
+      }
+    }
+
     // Clear tracked IDs from Script Properties
     var props = PropertiesService.getScriptProperties();
     props.deleteProperty('SEEDED_MEMBER_IDS');
@@ -10349,8 +10456,9 @@ function NUKE_SEEDED_DATA() {
     ui.alert('☢️ Complete',
       'Seeded data has been deleted:\n' +
       '• ' + deletedMembers + ' members removed\n' +
-      '• ' + deletedGrievances + ' grievances removed\n\n' +
-      'Demo mode has been permanently disabled.\n' +
+      '• ' + deletedGrievances + ' grievances removed\n' +
+      (feedbackDeleted ? '• Feedback & Development sheet deleted\n' : '') +
+      '\nDemo mode has been permanently disabled.\n' +
       'Refresh the page to remove the Demo menu.',
       ui.ButtonSet.OK);
 
