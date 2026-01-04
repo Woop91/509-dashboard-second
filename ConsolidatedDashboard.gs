@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-03T23:08:52.863Z
+ * - Build Date: 2026-01-04T00:15:14.144Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1528,24 +1528,33 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Use QUERY to get top 30 stewards sorted by active case count
-  // First, create a helper formula to get unique stewards with counts
-  var gDaysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
+  // Use QUERY to get top 30 stewards sorted by active case count (Open + Pending Info)
+  // This properly sorts by workload, not alphabetically
+  var queryFormula = '=IFERROR(QUERY({' +
+    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',' +
+    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '},' +
+    '"SELECT Col1, COUNT(Col1) WHERE Col1 <> \'\' AND Col1 <> \'Assigned Steward\' AND (Col2 = \'Open\' OR Col2 = \'Pending Info\') ' +
+    'GROUP BY Col1 ORDER BY COUNT(Col1) DESC LIMIT 30 LABEL COUNT(Col1) \'\'",' +
+    '0),{"",""})';
 
-  // Generate formulas for rows 51-80 (30 stewards)
+  // Place QUERY result starting at B51 - this returns steward names and their active counts
+  sheet.getRange('B51').setFormula(queryFormula);
+
+  // Generate rank numbers and additional metrics for rows 51-80
   for (var rank = 1; rank <= 30; rank++) {
     var row = 50 + rank;
-    var rankFormulas = [
-      '=' + rank,
-      '=IFERROR(INDEX(SORT(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + '<>"",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '="Open")),1,FALSE),' + rank + ',1),"")',
-      '=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")+COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),"")',
-      '=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")',
-      '=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),"")',
-      '=IF(B' + row + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + '),"")'
-    ];
-    sheet.getRange('A' + row + ':F' + row).setFormulas([rankFormulas])
-      .setHorizontalAlignment('center');
+    // Rank number
+    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
+    // Open cases (just Open status)
+    sheet.getRange('D' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")');
+    // Pending Info cases
+    sheet.getRange('E' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),"")');
+    // Total Ever (all cases for this steward)
+    sheet.getRange('F' + row).setFormula('=IF(B' + row + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + '),"")');
   }
+
+  // Set horizontal alignment for all data rows
+  sheet.getRange('A51:F80').setHorizontalAlignment('center');
 
   // Alternate row coloring for busiest stewards list
   for (var r = 51; r <= 80; r++) {
