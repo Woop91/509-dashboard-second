@@ -23,7 +23,7 @@
 > Deploying multiple files will cause function conflicts and trigger errors.
 
 1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
-2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
+2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
 
@@ -71,7 +71,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 ### File Descriptions
 
 **Constants.gs** (~607 lines)
-- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
+- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 6 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
@@ -93,7 +93,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 **Code.gs** (~3900 lines) - Main entry point with Drive/Calendar/Email/Audit
 - `onOpen()` - Creates menu system
-- `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
+- `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 6 hidden)
 - `DIAGNOSE_SETUP()` - System health check
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
@@ -403,7 +403,7 @@ var GRIEVANCE_COLS = {
 
 ---
 
-## Sheet Structure (5 Visible + 5 Hidden)
+## Sheet Structure (5 Visible + 6 Hidden)
 
 ### Core Data Sheets
 
@@ -417,10 +417,10 @@ var GRIEVANCE_COLS = {
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 4 | 💼 Dashboard | View | Executive metrics dashboard with 9 analytics sections |
+| 4 | 💼 Dashboard | View | Executive metrics dashboard with 12 analytics sections |
 | 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
 
-#### 💼 Dashboard - 9 Live Analytics Sections
+#### 💼 Dashboard - 12 Live Analytics Sections
 
 | # | Section | Color | Metrics | Data Source |
 |---|---------|-------|---------|-------------|
@@ -430,9 +430,12 @@ var GRIEVANCE_COLS = {
 | 4 | TIMELINE & PERFORMANCE | 🟣 Purple | Avg Days Open, Filed This Month, Closed This Month, Avg Resolution | Grievance Log |
 | 5 | TYPE ANALYSIS | 🔷 Indigo | 5 issue categories × (Total, Open, Resolved, Win Rate, Avg Days) | Grievance Log |
 | 6 | LOCATION BREAKDOWN | 🔵 Cyan | 5 locations × (Members, Grievances, Open Cases, Win Rate) | Config + Member Dir + Grievance Log |
-| 7 | STEWARD PERFORMANCE | 🟣 Purple | Total Stewards, Active w/Cases, Avg Cases, Vol Hours, Contacts | Member Dir + Grievance Log |
-| 8 | MONTH-OVER-MONTH TRENDS | 🔴 Red | Filed/Closed/Won × (This Month, Last Month, Change, % Change, Trend) | Grievance Log |
-| 9 | STATUS LEGEND | ⬜ Gray | Color/icon reference guide | Static |
+| 7 | MONTH-OVER-MONTH TRENDS | 🔴 Red | Filed/Closed/Won × (This Month, Last Month, Change, % Change, Trend) | Grievance Log |
+| 8 | STATUS LEGEND | ⬜ Gray | Color/icon reference guide | Static |
+| 9 | STEWARD PERFORMANCE SUMMARY | 🟣 Purple | Total Stewards, Active w/Cases, Avg Cases, Vol Hours, Contacts | Member Dir + Grievance Log |
+| 10 | TOP 30 BUSIEST STEWARDS | 🔴 Dark Red | Rank, Steward Name, Active Cases, Open, Pending Info, Total Ever | Grievance Log |
+| 11 | TOP 10 PERFORMERS BY SCORE | 🟢 Green | Rank, Steward, Score, Win Rate %, Avg Days, Overdue | `_Steward_Performance_Calc` |
+| 12 | STEWARDS NEEDING SUPPORT | 🔴 Red | Rank, Steward, Score, Win Rate %, Avg Days, Overdue | `_Steward_Performance_Calc` |
 
 **All sections use live COUNTIF/COUNTIFS/AVERAGEIFS formulas that auto-update when source data changes.**
 
@@ -445,6 +448,7 @@ var GRIEVANCE_COLS = {
 | 3 | `_Member_Lookup` | Member data lookup formulas |
 | 4 | `_Steward_Contact_Calc` | Steward contact tracking (Y-AA) |
 | 5 | `_Dashboard_Calc` | Dashboard summary metrics (15 key KPIs) |
+| 6 | `_Steward_Performance_Calc` | Per-steward performance scores with weighted formula |
 
 ---
 
@@ -659,9 +663,9 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Hidden Sheet Architecture (Self-Healing)
 
-The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
+The system uses 6 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
 
-### Hidden Sheets (5 total)
+### Hidden Sheets (6 total)
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
@@ -670,6 +674,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
 | `_Dashboard_Calc` | Both | 💼 Dashboard | 15 summary metrics (Win Rate, Overdue, Due This Week, etc.) |
+| `_Steward_Performance_Calc` | Grievance Log | 💼 Dashboard | Per-steward performance scores with weighted formula |
 
 ### Auto-Sync Trigger
 
@@ -681,7 +686,7 @@ The `onEditAutoSync` trigger automatically syncs data when:
 
 | Function | Purpose |
 |----------|---------|
-| `setupAllHiddenSheets()` | Create all 5 hidden sheets with formulas |
+| `setupAllHiddenSheets()` | Create all 6 hidden sheets with formulas |
 | `repairAllHiddenSheets()` | Recreate sheets, install trigger, sync data |
 | `installAutoSyncTrigger()` | Install the onEdit auto-sync trigger |
 | `verifyHiddenSheets()` | Verify all sheets and triggers are working |

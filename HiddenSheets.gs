@@ -1288,7 +1288,7 @@ function repairAllHiddenSheets() {
   ss.toast('Hidden sheets repaired and synced!', '✅ Success', 5);
   ui.alert('✅ Repair Complete',
     'Hidden calculation sheets have been repaired:\n\n' +
-    '• 5 hidden sheets recreated with self-healing formulas\n' +
+    '• 6 hidden sheets recreated with self-healing formulas\n' +
     '• Auto-sync trigger installed\n' +
     '• All data synced (grievances, members, dashboard)\n' +
     '• Checkboxes repaired in Grievance Log and Member Directory\n\n' +
@@ -1309,13 +1309,14 @@ function verifyHiddenSheets() {
   report.push('============================');
   report.push('');
 
-  // Check each hidden sheet (5 hidden sheets)
+  // Check each hidden sheet (6 hidden sheets)
   var hiddenSheets = [
     {name: SHEETS.GRIEVANCE_CALC, purpose: 'Grievance → Member Directory'},
     {name: SHEETS.GRIEVANCE_FORMULAS, purpose: 'Self-healing Grievance formulas'},
     {name: SHEETS.MEMBER_LOOKUP, purpose: 'Member → Grievance Log'},
     {name: SHEETS.STEWARD_CONTACT_CALC, purpose: 'Steward contact tracking'},
-    {name: SHEETS.DASHBOARD_CALC, purpose: 'Dashboard summary metrics'}
+    {name: SHEETS.DASHBOARD_CALC, purpose: 'Dashboard summary metrics'},
+    {name: SHEETS.STEWARD_PERFORMANCE_CALC, purpose: 'Steward performance scores'}
   ];
 
   report.push('📋 HIDDEN SHEETS:');

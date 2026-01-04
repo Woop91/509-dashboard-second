@@ -192,7 +192,7 @@ function CREATE_509_DASHBOARD() {
     '• Grievance Log\n' +
     '• 💼 Dashboard (Executive metrics)\n' +
     '• 🎯 Interactive (Customizable view)\n\n' +
-    'Plus 5 hidden calculation sheets for self-healing formulas.\n\n' +
+    'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
@@ -243,7 +243,7 @@ function CREATE_509_DASHBOARD() {
       '5 sheets created:\n' +
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Interactive (views)\n\n' +
-      'Plus 5 hidden calculation sheets with self-healing formulas.\n\n' +
+      'Plus 6 hidden calculation sheets with self-healing formulas.\n\n' +
       '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
       'update automatically when you edit the sheets.\n\n' +
       'Use the Demo menu to seed sample data.', ui.ButtonSet.OK);
@@ -919,6 +919,76 @@ function createDashboard(ss) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 11: TOP 10 PERFORMERS BY SCORE
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A82').setValue('🏆 TOP 10 PERFORMERS BY SCORE')
+    .setFontWeight('bold')
+    .setBackground('#059669')  // Green
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A82:F82').merge();
+
+  var topPerfLabels = [['Rank', 'Steward Name', 'Score', 'Win Rate %', 'Avg Days', 'Overdue']];
+  sheet.getRange('A83:F83').setValues(topPerfLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  // Query hidden sheet for top 10 by Performance Score (descending)
+  var topPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
+    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J DESC LIMIT 10",' +
+    '0),{"","","","",""})';
+  sheet.getRange('B84').setFormula(topPerfQuery);
+
+  // Add rank numbers for top performers
+  for (var rank = 1; rank <= 10; rank++) {
+    var row = 83 + rank;
+    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
+  }
+
+  // Alternate row coloring for top performers
+  for (var r = 84; r <= 93; r++) {
+    if (r % 2 === 0) {
+      sheet.getRange('A' + r + ':F' + r).setBackground('#ECFDF5');  // Light green
+    }
+  }
+  sheet.getRange('A84:F93').setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECTION 12: STEWARDS NEEDING SUPPORT (Bottom 10 by Score)
+  // ═══════════════════════════════════════════════════════════════════════════
+  sheet.getRange('A95').setValue('⚠️ STEWARDS NEEDING SUPPORT (Lowest Scores)')
+    .setFontWeight('bold')
+    .setBackground('#DC2626')  // Red
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('A95:F95').merge();
+
+  var lowPerfLabels = [['Rank', 'Steward Name', 'Score', 'Win Rate %', 'Avg Days', 'Overdue']];
+  sheet.getRange('A96:F96').setValues(lowPerfLabels)
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY)
+    .setHorizontalAlignment('center');
+
+  // Query hidden sheet for bottom 10 by Performance Score (ascending)
+  var lowPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
+    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J ASC LIMIT 10",' +
+    '0),{"","","","",""})';
+  sheet.getRange('B97').setFormula(lowPerfQuery);
+
+  // Add rank numbers for bottom performers (1 = lowest score)
+  for (var rank = 1; rank <= 10; rank++) {
+    var row = 96 + rank;
+    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
+  }
+
+  // Alternate row coloring for bottom performers
+  for (var r = 97; r <= 106; r++) {
+    if (r % 2 === 1) {
+      sheet.getRange('A' + r + ':F' + r).setBackground('#FEF2F2');  // Light red
+    }
+  }
+  sheet.getRange('A97:F106').setHorizontalAlignment('center');
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // FORMATTING AND CLEANUP
   // ═══════════════════════════════════════════════════════════════════════════
 
@@ -965,6 +1035,13 @@ function createDashboard(ss) {
   sheet.getRange('A47:E47').setNumberFormat(numberFormat);
   // Top 30 Busiest Stewards (rows 51-80)
   sheet.getRange('C51:F80').setNumberFormat(numberFormat);
+  // Top 10 Performers (rows 84-93) - Score and Win Rate have decimals
+  var decimalFormat = '#,##0.0';
+  sheet.getRange('C84:D93').setNumberFormat(decimalFormat);  // Score, Win Rate
+  sheet.getRange('E84:F93').setNumberFormat(numberFormat);   // Avg Days, Overdue
+  // Stewards Needing Support (rows 97-106)
+  sheet.getRange('C97:D106').setNumberFormat(decimalFormat);  // Score, Win Rate
+  sheet.getRange('E97:F106').setNumberFormat(numberFormat);   // Avg Days, Overdue
 }
 
 /**
@@ -1558,14 +1635,15 @@ function DIAGNOSE_SETUP() {
 
   report.push('');
 
-  // Check hidden sheets (5 hidden calculation sheets)
+  // Check hidden sheets (6 hidden calculation sheets)
   report.push('🔒 HIDDEN SHEETS:');
   var hiddenSheets = [
     SHEETS.GRIEVANCE_CALC,
     SHEETS.GRIEVANCE_FORMULAS,
     SHEETS.MEMBER_LOOKUP,
     SHEETS.STEWARD_CONTACT_CALC,
-    SHEETS.DASHBOARD_CALC
+    SHEETS.DASHBOARD_CALC,
+    SHEETS.STEWARD_PERFORMANCE_CALC
   ];
 
   hiddenSheets.forEach(function(sheetName) {
@@ -1602,7 +1680,7 @@ function REPAIR_DASHBOARD() {
   var response = ui.alert(
     '🔧 Repair Dashboard',
     'This will:\n\n' +
-    '• Recreate all 5 hidden calculation sheets with formulas\n' +
+    '• Recreate all 6 hidden calculation sheets with formulas\n' +
     '• Install auto-sync trigger\n' +
     '• Sync all cross-sheet data\n' +
     '• Reapply data validations\n\n' +
