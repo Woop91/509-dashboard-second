@@ -1169,6 +1169,12 @@ function createInteractiveDashboard(ss) {
   // Format
   sheet.autoResizeColumns(1, 6);
   sheet.setColumnWidth(3, 250);
+
+  // Delete excess columns after G (column 7)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 7) {
+    sheet.deleteColumns(8, maxCols - 7);
+  }
 }
 
 // ============================================================================
@@ -1666,6 +1672,12 @@ function createSatisfactionSheet(ss) {
   sheet.setColumnWidth(dashStart + 3, 80);   // Type
   sheet.setColumnWidth(dashStart + 4, 200);  // Options
 
+  // Delete excess columns after CJ (column 88)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 88) {
+    sheet.deleteColumns(89, maxCols - 88);
+  }
+
   Logger.log('Member Satisfaction sheet created with 68-question survey, dashboard, and chart data');
 }
 
@@ -1854,6 +1866,12 @@ function createFeedbackSheet(ss) {
 
   // Freeze header row
   sheet.setFrozenRows(1);
+
+  // Delete excess columns after O (column 15)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 15) {
+    sheet.deleteColumns(16, maxCols - 15);
+  }
 
   Logger.log('Feedback & Development sheet created');
 }
@@ -2560,6 +2578,12 @@ function createMenuChecklistSheet_() {
     .setRanges([sheet.getRange(2, 1, rows.length - 1, 7)])
     .build();
   sheet.setConditionalFormatRules([rule]);
+
+  // Delete excess columns after H (column 8)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 8) {
+    sheet.deleteColumns(9, maxCols - 8);
+  }
 
   return sheet;
 }
