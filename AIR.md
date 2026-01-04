@@ -148,7 +148,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `seed100MembersWithGrievances()` - Shortcut: seed 100 members + 50 grievances (50%)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
-- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries), deletes Feedback sheet
+- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries), deletes Feedback & Menu Checklist sheets
 - `NUKE_CONFIG_DROPDOWNS()` - Clear only Config dropdowns
 - `getConfigValues()` - Helper: get values from Config column
 - `randomChoice()` - Helper: pick random array element
@@ -475,7 +475,7 @@ var FEEDBACK_COLS = {
 
 ---
 
-## Sheet Structure (7 Visible + 6 Hidden)
+## Sheet Structure (8 Visible + 6 Hidden)
 
 ### Core Data Sheets
 
@@ -498,6 +498,7 @@ var FEEDBACK_COLS = {
 |---|------------|------|---------|
 | 6 | 📊 Member Satisfaction | Data | 68-question Google Form survey with dashboard, charts (82 cols + dashboard) |
 | 7 | 💡 Feedback & Development | Data | Bug/feature tracking with priority (11 columns) |
+| 8 | ✅ Menu Checklist | Reference | Function reference guide organized by 13 phases |
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 
