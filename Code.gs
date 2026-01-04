@@ -1184,6 +1184,13 @@ function createSatisfactionSheet(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.SATISFACTION);
   sheet.clear();
 
+  // Ensure sheet has enough columns (need 100+ for dashboard area)
+  var requiredCols = 100;
+  var currentCols = sheet.getMaxColumns();
+  if (currentCols < requiredCols) {
+    sheet.insertColumnsAfter(currentCols, requiredCols - currentCols);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GOOGLE FORM RESPONSE HEADERS (68 questions + timestamp)
   // When you link a Google Form, these columns receive form responses
