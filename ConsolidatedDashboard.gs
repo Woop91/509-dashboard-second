@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T21:04:05.949Z
+ * - Build Date: 2026-01-04T21:10:16.006Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -9651,6 +9651,13 @@ function seedSatisfactionData() {
     row.push('');                         // Q67: Additional comments (mostly empty)
 
     sampleData.push(row);
+  }
+
+  // Ensure sheet has enough columns (68 for survey data)
+  var requiredCols = sampleData[0].length;
+  var currentCols = sheet.getMaxColumns();
+  if (currentCols < requiredCols) {
+    sheet.insertColumnsAfter(currentCols, requiredCols - currentCols);
   }
 
   // Write sample data starting at row 2
