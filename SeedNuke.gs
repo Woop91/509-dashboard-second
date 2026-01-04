@@ -1281,7 +1281,8 @@ function NUKE_SEEDED_DATA() {
     '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
     '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
     '• Config dropdown values\n' +
-    '• Feedback & Development sheet (entire sheet deleted)\n\n' +
+    '• Feedback & Development sheet (entire sheet deleted)\n' +
+    '• Menu Checklist sheet (entire sheet deleted)\n\n' +
     '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
@@ -1299,7 +1300,8 @@ function NUKE_SEEDED_DATA() {
     '1. Delete ' + memberCount + ' seeded members\n' +
     '2. Delete ' + grievanceCount + ' seeded grievances\n' +
     '3. Delete Feedback & Development sheet\n' +
-    '4. Permanently disable the Demo menu\n\n' +
+    '4. Delete Menu Checklist sheet\n' +
+    '5. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -1356,6 +1358,19 @@ function NUKE_SEEDED_DATA() {
       }
     }
 
+    // Delete Menu Checklist sheet entirely
+    var menuChecklistToDelete = ss.getSheetByName(SHEETS.MENU_CHECKLIST);
+    var menuChecklistDeleted = false;
+    if (menuChecklistToDelete) {
+      try {
+        ss.deleteSheet(menuChecklistToDelete);
+        menuChecklistDeleted = true;
+        Logger.log('Menu Checklist sheet deleted');
+      } catch (e) {
+        Logger.log('Could not delete Menu Checklist sheet: ' + e.message);
+      }
+    }
+
     // Clear tracked IDs from Script Properties
     var props = PropertiesService.getScriptProperties();
     props.deleteProperty('SEEDED_MEMBER_IDS');
@@ -1370,6 +1385,7 @@ function NUKE_SEEDED_DATA() {
       '• ' + deletedMembers + ' members removed\n' +
       '• ' + deletedGrievances + ' grievances removed\n' +
       (feedbackDeleted ? '• Feedback & Development sheet deleted\n' : '') +
+      (menuChecklistDeleted ? '• Menu Checklist sheet deleted\n' : '') +
       '\nDemo mode has been permanently disabled.\n' +
       'Refresh the page to remove the Demo menu.',
       ui.ButtonSet.OK);

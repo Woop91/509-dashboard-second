@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T19:54:30.212Z
+ * - Build Date: 2026-01-04T20:01:17.575Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1014,7 +1014,8 @@ function CREATE_509_DASHBOARD() {
     '• 💼 Dashboard (Executive metrics)\n' +
     '• 🎯 Custom View (Customizable metrics)\n' +
     '• 📊 Member Satisfaction (Survey tracking)\n' +
-    '• 💡 Feedback & Development (Bug/feature tracking)\n\n' +
+    '• 💡 Feedback & Development (Bug/feature tracking)\n' +
+    '• Menu Checklist (function reference guide)\n\n' +
     'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
@@ -1056,6 +1057,10 @@ function CREATE_509_DASHBOARD() {
     createFeedbackSheet(ss);
     ss.toast('Created Feedback & Development', '🏗️ Progress', 2);
 
+    // Create Menu Checklist (function reference guide)
+    createMenuChecklistSheet_();
+    ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
+
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
     setupDataValidations();
@@ -1069,9 +1074,11 @@ function CREATE_509_DASHBOARD() {
 
     ss.toast('Dashboard creation complete!', '✅ Success', 5);
     ui.alert('✅ Success', '509 Dashboard has been created successfully!\n\n' +
-      '5 sheets created:\n' +
+      '8 sheets created:\n' +
       '• Config, Member Directory, Grievance Log (data)\n' +
-      '• 💼 Dashboard, 🎯 Interactive (views)\n\n' +
+      '• 💼 Dashboard, 🎯 Custom View (views)\n' +
+      '• 📊 Member Satisfaction, 💡 Feedback (tracking)\n' +
+      '• Menu Checklist (function reference)\n\n' +
       'Plus 6 hidden calculation sheets with self-healing formulas.\n\n' +
       '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
       'update automatically when you edit the sheets.\n\n' +
@@ -10369,7 +10376,8 @@ function NUKE_SEEDED_DATA() {
     '• ' + memberCount + ' seeded members (ID pattern: M****###)\n' +
     '• ' + grievanceCount + ' seeded grievances (ID pattern: G****###)\n' +
     '• Config dropdown values\n' +
-    '• Feedback & Development sheet (entire sheet deleted)\n\n' +
+    '• Feedback & Development sheet (entire sheet deleted)\n' +
+    '• Menu Checklist sheet (entire sheet deleted)\n\n' +
     '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
     '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
     'Continue?',
@@ -10387,7 +10395,8 @@ function NUKE_SEEDED_DATA() {
     '1. Delete ' + memberCount + ' seeded members\n' +
     '2. Delete ' + grievanceCount + ' seeded grievances\n' +
     '3. Delete Feedback & Development sheet\n' +
-    '4. Permanently disable the Demo menu\n\n' +
+    '4. Delete Menu Checklist sheet\n' +
+    '5. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
   );
@@ -10444,6 +10453,19 @@ function NUKE_SEEDED_DATA() {
       }
     }
 
+    // Delete Menu Checklist sheet entirely
+    var menuChecklistToDelete = ss.getSheetByName(SHEETS.MENU_CHECKLIST);
+    var menuChecklistDeleted = false;
+    if (menuChecklistToDelete) {
+      try {
+        ss.deleteSheet(menuChecklistToDelete);
+        menuChecklistDeleted = true;
+        Logger.log('Menu Checklist sheet deleted');
+      } catch (e) {
+        Logger.log('Could not delete Menu Checklist sheet: ' + e.message);
+      }
+    }
+
     // Clear tracked IDs from Script Properties
     var props = PropertiesService.getScriptProperties();
     props.deleteProperty('SEEDED_MEMBER_IDS');
@@ -10458,6 +10480,7 @@ function NUKE_SEEDED_DATA() {
       '• ' + deletedMembers + ' members removed\n' +
       '• ' + deletedGrievances + ' grievances removed\n' +
       (feedbackDeleted ? '• Feedback & Development sheet deleted\n' : '') +
+      (menuChecklistDeleted ? '• Menu Checklist sheet deleted\n' : '') +
       '\nDemo mode has been permanently disabled.\n' +
       'Refresh the page to remove the Demo menu.',
       ui.ButtonSet.OK);
