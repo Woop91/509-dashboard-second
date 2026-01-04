@@ -568,7 +568,7 @@ function syncSingleGrievanceToCalendar(grievanceId) {
 // ║  • Mobile-responsive design with touch targets                            ║
 // ║  • Bar charts for status distribution and categories                      ║
 // ║                                                                           ║
-// ║  Menu Location: 👤 Dashboard > 🎯 Interactive Dashboard                  ║
+// ║  Menu Location: 👤 Dashboard > 🎯 Custom View                  ║
 // ║                                                                           ║
 // ║  Added: December 29, 2025 (commit c75c1cc)                                ║
 // ║  Status: USER APPROVED - DO NOT CHANGE                                    ║
@@ -576,7 +576,7 @@ function syncSingleGrievanceToCalendar(grievanceId) {
 // ╚═══════════════════════════════════════════════════════════════════════════╝
 
 /**
- * Shows the Interactive Dashboard with tabbed interface
+ * Shows the Custom View with tabbed interface
  * Features: Overview, Members, Grievances, and Analytics tabs
  *
  * ⚠️ PROTECTED FUNCTION - DO NOT MODIFY ⚠️
@@ -585,7 +585,7 @@ function showInteractiveDashboardTab() {
   var html = HtmlService.createHtmlOutput(getInteractiveDashboardHtml())
     .setWidth(900)
     .setHeight(750);
-  SpreadsheetApp.getUi().showModalDialog(html, '🎯 Interactive Dashboard');
+  SpreadsheetApp.getUi().showModalDialog(html, '🎯 Custom View');
 }
 
 /**
@@ -717,7 +717,7 @@ function getInteractiveDashboardHtml() {
 
     // Header
     '<div class="header">' +
-    '<h1>🎯 Interactive Dashboard</h1>' +
+    '<h1>🎯 Custom View</h1>' +
     '<div class="subtitle">Real-time union data at your fingertips</div>' +
     '</div>' +
 

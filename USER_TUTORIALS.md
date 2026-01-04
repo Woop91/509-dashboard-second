@@ -347,17 +347,18 @@ After seeding, Member Directory columns auto-update when you edit Grievance Log:
 
 ### What Are Hidden Sheets?
 
-The dashboard uses 5 "hidden" calculation sheets (prefixed with "_") to automatically synchronize data between sheets. You don't see these sheets, but they power the auto-updating columns.
+The dashboard uses 6 "hidden" calculation sheets (prefixed with "_") to automatically synchronize data between sheets. You don't see these sheets, but they power the auto-updating columns.
 
-### The 5 Hidden Sheets
+### The 6 Hidden Sheets
 
 | Hidden Sheet | What It Does |
 |--------------|--------------|
 | `_Grievance_Calc` | Calculates grievance data for Member Directory |
+| `_Grievance_Formulas` | Self-healing formulas for Grievance Log timeline columns |
 | `_Member_Lookup` | Looks up member data for Grievance Log |
-| `_Steward_Contact_Calc` | Tracks steward contact data from Communications Log |
-| `_Engagement_Calc` | Calculates engagement metrics from Meeting/Volunteer sheets |
-| `_Steward_Workload_Calc` (v3.45) | Calculates steward workload metrics for Steward Workload sheet |
+| `_Steward_Contact_Calc` | Tracks steward contact data |
+| `_Dashboard_Calc` | Dashboard summary metrics (15 key metrics) |
+| `_Steward_Performance_Calc` | Per-steward performance scores with weighted formula |
 
 ### Auto-Populated Columns
 

@@ -511,7 +511,7 @@ For issues with tests:
 2. Review "Test Results" sheet for error details
 3. Run single test in isolation using `runSingleTest()`
 4. Check that test data cleanup completed
-5. Document bugs in Feedback & Development sheet
+5. Document bugs in a tracking system or GitHub issues
 
 ---
 

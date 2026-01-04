@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.6.0 (Desktop Search & Unified Seeding)
+**Version:** 1.7.0 (Dashboard Restructure & Bug Fixes)
 **Last Updated:** 2026-01-03
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -23,7 +23,7 @@
 > Deploying multiple files will cause function conflicts and trigger errors.
 
 1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
-2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 5 hidden calculation sheets
+2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
 3. Use `Demo > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
 
@@ -33,7 +33,7 @@
 
 The following code sections are **USER APPROVED** and should **NOT be modified or removed**:
 
-### Interactive Dashboard Modal Popup
+### Custom View Modal Popup
 
 **Location:** `ConsolidatedDashboard.gs` (lines 7536-8160) and `MobileQuickActions.gs` (lines 540-1164)
 
@@ -52,16 +52,15 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 ## File Architecture
 
-### Project Structure (10 Files)
+### Project Structure (9 Source Files)
 
 ```
 509-dashboard/
 ├── Constants.gs           # Configuration constants (SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS)
-├── Code.gs                # Main entry point, setup functions, sheet creation
+├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
 ├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
-├── DriveCalendarEmail.gs  # Google Drive, Calendar, Email notifications
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -71,8 +70,8 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 ### File Descriptions
 
-**Constants.gs** (~500 lines)
-- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 5 hidden)
+**Constants.gs** (~607 lines)
+- `SHEETS` - Sheet name constants (3 data + 2 dashboard + 6 hidden)
 - `COLORS` - Brand color scheme
 - `MEMBER_COLS` - 31 Member Directory column positions
 - `GRIEVANCE_COLS` - 34 Grievance Log column positions
@@ -92,9 +91,9 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `getMemberHeaders()` - Get all 31 member column headers
 - `getGrievanceHeaders()` - Get all 34 grievance column headers
 
-**Code.gs** (~900 lines)
+**Code.gs** (~3900 lines) - Main entry point with Drive/Calendar/Email/Audit
 - `onOpen()` - Creates menu system
-- `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 5 hidden)
+- `CREATE_509_DASHBOARD()` - Main setup function (creates 5 sheets + 6 hidden)
 - `DIAGNOSE_SETUP()` - System health check
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
@@ -111,12 +110,29 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `refreshAllFormulas()` - Refresh all formulas and sync
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
-- `searchMembers()` - Search members (stub)
+- `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Start grievance (stub)
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
+- Google Drive Integration:
+  - `setupDriveFolderForGrievance()` - Create folder for grievance
+  - `getOrCreateDashboardFolder_()` - Get/create root folder
+  - `showGrievanceFiles()` - View files for grievance
+  - `batchCreateGrievanceFolders()` - Bulk folder creation
+- Calendar Integration:
+  - `syncDeadlinesToCalendar()` - Sync deadlines to Google Calendar
+  - `showUpcomingDeadlinesFromCalendar()` - View calendar deadlines
+- Email Notifications:
+  - `showNotificationSettings()` - UI to enable/disable daily notifications
+  - `testDeadlineNotifications()` - Test notification system
+- Audit Log:
+  - `setupAuditLogSheet()` - Create hidden audit log
+  - `logAuditEvent()` - Record audit entry
+  - `onEditAudit()` - Audit trigger handler
+  - `viewAuditLog()` - View audit entries
+  - `getAuditHistory()` - Get history for a record
 
-**SeedNuke.gs** (~500 lines)
+**SeedNuke.gs** (~1353 lines)
 - `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%)
 - `seedConfigData()` - Populate Config dropdowns
 - `SEED_MEMBERS(count, grievancePercent)` - Seed N members with optional grievances (max 2000 members)
@@ -139,13 +155,14 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `addDays()` - Helper: add days to date
 
 **HiddenSheets.gs** (~1500 lines)
-- `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
-- Hidden Sheet Setup Functions (5 total):
+- `setupAllHiddenSheets()` - Create all 6 hidden calculation sheets
+- Hidden Sheet Setup Functions (6 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
   - `setupGrievanceFormulasSheet()` - Member lookup formulas (First Name, Last Name, Email, etc.)
   - `setupMemberLookupSheet()` - Member → Grievance Log sync
   - `setupStewardContactCalcSheet()` - Steward contact tracking
   - `setupDashboardCalcSheet()` - Dashboard summary metrics (15 key metrics)
+  - `setupStewardPerformanceCalcSheet()` - Steward performance scores with weighted formula
 - Sync Functions:
   - `syncAllData()` - Sync all cross-sheet data
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
@@ -178,29 +195,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
 - `setupADHDDefaults()` - Initialize ADHD-friendly defaults
 
-**DriveCalendarEmail.gs** (~500 lines) - Google Drive, Calendar & Email
-- Google Drive:
-  - `createRootFolder()` - Create base folder for grievance files
-  - `createGrievanceFolder()` - Create folder for specific grievance
-  - `linkFolderToGrievance()` - Link folder ID to grievance row
-  - `setupDriveFolderForGrievance()` - Menu handler for folder creation
-  - `listFolderFiles()` - List files in a folder
-  - `showGrievanceFiles()` - Show files for selected grievance
-  - `batchCreateGrievanceFolders()` - Create folders for all grievances
-- Calendar:
-  - `syncDeadlinesToCalendar()` - Sync all deadlines to Google Calendar
-  - `checkCalendarEventExists()` - Check if event already exists
-  - `clearAllCalendarEvents()` - Remove all dashboard calendar events
-  - `showUpcomingDeadlinesFromCalendar()` - View upcoming deadlines
-- Email Notifications:
-  - `setupDailyDeadlineNotifications()` - Enable daily email reminders
-  - `disableDailyDeadlineNotifications()` - Disable notifications
-  - `checkDeadlinesAndNotify()` - Main notification check (runs daily)
-  - `sendDeadlineNotification()` - Send individual notification
-  - `showNotificationSettings()` - Notification configuration UI
-  - `testDeadlineNotifications()` - Test notification system
-
-**TestingValidation.gs** (~500 lines) - Testing Framework & Data Validation
+**TestingValidation.gs** (~474 lines) - Testing Framework & Data Validation
 - Testing Framework:
   - `Assert` - Assertion library (assertEquals, assertTrue, assertFalse, etc.)
   - `runAllTests()` - Run complete test suite
@@ -224,7 +219,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `installValidationTrigger()` - Real-time validation on edit
   - `onEditValidation()` - Validation trigger handler
 
-**PerformanceUndo.gs** (~500 lines) - Caching Layer & Undo/Redo
+**PerformanceUndo.gs** (~294 lines) - Caching Layer & Undo/Redo
 - Caching:
   - `getCachedData()` - Get data from cache or load
   - `setCachedData()` - Store data in cache
@@ -246,7 +241,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `exportUndoHistoryToSheet()` - Export history to sheet
   - `createGrievanceSnapshot()`, `restoreFromSnapshot()` - Full snapshot backup
 
-**MobileQuickActions.gs** (~600 lines) - Mobile Interface & Quick Actions
+**MobileQuickActions.gs** (~1164 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
   - `showMobileDashboard()` - Touch-optimized dashboard
   - `getMobileDashboardStats()` - Dashboard statistics
@@ -408,7 +403,7 @@ var GRIEVANCE_COLS = {
 
 ---
 
-## Sheet Structure (5 Visible + 5 Hidden)
+## Sheet Structure (5 Visible + 6 Hidden)
 
 ### Core Data Sheets
 
@@ -422,10 +417,10 @@ var GRIEVANCE_COLS = {
 
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
-| 4 | 💼 Dashboard | View | Executive metrics dashboard with 9 analytics sections |
+| 4 | 💼 Dashboard | View | Executive metrics dashboard with 12 analytics sections |
 | 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
 
-#### 💼 Dashboard - 9 Live Analytics Sections
+#### 💼 Dashboard - 12 Live Analytics Sections
 
 | # | Section | Color | Metrics | Data Source |
 |---|---------|-------|---------|-------------|
@@ -435,9 +430,12 @@ var GRIEVANCE_COLS = {
 | 4 | TIMELINE & PERFORMANCE | 🟣 Purple | Avg Days Open, Filed This Month, Closed This Month, Avg Resolution | Grievance Log |
 | 5 | TYPE ANALYSIS | 🔷 Indigo | 5 issue categories × (Total, Open, Resolved, Win Rate, Avg Days) | Grievance Log |
 | 6 | LOCATION BREAKDOWN | 🔵 Cyan | 5 locations × (Members, Grievances, Open Cases, Win Rate) | Config + Member Dir + Grievance Log |
-| 7 | STEWARD PERFORMANCE | 🟣 Purple | Total Stewards, Active w/Cases, Avg Cases, Vol Hours, Contacts | Member Dir + Grievance Log |
-| 8 | MONTH-OVER-MONTH TRENDS | 🔴 Red | Filed/Closed/Won × (This Month, Last Month, Change, % Change, Trend) | Grievance Log |
-| 9 | STATUS LEGEND | ⬜ Gray | Color/icon reference guide | Static |
+| 7 | MONTH-OVER-MONTH TRENDS | 🔴 Red | Filed/Closed/Won × (This Month, Last Month, Change, % Change, Trend) | Grievance Log |
+| 8 | STATUS LEGEND | ⬜ Gray | Color/icon reference guide | Static |
+| 9 | STEWARD PERFORMANCE SUMMARY | 🟣 Purple | Total Stewards, Active w/Cases, Avg Cases, Vol Hours, Contacts | Member Dir + Grievance Log |
+| 10 | TOP 30 BUSIEST STEWARDS | 🔴 Dark Red | Rank, Steward Name, Active Cases, Open, Pending Info, Total Ever | Grievance Log |
+| 11 | TOP 10 PERFORMERS BY SCORE | 🟢 Green | Rank, Steward, Score, Win Rate %, Avg Days, Overdue | `_Steward_Performance_Calc` |
+| 12 | STEWARDS NEEDING SUPPORT | 🔴 Red | Rank, Steward, Score, Win Rate %, Avg Days, Overdue | `_Steward_Performance_Calc` |
 
 **All sections use live COUNTIF/COUNTIFS/AVERAGEIFS formulas that auto-update when source data changes.**
 
@@ -450,6 +448,7 @@ var GRIEVANCE_COLS = {
 | 3 | `_Member_Lookup` | Member data lookup formulas |
 | 4 | `_Steward_Contact_Calc` | Steward contact tracking (Y-AA) |
 | 5 | `_Dashboard_Calc` | Dashboard summary metrics (15 key KPIs) |
+| 6 | `_Steward_Performance_Calc` | Per-steward performance scores with weighted formula |
 
 ---
 
@@ -533,7 +532,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ```
 👤 Dashboard
 ├── 📊 Smart Dashboard (Auto-Detect)
-├── 🎯 Interactive Dashboard
+├── 🎯 Custom View
 ├── 🔍 Search Members
 ├── 📋 View Active Grievances
 ├── 📱 Mobile Dashboard
@@ -664,9 +663,9 @@ var sheet = ss.getSheetByName('Member Directory');
 
 ## Hidden Sheet Architecture (Self-Healing)
 
-The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
+The system uses 6 hidden calculation sheets with auto-sync triggers for cross-sheet data population. Formulas are stored in hidden sheets and synced to visible sheets, making them **self-healing** - if formulas are accidentally deleted, running REPAIR_DASHBOARD() restores them.
 
-### Hidden Sheets (5 total)
+### Hidden Sheets (6 total)
 
 | Sheet | Source | Destination | Purpose |
 |-------|--------|-------------|---------|
@@ -675,6 +674,7 @@ The system uses 5 hidden calculation sheets with auto-sync triggers for cross-sh
 | `_Member_Lookup` | Member Directory | Grievance Log | Member data lookup |
 | `_Steward_Contact_Calc` | Member Directory | Contact Reports | Y-AA (Contact tracking) |
 | `_Dashboard_Calc` | Both | 💼 Dashboard | 15 summary metrics (Win Rate, Overdue, Due This Week, etc.) |
+| `_Steward_Performance_Calc` | Grievance Log | 💼 Dashboard | Per-steward performance scores with weighted formula |
 
 ### Auto-Sync Trigger
 
@@ -686,7 +686,7 @@ The `onEditAutoSync` trigger automatically syncs data when:
 
 | Function | Purpose |
 |----------|---------|
-| `setupAllHiddenSheets()` | Create all 5 hidden sheets with formulas |
+| `setupAllHiddenSheets()` | Create all 6 hidden sheets with formulas |
 | `repairAllHiddenSheets()` | Recreate sheets, install trigger, sync data |
 | `installAutoSyncTrigger()` | Install the onEdit auto-sync trigger |
 | `verifyHiddenSheets()` | Verify all sheets and triggers are working |
@@ -732,6 +732,47 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.7.0 (2026-01-03) - Dashboard Restructure & Bug Fixes
+
+**Major Features:**
+
+1. **Dashboard Restructure**
+   - Removed unused columns G onwards - Dashboard now uses only columns A-F
+   - Moved Steward Performance section to near bottom for better visual hierarchy
+   - Added new **Top 30 Busiest Stewards** section showing stewards with most active cases
+   - Compact Status Legend now fits in single row (A-F)
+   - All numbers now formatted with comma separators (1,000)
+
+2. **Overdue Cases Bug Fix**
+   - Fixed Dashboard showing 0 for Overdue Cases
+   - Root cause: Formula was looking for `<0` but Days to Deadline shows "Overdue" text
+   - Changed formula to count cells containing "Overdue" text
+   - Also fixed in hidden sheet Steward Workload, Location Analytics calculations
+
+3. **Member Directory Enhancements**
+   - Added collapsible column groups for Engagement Metrics (Q-T) and Member Interests (U-X)
+   - Both groups are collapsed/hidden by default for cleaner view
+   - Added conditional formatting: Has Open Grievance = "Yes" shows red background
+   - Added comma formatting for numeric columns (Open Rate, Volunteer Hours)
+
+4. **Tab Rename: Interactive → Custom View**
+   - Renamed "🎯 Interactive" tab to "🎯 Custom View" for clarity
+   - Updated SHEETS constant and all string references
+
+5. **Code Cleanup**
+   - Removed orphaned `setupInteractiveDashboardCalcSheet()` function (defined but never called)
+   - Removed orphaned `setupEngagementCalcSheet()` function (used undefined constant)
+   - Fixed hidden sheet number comments for accuracy
+
+**Code Changes:**
+- Code.gs: ~150 lines added for Dashboard restructure and Member Directory enhancements
+- HiddenSheets.gs: Fixed 5 Overdue Cases formulas (changed `"<0"` to `"Overdue"`)
+- HiddenSheets.gs: Removed 2 orphaned functions (~60 lines)
+- Constants.gs: Changed `INTERACTIVE: '🎯 Interactive'` to `INTERACTIVE: '🎯 Custom View'`
+- MobileQuickActions.gs: Updated "Interactive Dashboard" text references
+
+---
 
 ### Version 1.6.0 (2026-01-03) - Desktop Search & Unified Seeding
 
@@ -1013,7 +1054,7 @@ Grievance Log ──────────────┘
 
 - Re-added dashboard sheets from original 509dashboard project
 - Created unified 💼 Dashboard (merged Executive Dashboard + Dashboard themes)
-- Added 🎯 Interactive Dashboard with customizable metric selection
+- Added 🎯 Custom View with customizable metric selection
 - Added `_Dashboard_Calc` hidden sheet with 15 self-healing metric formulas
 
 **New Sheets (2):**
@@ -1048,71 +1089,6 @@ Grievance Log ──────────────┘
 - Updated CREATE_509_DASHBOARD, DIAGNOSE_SETUP, REPAIR_DASHBOARD for 5 sheets
 
 ---
-
-### Version 1.3.0 (2025-12-16) - Simplified Core Architecture
-
-**Major Updates:**
-
-- Simplified from 22 sheets to 3 core sheets (Config, Member Directory, Grievance Log)
-- Reduced hidden calculation sheets from 13 to 4 essential sheets
-- Removed 18 non-essential sheets to focus on core grievance tracking functionality
-
-**Sheets Removed:**
-
-- Dashboard sheets: Dashboard, Executive Dashboard, KPI Performance Dashboard, Interactive
-- Analytics sheets: Steward Workload, Trends & Timeline, Location Analytics, Type Analysis, Member Engagement, Cost Impact
-- Utility sheets: Audit_Log, Diagnostics, Archive, User Settings, Member Satisfaction, Feedback & Development
-- Help sheets: FAQ, Getting Started
-
-**Hidden Sheets Retained (4):**
-
-- `_Grievance_Calc` - Grievance → Member Directory sync (AB-AD)
-- `_Grievance_Formulas` - Member → Grievance Log sync (C-D, X-AA)
-- `_Member_Lookup` - Member data lookup formulas
-- `_Steward_Contact_Calc` - Steward contact tracking (Y-AA)
-
-**Code Changes:**
-
-- Code.gs: Removed 19 sheet creation functions, reduced from ~1000 to ~600 lines
-- HiddenSheets.gs: Reduced from ~1600 to ~800 lines, removed 9 hidden sheet setup functions
-- Constants.gs: SHEETS object reduced from 22+ entries to 7 (3 core + 4 hidden)
-- Menu updated to remove references to deleted sheets
-
----
-
-### Version 1.2.0 (2025-12-16) - Complete Self-Healing Architecture
-
-**Major Updates:**
-
-- Expanded hidden sheets from 6 to 13 total calculation sheets
-- Added complete dropdown validation for all Config-referenced columns
-- Added Home Towns header to Config sheet (column AF)
-- Checkbox preservation after bulk setValues() operations
-
-**New Hidden Calculation Sheets (7 added):**
-
-- `_Grievance_Formulas` - Member lookup formulas for Grievance Log
-- `_Dashboard_Summary_Calc` - 15 dashboard summary metrics
-- `_Trends_Calc` - 12-month time-series analytics
-- `_Location_Analytics_Calc` - Location-based breakdown
-- `_Type_Analysis_Calc` - Issue category analysis
-- `_Steward_Performance_Calc` - Steward performance scores with Performance Score formula
-- `_Cost_Impact_Calc` - Financial impact estimates
-
-**Dropdown Validations Added:**
-
-- Member Directory: PREFERRED_COMM (J) → COMM_METHODS config
-- Member Directory: HOME_TOWN (X) → HOME_TOWNS config
-
-**Checkbox Repair Functions:**
-
-- `repairGrievanceCheckboxes()` - Re-apply checkboxes to Message Alert (AC)
-- `repairMemberCheckboxes()` - Re-apply checkboxes to Start Grievance (AE)
-
-**Config Sheet Improvements:**
-
-- Added "Home Towns" header at column AF (32) with consistent styling
-- Auto-resize for Home Towns column
 
 ### Version 1.1.0 (2025-12-14) - Hidden Sheet Architecture
 
