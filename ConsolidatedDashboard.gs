@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T18:14:42.345Z
+ * - Build Date: 2026-01-04T19:16:29.765Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1991,7 +1991,152 @@ function createSatisfactionSheet(ss) {
   // Freeze header row
   sheet.setFrozenRows(1);
 
-  Logger.log('Member Satisfaction sheet created');
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GOOGLE FORM SURVEY OUTLINE (Reference for form creation)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var surveyStartRow = 15;
+
+  // Header
+  sheet.getRange('L' + surveyStartRow).setValue('📋 WAVE 1 SURVEY OUTLINE')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setBackground('#4285F4')
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('L' + surveyStartRow + ':R' + surveyStartRow).merge();
+
+  // Google Form link
+  sheet.getRange('L' + (surveyStartRow + 1)).setValue('🔗 Create New Google Form:')
+    .setFontWeight('bold');
+  sheet.getRange('M' + (surveyStartRow + 1)).setValue('https://docs.google.com/forms/create')
+    .setFontColor('#1155CC');
+
+  // Survey sections outline
+  var surveyOutline = [
+    ['', '', '', '', '', '', ''],
+    ['SECTION', 'TITLE', 'QUESTION TYPE', 'OPTIONS/SCALE', '', '', ''],
+    ['0', 'INTRO', 'Description', 'Union Member Satisfaction Survey — Wave 1', '', '', ''],
+    ['', '', '', 'Anonymous survey, reported in aggregate. No names in open-text.', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['1', 'WORK CONTEXT', '', '', '', '', ''],
+    ['', 'Worksite / Program / Region', 'Dropdown', '(Your worksites)', '', '', ''],
+    ['', 'Role / Job Group', 'Dropdown', '(Your roles)', '', '', ''],
+    ['', 'Shift', 'Multiple choice', 'Day | Evening | Night | Rotating', '', '', ''],
+    ['', 'Time in current role', 'Multiple choice', '<1 yr | 1-3 yrs | 4-7 yrs | 8-15 yrs | 15+ yrs', '', '', ''],
+    ['', 'Contact with steward in past 12 months?', 'Multiple choice + branching', 'Yes → Section 3A | No → Section 3B', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['2', 'OVERALL SATISFACTION', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Satisfied with union representation', '1-10', '', '', '', ''],
+    ['', 'Trust union to act in members\' best interests', '1-10', '', '', '', ''],
+    ['', 'Feel more protected at work because of union', '1-10', '', '', '', ''],
+    ['', 'Would recommend membership to coworker', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['3A', 'STEWARD RATINGS (Had Contact)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Responded in timely manner', '1-10', '', '', '', ''],
+    ['', 'Treated me with respect', '1-10', '', '', '', ''],
+    ['', 'Explained options clearly', '1-10', '', '', '', ''],
+    ['', 'Followed through on commitments', '1-10', '', '', '', ''],
+    ['', 'Advocated effectively', '1-10', '', '', '', ''],
+    ['', 'Felt safe raising concerns', '1-10', '', '', '', ''],
+    ['', 'Handled confidentiality appropriately', '1-10', '', '', '', ''],
+    ['', 'What should stewards improve?', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['3B', 'STEWARD ACCESS (No Contact)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Know how to contact steward/rep', '1-10', '', '', '', ''],
+    ['', 'Confident I would get help', '1-10', '', '', '', ''],
+    ['', 'Easy to figure out who to contact', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['4', 'CHAPTER EFFECTIVENESS', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Chapter reps understand my workplace issues', '1-10', '', '', '', ''],
+    ['', 'Chapter communication is regular and clear', '1-10', '', '', '', ''],
+    ['', 'Chapter organizes members effectively', '1-10', '', '', '', ''],
+    ['', 'Know how to reach chapter contact', '1-10', '', '', '', ''],
+    ['', 'Representation is fair across roles/shifts', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['5', 'LOCAL LEADERSHIP & GOVERNANCE', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Leadership communicates decisions clearly', '1-10', '', '', '', ''],
+    ['', 'Understand how decisions are made', '1-10', '', '', '', ''],
+    ['', 'Union is transparent about finances', '1-10', '', '', '', ''],
+    ['', 'Leadership is accountable to feedback', '1-10', '', '', '', ''],
+    ['', 'Internal processes feel fair', '1-10', '', '', '', ''],
+    ['', 'Union welcomes differing opinions', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['6', 'CONTRACT ENFORCEMENT', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Union enforces contract effectively', '1-10', '', '', '', ''],
+    ['', 'Communicates realistic timelines', '1-10', '', '', '', ''],
+    ['', 'Provides clear updates on issues', '1-10', '', '', '', ''],
+    ['', 'Prioritizes frontline conditions', '1-10', '', '', '', ''],
+    ['', 'Filed grievance in past 24 months?', 'Multiple choice + branching', 'Yes → Section 6A | No → Section 7', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['6A', 'REPRESENTATION PROCESS (Filed)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Understood steps and timeline', '1-10', '', '', '', ''],
+    ['', 'Felt supported throughout', '1-10', '', '', '', ''],
+    ['', 'Received updates often enough', '1-10', '', '', '', ''],
+    ['', 'Outcome feels justified', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['7', 'COMMUNICATION QUALITY', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Communications are clear and actionable', '1-10', '', '', '', ''],
+    ['', 'Receive enough information', '1-10', '', '', '', ''],
+    ['', 'Can find information easily', '1-10', '', '', '', ''],
+    ['', 'Communications reach all shifts/locations', '1-10', '', '', '', ''],
+    ['', 'Meetings are worth attending', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['8', 'MEMBER VOICE & CULTURE', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'My voice matters in the union', '1-10', '', '', '', ''],
+    ['', 'Union actively seeks input', '1-10', '', '', '', ''],
+    ['', 'Members treated with dignity', '1-10', '', '', '', ''],
+    ['', 'Newer members are supported', '1-10', '', '', '', ''],
+    ['', 'Internal conflict handled respectfully', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['9', 'VALUE & COLLECTIVE ACTION', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Union provides good value for dues', '1-10', '', '', '', ''],
+    ['', 'Priorities reflect member needs', '1-10', '', '', '', ''],
+    ['', 'Union prepared to mobilize', '1-10', '', '', '', ''],
+    ['', 'Understand how to get involved', '1-10', '', '', '', ''],
+    ['', 'Acting together, we can win improvements', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['10', 'ROTATING: SCHEDULING/OFFICE DAYS', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Understand proposed changes', '1-10', '', '', '', ''],
+    ['', 'Feel adequately informed', '1-10', '', '', '', ''],
+    ['', 'Decisions use clear criteria', '1-10', '', '', '', ''],
+    ['', 'Work can be done under current expectations', '1-10', '', '', '', ''],
+    ['', 'Approach supports effective outcomes', '1-10', '', '', '', ''],
+    ['', 'Approach supports my wellbeing', '1-10', '', '', '', ''],
+    ['', 'My concerns would be taken seriously', '1-10', '', '', '', ''],
+    ['', 'Biggest scheduling challenge?', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['11', 'PRIORITIES & CLOSE', '', '', '', '', ''],
+    ['', 'Top 3 priorities (next 6-12 months)', 'Checkboxes (limit 3)', 'Contract enforcement | Workload | Scheduling | Pay | Safety | Training | Equity | Communication | Steward training | Organizing | Other', '', '', ''],
+    ['', '#1 change union should make', 'Paragraph', '', '', '', ''],
+    ['', 'One thing union should keep doing', 'Paragraph', '', '', '', ''],
+    ['', 'Additional comments (no names)', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['BRANCHING RULES:', '', '', '', '', '', ''],
+    ['', 'Steward contact: Yes → 3A, No → 3B', '', '', '', '', ''],
+    ['', 'Grievance filed: Yes → 6A, No → 7', '', '', '', '', '']
+  ];
+
+  sheet.getRange(surveyStartRow + 2, 12, surveyOutline.length, 7).setValues(surveyOutline);
+
+  // Format section headers
+  sheet.getRange('L' + (surveyStartRow + 3) + ':R' + (surveyStartRow + 3))
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Format section numbers
+  for (var s = surveyStartRow + 4; s <= surveyStartRow + 2 + surveyOutline.length; s++) {
+    var cellValue = sheet.getRange('L' + s).getValue();
+    if (cellValue && !isNaN(cellValue.toString().replace('A', '').replace('B', ''))) {
+      sheet.getRange('L' + s + ':R' + s).setBackground('#E8F0FE').setFontWeight('bold');
+    }
+  }
+
+  // Column widths for survey outline
+  sheet.setColumnWidth(16, 200); // P - Question
+  sheet.setColumnWidth(17, 120); // Q - Type
+  sheet.setColumnWidth(18, 300); // R - Options
+
+  Logger.log('Member Satisfaction sheet created with Wave 1 Survey outline');
 }
 
 // ============================================================================
