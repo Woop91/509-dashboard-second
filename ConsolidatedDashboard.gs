@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T20:35:20.411Z
+ * - Build Date: 2026-01-04T20:37:21.329Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -3217,9 +3217,6 @@ function REPAIR_DASHBOARD() {
 
     // Also reapply data validations
     setupDataValidations();
-
-    // Create Menu Checklist sheet
-    createMenuChecklistSheet_();
 
     // Final message handled by repairAllHiddenSheets
   } catch (error) {

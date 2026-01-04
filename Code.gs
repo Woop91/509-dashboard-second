@@ -2397,9 +2397,6 @@ function REPAIR_DASHBOARD() {
     // Also reapply data validations
     setupDataValidations();
 
-    // Create Menu Checklist sheet
-    createMenuChecklistSheet_();
-
     // Final message handled by repairAllHiddenSheets
   } catch (error) {
     Logger.log('Error in REPAIR_DASHBOARD: ' + error.message);
