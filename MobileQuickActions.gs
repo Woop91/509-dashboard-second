@@ -240,7 +240,7 @@ function getRecentGrievancesForMobile(limit) {
   if (!sheet || sheet.getLastRow() <= 1) return [];
   var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
   return data.map(function(row, idx) {
-    var filed = row[GRIEVANCE_COLS.FILED_DATE - 1];
+    var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
     var deadline = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
     return {
       id: row[GRIEVANCE_COLS.GRIEVANCE_ID - 1],
@@ -515,7 +515,7 @@ function showMemberGrievanceHistory(memberId) {
   var mine = [];
   data.forEach(function(row) {
     if (row[GRIEVANCE_COLS.MEMBER_ID - 1] === memberId) {
-      mine.push({ id: row[GRIEVANCE_COLS.GRIEVANCE_ID - 1], status: row[GRIEVANCE_COLS.STATUS - 1], step: row[GRIEVANCE_COLS.CURRENT_STEP - 1], issue: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1], filed: row[GRIEVANCE_COLS.FILED_DATE - 1], closed: row[GRIEVANCE_COLS.DATE_CLOSED - 1] });
+      mine.push({ id: row[GRIEVANCE_COLS.GRIEVANCE_ID - 1], status: row[GRIEVANCE_COLS.STATUS - 1], step: row[GRIEVANCE_COLS.CURRENT_STEP - 1], issue: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1], filed: row[GRIEVANCE_COLS.DATE_FILED - 1], closed: row[GRIEVANCE_COLS.DATE_CLOSED - 1] });
     }
   });
   if (mine.length === 0) { SpreadsheetApp.getUi().alert('No grievances for this member.'); return; }
