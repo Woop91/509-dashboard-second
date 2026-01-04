@@ -288,8 +288,16 @@ function seedFeedbackData() {
     }
   }
 
-  // Check if sheet already has data (skip if data exists)
-  if (sheet.getLastRow() > 1) {
+  // Check if column A (data area) already has data beyond header
+  var dataCol = sheet.getRange('A:A').getValues();
+  var dataRowCount = 0;
+  for (var i = 1; i < dataCol.length; i++) {
+    if (dataCol[i][0] !== '') {
+      dataRowCount++;
+      break;
+    }
+  }
+  if (dataRowCount > 0) {
     Logger.log('Feedback sheet already has data. Skipping seed.');
     return;
   }

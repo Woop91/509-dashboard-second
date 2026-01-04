@@ -1170,10 +1170,10 @@ function createInteractiveDashboard(ss) {
   sheet.autoResizeColumns(1, 6);
   sheet.setColumnWidth(3, 250);
 
-  // Delete excess columns after G (column 7)
+  // Delete excess columns after F (column 6)
   var maxCols = sheet.getMaxColumns();
-  if (maxCols > 7) {
-    sheet.deleteColumns(8, maxCols - 7);
+  if (maxCols > 6) {
+    sheet.deleteColumns(7, maxCols - 6);
   }
 }
 
@@ -2532,7 +2532,7 @@ function createMenuChecklistSheet_() {
   ];
 
   // Build rows with header
-  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description', 'Comments']];
+  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description', 'Notes']];
   for (var i = 0; i < menuItems.length; i++) {
     rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], menuItems[i][4], '']);
   }
@@ -2579,10 +2579,10 @@ function createMenuChecklistSheet_() {
     .build();
   sheet.setConditionalFormatRules([rule]);
 
-  // Delete excess columns after H (column 8)
+  // Delete excess columns after G (column 7)
   var maxCols = sheet.getMaxColumns();
-  if (maxCols > 8) {
-    sheet.deleteColumns(9, maxCols - 8);
+  if (maxCols > 7) {
+    sheet.deleteColumns(8, maxCols - 7);
   }
 
   return sheet;
