@@ -236,7 +236,7 @@ Dashboard (Real-time metrics and visualizations)
 
 ```
 Project Files (9 source files → 1 consolidated deployment)
-├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS constants
+├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS, SATISFACTION_COLS, FEEDBACK_COLS
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
@@ -249,12 +249,14 @@ Project Files (9 source files → 1 consolidated deployment)
 
 Key Functions:
 ├── CREATE_509_DASHBOARD() - Main setup function
-├── Sheet Creation
+├── Sheet Creation (7 sheets)
 │   ├── createConfigSheet()
 │   ├── createMemberDirectory()
 │   ├── createGrievanceLog()
 │   ├── createDashboard()
-│   └── createInteractiveDashboard()
+│   ├── createInteractiveDashboard()
+│   ├── createSatisfactionSheet()
+│   └── createFeedbackSheet()
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
@@ -555,9 +557,7 @@ Features include:
 
 ---
 
-### 7. Member Satisfaction Tracking
-
-> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
+### 7. Member Satisfaction Tracking (📊 Member Satisfaction)
 
 **Purpose**: Track and analyze member satisfaction surveys
 
@@ -579,9 +579,7 @@ Features include:
 - Average Communication
 - % Would Recommend (percentage of Yes responses)
 
-### 8. Feedback & Development
-
-> ⚠️ **TODO - FUTURE IMPLEMENTATION:** This sheet is planned but not yet implemented.
+### 8. Feedback & Development (💡 Feedback & Development)
 
 **Purpose**: Track system improvements and feature requests
 

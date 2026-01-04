@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T17:40:05.815Z
+ * - Build Date: 2026-01-04T19:16:29.765Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -68,7 +68,10 @@ var SHEETS = {
   // Menu Checklist
   MENU_CHECKLIST: 'Menu Checklist',
   // Audit Log (hidden)
-  AUDIT_LOG: '_Audit_Log'
+  AUDIT_LOG: '_Audit_Log',
+  // Satisfaction & Feedback sheets
+  SATISFACTION: '📊 Member Satisfaction',
+  FEEDBACK: '💡 Feedback & Development'
 };
 
 // ============================================================================
@@ -300,6 +303,49 @@ var CONFIG_COLS = {
   MAIN_FAX: 41,               // AO
   MAIN_CONTACT_NAME: 42,      // AP
   MAIN_CONTACT_EMAIL: 43      // AQ
+};
+
+// ============================================================================
+// SATISFACTION SURVEY COLUMNS (10 columns: A-J)
+// ============================================================================
+
+/**
+ * Member Satisfaction Survey column positions (1-indexed)
+ * @const {Object}
+ */
+var SATISFACTION_COLS = {
+  SURVEY_ID: 1,                // A - Auto-generated unique ID
+  MEMBER_ID: 2,                // B - Links to Member Directory
+  MEMBER_NAME: 3,              // C - Auto-populated from Member Directory
+  DATE_SENT: 4,                // D - Date survey was sent
+  DATE_COMPLETED: 5,           // E - Date survey was completed
+  OVERALL_SATISFACTION: 6,     // F - 1-5 scale
+  STEWARD_SUPPORT: 7,          // G - 1-5 scale
+  COMMUNICATION: 8,            // H - 1-5 scale
+  WOULD_RECOMMEND: 9,          // I - Yes/No
+  COMMENTS: 10                 // J - Free text
+};
+
+// ============================================================================
+// FEEDBACK & DEVELOPMENT COLUMNS (11 columns: A-K)
+// ============================================================================
+
+/**
+ * Feedback & Development column positions (1-indexed)
+ * @const {Object}
+ */
+var FEEDBACK_COLS = {
+  TIMESTAMP: 1,                // A - Auto-generated timestamp
+  SUBMITTED_BY: 2,             // B - Who submitted the feedback
+  CATEGORY: 3,                 // C - Area of the system
+  TYPE: 4,                     // D - Bug, Feature Request, Improvement
+  PRIORITY: 5,                 // E - Low, Medium, High, Critical
+  TITLE: 6,                    // F - Short title
+  DESCRIPTION: 7,              // G - Detailed description
+  STATUS: 8,                   // H - New, In Progress, Resolved, Won't Fix
+  ASSIGNED_TO: 9,              // I - Who is working on it
+  RESOLUTION: 10,              // J - How it was resolved
+  NOTES: 11                    // K - Additional notes
 };
 
 // ============================================================================
@@ -837,7 +883,9 @@ function CREATE_509_DASHBOARD() {
     '• Member Directory\n' +
     '• Grievance Log\n' +
     '• 💼 Dashboard (Executive metrics)\n' +
-    '• 🎯 Interactive (Customizable view)\n\n' +
+    '• 🎯 Custom View (Customizable metrics)\n' +
+    '• 📊 Member Satisfaction (Survey tracking)\n' +
+    '• 💡 Feedback & Development (Bug/feature tracking)\n\n' +
     'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
@@ -872,6 +920,12 @@ function CREATE_509_DASHBOARD() {
 
     createInteractiveDashboard(ss);
     ss.toast('Created Custom View', '🏗️ Progress', 2);
+
+    createSatisfactionSheet(ss);
+    ss.toast('Created Member Satisfaction', '🏗️ Progress', 2);
+
+    createFeedbackSheet(ss);
+    ss.toast('Created Feedback & Development', '🏗️ Progress', 2);
 
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
@@ -1800,6 +1854,478 @@ function createInteractiveDashboard(ss) {
   // Format
   sheet.autoResizeColumns(1, 6);
   sheet.setColumnWidth(3, 250);
+}
+
+// ============================================================================
+// MEMBER SATISFACTION SHEET
+// ============================================================================
+
+/**
+ * Create the Member Satisfaction Tracking sheet
+ * Tracks survey responses and calculates satisfaction metrics
+ * @param {Spreadsheet} ss - Spreadsheet object
+ */
+function createSatisfactionSheet(ss) {
+  var sheet = getOrCreateSheet(ss, SHEETS.SATISFACTION);
+  sheet.clear();
+
+  // Headers
+  var headers = [
+    'Survey ID',           // A
+    'Member ID',           // B
+    'Member Name',         // C - Auto-populated
+    'Date Sent',           // D
+    'Date Completed',      // E
+    'Overall Satisfaction',// F - 1-5 scale
+    'Steward Support',     // G - 1-5 scale
+    'Communication',       // H - 1-5 scale
+    'Would Recommend',     // I - Yes/No
+    'Comments'             // J
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.HEADER_BG)
+    .setFontColor(COLORS.HEADER_TEXT);
+
+  // Column widths
+  sheet.setColumnWidth(SATISFACTION_COLS.SURVEY_ID, 100);
+  sheet.setColumnWidth(SATISFACTION_COLS.MEMBER_ID, 100);
+  sheet.setColumnWidth(SATISFACTION_COLS.MEMBER_NAME, 150);
+  sheet.setColumnWidth(SATISFACTION_COLS.DATE_SENT, 100);
+  sheet.setColumnWidth(SATISFACTION_COLS.DATE_COMPLETED, 120);
+  sheet.setColumnWidth(SATISFACTION_COLS.OVERALL_SATISFACTION, 140);
+  sheet.setColumnWidth(SATISFACTION_COLS.STEWARD_SUPPORT, 120);
+  sheet.setColumnWidth(SATISFACTION_COLS.COMMUNICATION, 120);
+  sheet.setColumnWidth(SATISFACTION_COLS.WOULD_RECOMMEND, 130);
+  sheet.setColumnWidth(SATISFACTION_COLS.COMMENTS, 300);
+
+  // Member ID dropdown validation (from Member Directory)
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+    var memberIdRange = "'" + SHEETS.MEMBER_DIR + "'!" + memberIdCol + "2:" + memberIdCol;
+    var memberRule = SpreadsheetApp.newDataValidation()
+      .requireValueInRange(memberSheet.getRange(memberIdCol + '2:' + memberIdCol), true)
+      .setAllowInvalid(false)
+      .build();
+    sheet.getRange(2, SATISFACTION_COLS.MEMBER_ID, 998, 1).setDataValidation(memberRule);
+  }
+
+  // 1-5 scale validation for satisfaction columns
+  var ratingRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['1', '2', '3', '4', '5'], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, SATISFACTION_COLS.OVERALL_SATISFACTION, 998, 1).setDataValidation(ratingRule);
+  sheet.getRange(2, SATISFACTION_COLS.STEWARD_SUPPORT, 998, 1).setDataValidation(ratingRule);
+  sheet.getRange(2, SATISFACTION_COLS.COMMUNICATION, 998, 1).setDataValidation(ratingRule);
+
+  // Yes/No validation for Would Recommend
+  var yesNoRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['Yes', 'No'], true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, SATISFACTION_COLS.WOULD_RECOMMEND, 998, 1).setDataValidation(yesNoRule);
+
+  // Date format
+  sheet.getRange(2, SATISFACTION_COLS.DATE_SENT, 998, 1).setNumberFormat('MM/dd/yyyy');
+  sheet.getRange(2, SATISFACTION_COLS.DATE_COMPLETED, 998, 1).setNumberFormat('MM/dd/yyyy');
+
+  // Auto-populate Member Name formula (rows 2-100)
+  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  var mFirstCol = getColumnLetter(MEMBER_COLS.FIRST_NAME);
+  var mLastCol = getColumnLetter(MEMBER_COLS.LAST_NAME);
+  var lookupRange = "'" + SHEETS.MEMBER_DIR + "'!" + mIdCol + ":" + mLastCol;
+  for (var i = 2; i <= 100; i++) {
+    var memberIdCell = getColumnLetter(SATISFACTION_COLS.MEMBER_ID) + i;
+    var formula = '=IF(' + memberIdCell + '="","",IFERROR(VLOOKUP(' + memberIdCell + ',' + lookupRange + ',' + MEMBER_COLS.FIRST_NAME + ',FALSE)&" "&VLOOKUP(' + memberIdCell + ',' + lookupRange + ',' + MEMBER_COLS.LAST_NAME + ',FALSE),""))';
+    sheet.getRange(i, SATISFACTION_COLS.MEMBER_NAME).setFormula(formula);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUMMARY METRICS SECTION (Rows at bottom right)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Add summary section starting at row 2, column L
+  sheet.getRange('L1').setValue('📊 SATISFACTION METRICS')
+    .setFontWeight('bold')
+    .setBackground(COLORS.UNION_GREEN)
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('L1:N1').merge();
+
+  // Metric labels and formulas
+  var satCol = getColumnLetter(SATISFACTION_COLS.OVERALL_SATISFACTION);
+  var stewCol = getColumnLetter(SATISFACTION_COLS.STEWARD_SUPPORT);
+  var commCol = getColumnLetter(SATISFACTION_COLS.COMMUNICATION);
+  var recCol = getColumnLetter(SATISFACTION_COLS.WOULD_RECOMMEND);
+  var compCol = getColumnLetter(SATISFACTION_COLS.DATE_COMPLETED);
+
+  var metrics = [
+    ['Metric', 'Value', 'Description'],
+    ['Total Surveys Sent', '=COUNTA(' + getColumnLetter(SATISFACTION_COLS.SURVEY_ID) + '2:' + getColumnLetter(SATISFACTION_COLS.SURVEY_ID) + ')', 'All surveys sent'],
+    ['Surveys Completed', '=COUNTA(' + compCol + '2:' + compCol + ')', 'Surveys with responses'],
+    ['Response Rate', '=IFERROR(ROUND(COUNTA(' + compCol + '2:' + compCol + ')/COUNTA(' + getColumnLetter(SATISFACTION_COLS.SURVEY_ID) + '2:' + getColumnLetter(SATISFACTION_COLS.SURVEY_ID) + ')*100,1)&"%","0%")', 'Percentage completed'],
+    ['Avg Overall Satisfaction', '=IFERROR(ROUND(AVERAGE(' + satCol + '2:' + satCol + '),2),"N/A")', 'Scale 1-5'],
+    ['Avg Steward Support', '=IFERROR(ROUND(AVERAGE(' + stewCol + '2:' + stewCol + '),2),"N/A")', 'Scale 1-5'],
+    ['Avg Communication', '=IFERROR(ROUND(AVERAGE(' + commCol + '2:' + commCol + '),2),"N/A")', 'Scale 1-5'],
+    ['% Would Recommend', '=IFERROR(ROUND(COUNTIF(' + recCol + '2:' + recCol + ',"Yes")/COUNTA(' + recCol + '2:' + recCol + ')*100,1)&"%","0%")', 'Yes responses']
+  ];
+
+  for (var m = 0; m < metrics.length; m++) {
+    sheet.getRange(2 + m, 12).setValue(metrics[m][0]);
+    if (m === 0) {
+      sheet.getRange(2 + m, 13).setValue(metrics[m][1]);
+    } else {
+      sheet.getRange(2 + m, 13).setFormula(metrics[m][1]);
+    }
+    sheet.getRange(2 + m, 14).setValue(metrics[m][2]);
+  }
+
+  // Format metrics header
+  sheet.getRange('L2:N2').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
+  sheet.setColumnWidth(12, 180);
+  sheet.setColumnWidth(13, 80);
+  sheet.setColumnWidth(14, 150);
+
+  // Freeze header row
+  sheet.setFrozenRows(1);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GOOGLE FORM SURVEY OUTLINE (Reference for form creation)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  var surveyStartRow = 15;
+
+  // Header
+  sheet.getRange('L' + surveyStartRow).setValue('📋 WAVE 1 SURVEY OUTLINE')
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setBackground('#4285F4')
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('L' + surveyStartRow + ':R' + surveyStartRow).merge();
+
+  // Google Form link
+  sheet.getRange('L' + (surveyStartRow + 1)).setValue('🔗 Create New Google Form:')
+    .setFontWeight('bold');
+  sheet.getRange('M' + (surveyStartRow + 1)).setValue('https://docs.google.com/forms/create')
+    .setFontColor('#1155CC');
+
+  // Survey sections outline
+  var surveyOutline = [
+    ['', '', '', '', '', '', ''],
+    ['SECTION', 'TITLE', 'QUESTION TYPE', 'OPTIONS/SCALE', '', '', ''],
+    ['0', 'INTRO', 'Description', 'Union Member Satisfaction Survey — Wave 1', '', '', ''],
+    ['', '', '', 'Anonymous survey, reported in aggregate. No names in open-text.', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['1', 'WORK CONTEXT', '', '', '', '', ''],
+    ['', 'Worksite / Program / Region', 'Dropdown', '(Your worksites)', '', '', ''],
+    ['', 'Role / Job Group', 'Dropdown', '(Your roles)', '', '', ''],
+    ['', 'Shift', 'Multiple choice', 'Day | Evening | Night | Rotating', '', '', ''],
+    ['', 'Time in current role', 'Multiple choice', '<1 yr | 1-3 yrs | 4-7 yrs | 8-15 yrs | 15+ yrs', '', '', ''],
+    ['', 'Contact with steward in past 12 months?', 'Multiple choice + branching', 'Yes → Section 3A | No → Section 3B', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['2', 'OVERALL SATISFACTION', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Satisfied with union representation', '1-10', '', '', '', ''],
+    ['', 'Trust union to act in members\' best interests', '1-10', '', '', '', ''],
+    ['', 'Feel more protected at work because of union', '1-10', '', '', '', ''],
+    ['', 'Would recommend membership to coworker', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['3A', 'STEWARD RATINGS (Had Contact)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Responded in timely manner', '1-10', '', '', '', ''],
+    ['', 'Treated me with respect', '1-10', '', '', '', ''],
+    ['', 'Explained options clearly', '1-10', '', '', '', ''],
+    ['', 'Followed through on commitments', '1-10', '', '', '', ''],
+    ['', 'Advocated effectively', '1-10', '', '', '', ''],
+    ['', 'Felt safe raising concerns', '1-10', '', '', '', ''],
+    ['', 'Handled confidentiality appropriately', '1-10', '', '', '', ''],
+    ['', 'What should stewards improve?', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['3B', 'STEWARD ACCESS (No Contact)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Know how to contact steward/rep', '1-10', '', '', '', ''],
+    ['', 'Confident I would get help', '1-10', '', '', '', ''],
+    ['', 'Easy to figure out who to contact', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['4', 'CHAPTER EFFECTIVENESS', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Chapter reps understand my workplace issues', '1-10', '', '', '', ''],
+    ['', 'Chapter communication is regular and clear', '1-10', '', '', '', ''],
+    ['', 'Chapter organizes members effectively', '1-10', '', '', '', ''],
+    ['', 'Know how to reach chapter contact', '1-10', '', '', '', ''],
+    ['', 'Representation is fair across roles/shifts', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['5', 'LOCAL LEADERSHIP & GOVERNANCE', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Leadership communicates decisions clearly', '1-10', '', '', '', ''],
+    ['', 'Understand how decisions are made', '1-10', '', '', '', ''],
+    ['', 'Union is transparent about finances', '1-10', '', '', '', ''],
+    ['', 'Leadership is accountable to feedback', '1-10', '', '', '', ''],
+    ['', 'Internal processes feel fair', '1-10', '', '', '', ''],
+    ['', 'Union welcomes differing opinions', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['6', 'CONTRACT ENFORCEMENT', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Union enforces contract effectively', '1-10', '', '', '', ''],
+    ['', 'Communicates realistic timelines', '1-10', '', '', '', ''],
+    ['', 'Provides clear updates on issues', '1-10', '', '', '', ''],
+    ['', 'Prioritizes frontline conditions', '1-10', '', '', '', ''],
+    ['', 'Filed grievance in past 24 months?', 'Multiple choice + branching', 'Yes → Section 6A | No → Section 7', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['6A', 'REPRESENTATION PROCESS (Filed)', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Understood steps and timeline', '1-10', '', '', '', ''],
+    ['', 'Felt supported throughout', '1-10', '', '', '', ''],
+    ['', 'Received updates often enough', '1-10', '', '', '', ''],
+    ['', 'Outcome feels justified', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['7', 'COMMUNICATION QUALITY', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Communications are clear and actionable', '1-10', '', '', '', ''],
+    ['', 'Receive enough information', '1-10', '', '', '', ''],
+    ['', 'Can find information easily', '1-10', '', '', '', ''],
+    ['', 'Communications reach all shifts/locations', '1-10', '', '', '', ''],
+    ['', 'Meetings are worth attending', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['8', 'MEMBER VOICE & CULTURE', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'My voice matters in the union', '1-10', '', '', '', ''],
+    ['', 'Union actively seeks input', '1-10', '', '', '', ''],
+    ['', 'Members treated with dignity', '1-10', '', '', '', ''],
+    ['', 'Newer members are supported', '1-10', '', '', '', ''],
+    ['', 'Internal conflict handled respectfully', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['9', 'VALUE & COLLECTIVE ACTION', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Union provides good value for dues', '1-10', '', '', '', ''],
+    ['', 'Priorities reflect member needs', '1-10', '', '', '', ''],
+    ['', 'Union prepared to mobilize', '1-10', '', '', '', ''],
+    ['', 'Understand how to get involved', '1-10', '', '', '', ''],
+    ['', 'Acting together, we can win improvements', '1-10', '', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['10', 'ROTATING: SCHEDULING/OFFICE DAYS', 'Linear scale 1-10', '', '', '', ''],
+    ['', 'Understand proposed changes', '1-10', '', '', '', ''],
+    ['', 'Feel adequately informed', '1-10', '', '', '', ''],
+    ['', 'Decisions use clear criteria', '1-10', '', '', '', ''],
+    ['', 'Work can be done under current expectations', '1-10', '', '', '', ''],
+    ['', 'Approach supports effective outcomes', '1-10', '', '', '', ''],
+    ['', 'Approach supports my wellbeing', '1-10', '', '', '', ''],
+    ['', 'My concerns would be taken seriously', '1-10', '', '', '', ''],
+    ['', 'Biggest scheduling challenge?', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['11', 'PRIORITIES & CLOSE', '', '', '', '', ''],
+    ['', 'Top 3 priorities (next 6-12 months)', 'Checkboxes (limit 3)', 'Contract enforcement | Workload | Scheduling | Pay | Safety | Training | Equity | Communication | Steward training | Organizing | Other', '', '', ''],
+    ['', '#1 change union should make', 'Paragraph', '', '', '', ''],
+    ['', 'One thing union should keep doing', 'Paragraph', '', '', '', ''],
+    ['', 'Additional comments (no names)', 'Paragraph', 'Optional', '', '', ''],
+    ['', '', '', '', '', '', ''],
+    ['BRANCHING RULES:', '', '', '', '', '', ''],
+    ['', 'Steward contact: Yes → 3A, No → 3B', '', '', '', '', ''],
+    ['', 'Grievance filed: Yes → 6A, No → 7', '', '', '', '', '']
+  ];
+
+  sheet.getRange(surveyStartRow + 2, 12, surveyOutline.length, 7).setValues(surveyOutline);
+
+  // Format section headers
+  sheet.getRange('L' + (surveyStartRow + 3) + ':R' + (surveyStartRow + 3))
+    .setFontWeight('bold')
+    .setBackground(COLORS.LIGHT_GRAY);
+
+  // Format section numbers
+  for (var s = surveyStartRow + 4; s <= surveyStartRow + 2 + surveyOutline.length; s++) {
+    var cellValue = sheet.getRange('L' + s).getValue();
+    if (cellValue && !isNaN(cellValue.toString().replace('A', '').replace('B', ''))) {
+      sheet.getRange('L' + s + ':R' + s).setBackground('#E8F0FE').setFontWeight('bold');
+    }
+  }
+
+  // Column widths for survey outline
+  sheet.setColumnWidth(16, 200); // P - Question
+  sheet.setColumnWidth(17, 120); // Q - Type
+  sheet.setColumnWidth(18, 300); // R - Options
+
+  Logger.log('Member Satisfaction sheet created with Wave 1 Survey outline');
+}
+
+// ============================================================================
+// FEEDBACK & DEVELOPMENT SHEET
+// ============================================================================
+
+/**
+ * Create the Feedback & Development tracking sheet
+ * Tracks bugs, feature requests, and system improvements
+ * @param {Spreadsheet} ss - Spreadsheet object
+ */
+function createFeedbackSheet(ss) {
+  var sheet = getOrCreateSheet(ss, SHEETS.FEEDBACK);
+  sheet.clear();
+
+  // Headers
+  var headers = [
+    'Timestamp',       // A - Auto-generated
+    'Submitted By',    // B
+    'Category',        // C
+    'Type',            // D
+    'Priority',        // E
+    'Title',           // F
+    'Description',     // G
+    'Status',          // H
+    'Assigned To',     // I
+    'Resolution',      // J
+    'Notes'            // K
+  ];
+
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+    .setFontWeight('bold')
+    .setBackground(COLORS.HEADER_BG)
+    .setFontColor(COLORS.HEADER_TEXT);
+
+  // Column widths
+  sheet.setColumnWidth(FEEDBACK_COLS.TIMESTAMP, 140);
+  sheet.setColumnWidth(FEEDBACK_COLS.SUBMITTED_BY, 120);
+  sheet.setColumnWidth(FEEDBACK_COLS.CATEGORY, 120);
+  sheet.setColumnWidth(FEEDBACK_COLS.TYPE, 120);
+  sheet.setColumnWidth(FEEDBACK_COLS.PRIORITY, 80);
+  sheet.setColumnWidth(FEEDBACK_COLS.TITLE, 200);
+  sheet.setColumnWidth(FEEDBACK_COLS.DESCRIPTION, 350);
+  sheet.setColumnWidth(FEEDBACK_COLS.STATUS, 100);
+  sheet.setColumnWidth(FEEDBACK_COLS.ASSIGNED_TO, 120);
+  sheet.setColumnWidth(FEEDBACK_COLS.RESOLUTION, 250);
+  sheet.setColumnWidth(FEEDBACK_COLS.NOTES, 200);
+
+  // Category dropdown
+  var categoryOptions = ['Dashboard', 'Member Directory', 'Grievance Log', 'Config', 'Search', 'Mobile', 'Reports', 'Performance', 'UI/UX', 'Other'];
+  var categoryRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(categoryOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, FEEDBACK_COLS.CATEGORY, 998, 1).setDataValidation(categoryRule);
+
+  // Type dropdown
+  var typeOptions = ['Bug', 'Feature Request', 'Improvement', 'Documentation', 'Question'];
+  var typeRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(typeOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, FEEDBACK_COLS.TYPE, 998, 1).setDataValidation(typeRule);
+
+  // Priority dropdown with conditional formatting
+  var priorityOptions = ['Low', 'Medium', 'High', 'Critical'];
+  var priorityRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(priorityOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, FEEDBACK_COLS.PRIORITY, 998, 1).setDataValidation(priorityRule);
+
+  // Status dropdown
+  var statusOptions = ['New', 'In Progress', 'On Hold', 'Resolved', 'Won\'t Fix', 'Duplicate'];
+  var statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(statusOptions, true)
+    .setAllowInvalid(false)
+    .build();
+  sheet.getRange(2, FEEDBACK_COLS.STATUS, 998, 1).setDataValidation(statusRule);
+
+  // Conditional formatting for Priority
+  var priorityRange = sheet.getRange(2, FEEDBACK_COLS.PRIORITY, 998, 1);
+
+  // Critical = Red
+  var criticalRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Critical')
+    .setBackground('#FFCDD2')
+    .setFontColor('#B71C1C')
+    .setRanges([priorityRange])
+    .build();
+
+  // High = Orange
+  var highRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('High')
+    .setBackground('#FFE0B2')
+    .setFontColor('#E65100')
+    .setRanges([priorityRange])
+    .build();
+
+  // Medium = Yellow
+  var mediumRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Medium')
+    .setBackground('#FFF9C4')
+    .setFontColor('#F57F17')
+    .setRanges([priorityRange])
+    .build();
+
+  // Low = Green
+  var lowRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Low')
+    .setBackground('#C8E6C9')
+    .setFontColor('#1B5E20')
+    .setRanges([priorityRange])
+    .build();
+
+  // Conditional formatting for Status
+  var statusRange = sheet.getRange(2, FEEDBACK_COLS.STATUS, 998, 1);
+
+  // Resolved = Green
+  var resolvedRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('Resolved')
+    .setBackground('#C8E6C9')
+    .setFontColor('#1B5E20')
+    .setRanges([statusRange])
+    .build();
+
+  // In Progress = Blue
+  var inProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenTextEqualTo('In Progress')
+    .setBackground('#BBDEFB')
+    .setFontColor('#0D47A1')
+    .setRanges([statusRange])
+    .build();
+
+  // Apply all conditional formatting rules
+  var rules = sheet.getConditionalFormatRules();
+  rules.push(criticalRule, highRule, mediumRule, lowRule, resolvedRule, inProgressRule);
+  sheet.setConditionalFormatRules(rules);
+
+  // Timestamp format
+  sheet.getRange(2, FEEDBACK_COLS.TIMESTAMP, 998, 1).setNumberFormat('MM/dd/yyyy HH:mm');
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SUMMARY METRICS SECTION
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  sheet.getRange('M1').setValue('📊 FEEDBACK METRICS')
+    .setFontWeight('bold')
+    .setBackground(COLORS.PRIMARY_PURPLE)
+    .setFontColor(COLORS.WHITE);
+  sheet.getRange('M1:O1').merge();
+
+  var typeCol = getColumnLetter(FEEDBACK_COLS.TYPE);
+  var statusCol = getColumnLetter(FEEDBACK_COLS.STATUS);
+  var priorityCol = getColumnLetter(FEEDBACK_COLS.PRIORITY);
+  var idCol = getColumnLetter(FEEDBACK_COLS.TIMESTAMP);
+
+  var feedbackMetrics = [
+    ['Metric', 'Value', 'Description'],
+    ['Total Items', '=COUNTA(' + idCol + '2:' + idCol + ')', 'All feedback items'],
+    ['Bugs', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Bug")', 'Bug reports'],
+    ['Feature Requests', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Feature Request")', 'New feature asks'],
+    ['Improvements', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Improvement")', 'Enhancement suggestions'],
+    ['New/Open', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"New")+COUNTIF(' + statusCol + '2:' + statusCol + ',"In Progress")', 'Unresolved items'],
+    ['Resolved', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")', 'Completed items'],
+    ['Critical Priority', '=COUNTIF(' + priorityCol + '2:' + priorityCol + ',"Critical")', 'Urgent items'],
+    ['Resolution Rate', '=IFERROR(ROUND(COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")/COUNTA(' + idCol + '2:' + idCol + ')*100,1)&"%","0%")', 'Percentage resolved']
+  ];
+
+  for (var f = 0; f < feedbackMetrics.length; f++) {
+    sheet.getRange(2 + f, 13).setValue(feedbackMetrics[f][0]);
+    if (f === 0) {
+      sheet.getRange(2 + f, 14).setValue(feedbackMetrics[f][1]);
+    } else {
+      sheet.getRange(2 + f, 14).setFormula(feedbackMetrics[f][1]);
+    }
+    sheet.getRange(2 + f, 15).setValue(feedbackMetrics[f][2]);
+  }
+
+  // Format metrics header
+  sheet.getRange('M2:O2').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
+  sheet.setColumnWidth(13, 140);
+  sheet.setColumnWidth(14, 80);
+  sheet.setColumnWidth(15, 150);
+
+  // Freeze header row
+  sheet.setFrozenRows(1);
+
+  Logger.log('Feedback & Development sheet created');
 }
 
 // ============================================================================

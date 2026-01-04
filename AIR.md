@@ -113,7 +113,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Start grievance (stub)
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- Sheet creation (5 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`
+- Sheet creation (7 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -401,9 +401,44 @@ var GRIEVANCE_COLS = {
 };
 ```
 
+### SATISFACTION_COLS (10 columns: A-J)
+
+```javascript
+var SATISFACTION_COLS = {
+  SURVEY_ID: 1,                // A - Auto-generated unique ID
+  MEMBER_ID: 2,                // B - Links to Member Directory
+  MEMBER_NAME: 3,              // C - Auto-populated from Member Directory
+  DATE_SENT: 4,                // D - Date survey was sent
+  DATE_COMPLETED: 5,           // E - Date survey was completed
+  OVERALL_SATISFACTION: 6,     // F - 1-5 scale
+  STEWARD_SUPPORT: 7,          // G - 1-5 scale
+  COMMUNICATION: 8,            // H - 1-5 scale
+  WOULD_RECOMMEND: 9,          // I - Yes/No
+  COMMENTS: 10                 // J - Free text
+};
+```
+
+### FEEDBACK_COLS (11 columns: A-K)
+
+```javascript
+var FEEDBACK_COLS = {
+  TIMESTAMP: 1,                // A - Auto-generated timestamp
+  SUBMITTED_BY: 2,             // B - Who submitted the feedback
+  CATEGORY: 3,                 // C - Area of the system
+  TYPE: 4,                     // D - Bug, Feature Request, Improvement
+  PRIORITY: 5,                 // E - Low, Medium, High, Critical
+  TITLE: 6,                    // F - Short title
+  DESCRIPTION: 7,              // G - Detailed description
+  STATUS: 8,                   // H - New, In Progress, Resolved, Won't Fix
+  ASSIGNED_TO: 9,              // I - Who is working on it
+  RESOLUTION: 10,              // J - How it was resolved
+  NOTES: 11                    // K - Additional notes
+};
+```
+
 ---
 
-## Sheet Structure (5 Visible + 6 Hidden)
+## Sheet Structure (7 Visible + 6 Hidden)
 
 ### Core Data Sheets
 
@@ -418,7 +453,14 @@ var GRIEVANCE_COLS = {
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
 | 4 | 💼 Dashboard | View | Executive metrics dashboard with 12 analytics sections |
-| 5 | 🎯 Interactive | View | Customizable metrics with dropdowns |
+| 5 | 🎯 Custom View | View | Customizable metrics with dropdowns |
+
+### Tracking Sheets
+
+| # | Sheet Name | Type | Purpose |
+|---|------------|------|---------|
+| 6 | 📊 Member Satisfaction | Data | Survey tracking with satisfaction metrics (10 columns) |
+| 7 | 💡 Feedback & Development | Data | Bug/feature tracking with priority (11 columns) |
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 
