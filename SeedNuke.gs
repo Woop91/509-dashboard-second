@@ -561,6 +561,13 @@ function seedSatisfactionData() {
     sampleData.push(row);
   }
 
+  // Ensure sheet has enough columns (68 for survey data)
+  var requiredCols = sampleData[0].length;
+  var currentCols = sheet.getMaxColumns();
+  if (currentCols < requiredCols) {
+    sheet.insertColumnsAfter(currentCols, requiredCols - currentCols);
+  }
+
   // Write sample data starting at row 2
   sheet.getRange(2, 1, sampleData.length, sampleData[0].length).setValues(sampleData);
 
