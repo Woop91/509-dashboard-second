@@ -29,6 +29,7 @@ var SHEETS = {
   MEMBER_LOOKUP: '_Member_Lookup',
   STEWARD_CONTACT_CALC: '_Steward_Contact_Calc',
   DASHBOARD_CALC: '_Dashboard_Calc',
+  STEWARD_PERFORMANCE_CALC: '_Steward_Performance_Calc',
   // Optional source sheets
   MEETING_ATTENDANCE: '📅 Meeting Attendance',
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',

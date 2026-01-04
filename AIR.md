@@ -154,14 +154,15 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~2150 lines)
-- `setupAllHiddenSheets()` - Create all 5 hidden calculation sheets
-- Hidden Sheet Setup Functions (5 total):
+**HiddenSheets.gs** (~1500 lines)
+- `setupAllHiddenSheets()` - Create all 6 hidden calculation sheets
+- Hidden Sheet Setup Functions (6 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
   - `setupGrievanceFormulasSheet()` - Member lookup formulas (First Name, Last Name, Email, etc.)
   - `setupMemberLookupSheet()` - Member → Grievance Log sync
   - `setupStewardContactCalcSheet()` - Steward contact tracking
   - `setupDashboardCalcSheet()` - Dashboard summary metrics (15 key metrics)
+  - `setupStewardPerformanceCalcSheet()` - Steward performance scores with weighted formula
 - Sync Functions:
   - `syncAllData()` - Sync all cross-sheet data
   - `syncGrievanceToMemberDirectory()` - Sync grievance data to members (AB-AD)
