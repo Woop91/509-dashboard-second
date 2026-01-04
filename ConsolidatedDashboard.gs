@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T00:47:15.336Z
+ * - Build Date: 2026-01-04T01:01:20.207Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -5479,8 +5479,8 @@ function setupStewardContactCalcSheet() {
 
   sheet.clear();
 
-  // Headers for steward contact summary
-  var headers = ['Steward Name', 'Total Contacts', 'Contacts This Month', 'Contacts Last 7 Days', 'Last Contact Date', 'Avg Days Between Contacts'];
+  // Headers for steward contact summary (5 columns)
+  var headers = ['Steward Name', 'Total Contacts', 'Contacts This Month', 'Contacts Last 7 Days', 'Last Contact Date'];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
     .setFontWeight('bold')
     .setBackground(COLORS.LIGHT_GRAY);
@@ -5503,9 +5503,6 @@ function setupStewardContactCalcSheet() {
 
   // Column E: Most recent contact date for this steward
   sheet.getRange('E2').setFormula('=ARRAYFORMULA(IF(A2:A="","",IFERROR(TEXT(MAXIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',\'' + SHEETS.MEMBER_DIR + '\'!' + mContactStewardCol + ':' + mContactStewardCol + ',A2:A),"MM/dd/yyyy"),"-")))');
-
-  // Column F: Placeholder for avg days between contacts (complex calculation)
-  sheet.getRange('F2').setFormula('=ARRAYFORMULA(IF(A2:A="","","-"))');
 
   // Auto-resize columns
   sheet.autoResizeColumns(1, headers.length);
@@ -5581,19 +5578,6 @@ function setupStewardPerformanceCalcSheet() {
 
   sheet.hideSheet();
   Logger.log('_Steward_Performance_Calc sheet setup complete');
-}
-
-/**
- * Sync steward performance to visible sheet
- */
-function syncStewardPerformance() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var calcSheet = ss.getSheetByName(SHEETS.STEWARD_PERFORMANCE_CALC);
-
-  if (!calcSheet) return;
-
-  var data = calcSheet.getDataRange().getValues();
-  Logger.log('Steward performance data available: ' + (data.length - 1) + ' stewards');
 }
 
 // ============================================================================
@@ -6224,13 +6208,14 @@ function showGrievancesWithMissingMemberIds() {
 function refreshAllHiddenFormulas() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Touch each hidden sheet to force recalc
+  // Touch each hidden sheet to force recalc (6 hidden sheets)
   var hiddenSheetNames = [
     SHEETS.GRIEVANCE_CALC,
     SHEETS.GRIEVANCE_FORMULAS,
     SHEETS.MEMBER_LOOKUP,
-    SHEETS.STEWARD_WORKLOAD_CALC,
-    SHEETS.INTERACTIVE_CALC
+    SHEETS.STEWARD_CONTACT_CALC,
+    SHEETS.DASHBOARD_CALC,
+    SHEETS.STEWARD_PERFORMANCE_CALC
   ];
 
   hiddenSheetNames.forEach(function(name) {
