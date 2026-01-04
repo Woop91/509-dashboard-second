@@ -147,7 +147,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `seed100MembersWithGrievances()` - Shortcut: seed 100 members + 50 grievances (50%)
 - `generateSingleMemberRow()` - Generate one member row (31 columns)
 - `generateSingleGrievanceRow()` - Generate one grievance row (34 columns)
-- `NUKE_ALL_DATA()` - Clear all data with confirmation
+- `NUKE_SEEDED_DATA()` - Clear seeded data with confirmation (preserves manual entries)
 - `NUKE_CONFIG_DROPDOWNS()` - Clear only Config dropdowns
 - `getConfigValues()` - Helper: get values from Config column
 - `randomChoice()` - Helper: pick random array element
