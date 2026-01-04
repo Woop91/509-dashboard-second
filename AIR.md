@@ -645,7 +645,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 └── Setup Data Validations
 
 🎭 Demo
-├── 🚀 Seed All Sample Data (1,000 members + 300 grievances)
+├── 🚀 Seed All Sample Data (1,000 members + 300 grievances + 50 surveys + 3 feedback)
 └── 🗑️ Nuke Data (submenu)
     ├── ☢️ NUKE SEEDED DATA
     ├── 🧹 Clear Config Dropdowns Only

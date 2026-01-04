@@ -522,7 +522,7 @@ Features include:
 - **Seed 50 Members (30% Grievances)** - Quick seed option
 - **Seed 100 Members (50% Grievances)** - Quick seed with more grievances
 
-**NUKE_SEEDED_DATA()** - Clears all member and grievance data
+**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Menu Checklist sheets
 
 **Limits**: Max 2,000 members per call (prevents timeout)
 
@@ -683,7 +683,13 @@ System improvement tracking
 
 ## Data Seeding
 
-Generate realistic test data with members and grievances in a single operation:
+Generate realistic test data for the dashboard:
+
+### Seed All Sample Data (Recommended)
+- `SEED_SAMPLE_DATA()` - Seeds complete demo environment
+- Access via: **🎭 Demo > 🚀 Seed All Sample Data**
+- Seeds: 1,000 members + 300 grievances + 50 survey responses + 3 feedback entries
+- Automatically installs auto-sync trigger
 
 ### Unified Member & Grievance Seeding
 - `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances
