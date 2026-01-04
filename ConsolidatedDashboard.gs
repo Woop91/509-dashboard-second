@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T21:10:16.006Z
+ * - Build Date: 2026-01-04T21:19:20.292Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -2004,6 +2004,13 @@ function createInteractiveDashboard(ss) {
 function createSatisfactionSheet(ss) {
   var sheet = getOrCreateSheet(ss, SHEETS.SATISFACTION);
   sheet.clear();
+
+  // Ensure sheet has enough columns (need 100+ for dashboard area)
+  var requiredCols = 100;
+  var currentCols = sheet.getMaxColumns();
+  if (currentCols < requiredCols) {
+    sheet.insertColumnsAfter(currentCols, requiredCols - currentCols);
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GOOGLE FORM RESPONSE HEADERS (68 questions + timestamp)
