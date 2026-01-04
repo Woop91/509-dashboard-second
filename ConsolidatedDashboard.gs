@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T21:40:38.214Z
+ * - Build Date: 2026-01-04T21:58:10.256Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1990,6 +1990,12 @@ function createInteractiveDashboard(ss) {
   // Format
   sheet.autoResizeColumns(1, 6);
   sheet.setColumnWidth(3, 250);
+
+  // Delete excess columns after G (column 7)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 7) {
+    sheet.deleteColumns(8, maxCols - 7);
+  }
 }
 
 // ============================================================================
@@ -2487,6 +2493,12 @@ function createSatisfactionSheet(ss) {
   sheet.setColumnWidth(dashStart + 3, 80);   // Type
   sheet.setColumnWidth(dashStart + 4, 200);  // Options
 
+  // Delete excess columns after CJ (column 88)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 88) {
+    sheet.deleteColumns(89, maxCols - 88);
+  }
+
   Logger.log('Member Satisfaction sheet created with 68-question survey, dashboard, and chart data');
 }
 
@@ -2675,6 +2687,12 @@ function createFeedbackSheet(ss) {
 
   // Freeze header row
   sheet.setFrozenRows(1);
+
+  // Delete excess columns after O (column 15)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 15) {
+    sheet.deleteColumns(16, maxCols - 15);
+  }
 
   Logger.log('Feedback & Development sheet created');
 }
@@ -3335,16 +3353,16 @@ function createMenuChecklistSheet_() {
   ];
 
   // Build rows with header
-  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description']];
+  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description', 'Comments']];
   for (var i = 0; i < menuItems.length; i++) {
-    rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], menuItems[i][4]]);
+    rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], menuItems[i][4], '']);
   }
 
   // Write all data
-  sheet.getRange(1, 1, rows.length, 6).setValues(rows);
+  sheet.getRange(1, 1, rows.length, 7).setValues(rows);
 
   // Format header
-  sheet.getRange(1, 1, 1, 6)
+  sheet.getRange(1, 1, 1, 7)
     .setFontWeight('bold')
     .setBackground(COLORS.PRIMARY_PURPLE || '#7C3AED')
     .setFontColor(COLORS.WHITE || '#FFFFFF')
@@ -3362,6 +3380,7 @@ function createMenuChecklistSheet_() {
   sheet.setColumnWidth(4, 250);
   sheet.setColumnWidth(5, 250);
   sheet.setColumnWidth(6, 350);
+  sheet.setColumnWidth(7, 250);
 
   // Freeze header
   sheet.setFrozenRows(1);
@@ -3369,7 +3388,7 @@ function createMenuChecklistSheet_() {
   // Alternating colors
   for (var r = 2; r <= rows.length; r++) {
     if (r % 2 === 0) {
-      sheet.getRange(r, 1, 1, 6).setBackground('#F9FAFB');
+      sheet.getRange(r, 1, 1, 7).setBackground('#F9FAFB');
     }
   }
 
@@ -3377,9 +3396,15 @@ function createMenuChecklistSheet_() {
   var rule = SpreadsheetApp.newConditionalFormatRule()
     .whenFormulaSatisfied('=$A2=TRUE')
     .setBackground('#E8F5E9')
-    .setRanges([sheet.getRange(2, 1, rows.length - 1, 6)])
+    .setRanges([sheet.getRange(2, 1, rows.length - 1, 7)])
     .build();
   sheet.setConditionalFormatRules([rule]);
+
+  // Delete excess columns after H (column 8)
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 8) {
+    sheet.deleteColumns(9, maxCols - 8);
+  }
 
   return sheet;
 }
