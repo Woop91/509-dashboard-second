@@ -261,8 +261,8 @@ Key Functions:
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
-│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 3 feedback entries
-│   └── NUKE_SEEDED_DATA() - Clears seeded data + deletes Feedback & Menu Checklist sheets
+│   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 50 surveys + 3 feedback entries
+│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Menu Checklist sheets
 └── User Interface
     ├── onOpen() - Menu creation
     ├── refreshAllFormulas()
