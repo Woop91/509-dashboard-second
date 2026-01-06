@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.7.0 (Dashboard Restructure & Bug Fixes)
-**Last Updated:** 2026-01-03
+**Version:** 1.8.0 (Member Satisfaction Dashboard)
+**Last Updated:** 2026-01-06
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -47,6 +47,28 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 | `getInteractiveMemberData()` | Fetches member list data |
 
 **Why Protected:** This modal provides essential dashboard functionality that users rely on for quick access to data.
+
+### Member Satisfaction Dashboard Modal
+
+**Location:** `Code.gs` (lines 4740-5668)
+
+**Functions:**
+| Function | Purpose |
+|----------|---------|
+| `showSatisfactionDashboard()` | Opens the 900x750 modal dialog |
+| `getSatisfactionDashboardHtml()` | Returns HTML with 4-tab interface |
+| `getSatisfactionOverviewData()` | Fetches overview stats, NPS score, insights |
+| `getSatisfactionResponseData()` | Fetches individual survey responses |
+| `getSatisfactionSectionData()` | Fetches scores by survey section |
+| `getSatisfactionAnalyticsData()` | Fetches worksite/role analysis, priorities |
+
+**Tabs:**
+1. **Overview** - Key metrics (total responses, avg satisfaction, NPS, response rate), gauge charts, auto-generated insights
+2. **Responses** - Searchable list with satisfaction level filtering (High/Medium/Needs Attention)
+3. **By Section** - Bar chart of all 11 survey sections ranked by score, section detail cards
+4. **Insights** - Worksite/role breakdowns, steward contact impact analysis, top member priorities
+
+**Why Added:** Provides interactive survey analysis without leaving the spreadsheet, matching the Custom View pattern.
 
 ---
 
@@ -131,6 +153,13 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `onEditAudit()` - Audit trigger handler
   - `viewAuditLog()` - View audit entries
   - `getAuditHistory()` - Get history for a record
+- Member Satisfaction Dashboard:
+  - `showSatisfactionDashboard()` - Opens 900x750 modal with 4-tab interface
+  - `getSatisfactionDashboardHtml()` - Returns HTML/CSS/JS for the satisfaction dashboard
+  - `getSatisfactionOverviewData()` - Fetches overview stats, NPS score, response rate, insights
+  - `getSatisfactionResponseData()` - Fetches individual survey responses with filtering support
+  - `getSatisfactionSectionData()` - Fetches scores for all 11 survey sections
+  - `getSatisfactionAnalyticsData()` - Fetches worksite/role analysis, steward impact, priorities
 
 **SeedNuke.gs** (~1400 lines)
 - `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%) + 50 survey responses + 3 feedback entries
@@ -614,6 +643,7 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 👤 Dashboard
 ├── 📊 Smart Dashboard (Auto-Detect)
 ├── 🎯 Custom View
+├── 📊 Member Satisfaction          ← NEW: Interactive survey dashboard modal
 ├── 🔍 Search Members
 ├── 📋 View Active Grievances
 ├── 📱 Mobile Dashboard
@@ -813,6 +843,37 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.8.0 (2026-01-06) - Member Satisfaction Dashboard
+
+**New Feature: Interactive Satisfaction Dashboard Modal**
+
+Added a new modal popup dashboard for analyzing member satisfaction survey data, accessible via **Dashboard > 📊 Member Satisfaction**.
+
+**Functions Added (Code.gs):**
+- `showSatisfactionDashboard()` - Opens 900x750 modal dialog
+- `getSatisfactionDashboardHtml()` - Returns HTML with 4-tab interface
+- `getSatisfactionOverviewData()` - Calculates overview stats, NPS score, response rate
+- `getSatisfactionResponseData()` - Fetches individual responses with filtering support
+- `getSatisfactionSectionData()` - Fetches scores for all 11 survey sections
+- `getSatisfactionAnalyticsData()` - Generates worksite/role analysis, steward impact, priorities
+
+**Dashboard Tabs:**
+1. **Overview** - 6 stat cards (responses, avg satisfaction, NPS, response rate, steward rating, leadership), circular gauge charts for key metrics, auto-generated insights
+2. **Responses** - Searchable list with satisfaction level filtering (High ≥7, Medium 5-7, Low <5)
+3. **By Section** - Bar chart showing all 11 survey sections ranked by score, section detail cards with progress bars
+4. **Insights** - Key findings, satisfaction by worksite, by role, steward contact impact analysis, top member priorities
+
+**Design:**
+- Green gradient header theme (differentiates from purple Custom View)
+- Mobile-responsive with 44px touch targets
+- Client-side search and filtering for instant results
+- Color-coded scores: green (7+), yellow (5-7), red (<5)
+- Lazy-loads data per tab for performance
+
+**Menu Location:** Dashboard > 📊 Member Satisfaction
+
+---
 
 ### Version 1.7.0 (2026-01-03) - Dashboard Restructure & Bug Fixes
 
