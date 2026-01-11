@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.8.0 (Member Satisfaction Dashboard)
-**Last Updated:** 2026-01-06
+**Version:** 1.9.0 (Grievance Form Workflow + Visual Enhancements)
+**Last Updated:** 2026-01-11
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -133,9 +133,19 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
 - `searchMembers()` - Desktop search dialog
-- `startNewGrievance()` - Start grievance (stub)
+- `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (7 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`
+- Grievance Form Workflow:
+  - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
+  - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory
+  - `getCurrentStewardInfo_()` - Get current user's steward info
+  - `buildGrievanceFormUrl_()` - Build pre-filled form URL with all parameters
+  - `onGrievanceFormSubmit(e)` - Form submission trigger handler (adds to Grievance Log + creates folder)
+  - `setupGrievanceFormTrigger()` - Menu-driven trigger setup for form submissions
+  - `createGrievanceFolderFromData_()` - Create folder with subfolders (Documents, Correspondence, Notes)
+  - `shareWithCoordinators_()` - Share folder with coordinators from Config
+  - `testGrievanceFormSubmission()` - Test function with sample data
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -844,11 +854,11 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
-### Version 1.9.0 (2026-01-11) - Visual Enhancements & Progress Tracking
+### Version 1.9.0 (2026-01-11) - Visual Enhancements, Progress Tracking & Grievance Form Workflow
 
-**New Features: Data Validation, Heatmaps & Progress Bar**
+**New Features: Data Validation, Heatmaps, Progress Bar & Automated Grievance Workflow**
 
-Added visual data quality indicators, deadline heatmaps, and grievance progress tracking.
+Added visual data quality indicators, deadline heatmaps, grievance progress tracking, and automated grievance form workflow with Drive folder creation.
 
 ---
 
@@ -898,6 +908,35 @@ Grievance Log entries automatically sort by status priority (active cases first)
 
 ---
 
+#### Grievance Form Workflow (New)
+
+**7. Pre-filled Google Form Integration**
+- `startNewGrievance()`: Opens pre-filled Google Form with member data
+- Form fields auto-populated from Member Directory (Member ID, name, job title, location, email, etc.)
+- Steward info auto-populated from current user's session (if they're a steward in Member Directory)
+- Default values: Date Filed = today, Step = I
+
+**8. Automatic Form Submission Processing**
+- `onGrievanceFormSubmit(e)`: Trigger handler for form submissions
+- Generates unique Grievance ID (format: GXXXX123 based on member name)
+- Adds grievance to Grievance Log with all form data
+- Calculates deadlines via hidden sheet formulas
+- Updates Member Directory grievance status
+
+**9. Automatic Drive Folder Creation**
+- Creates folder in "509 Dashboard - Grievance Files" root folder
+- Folder name format: `GXXXX123 - FirstName LastName (MemberID)`
+- Creates subfolders: 📄 Documents, 📧 Correspondence, 📝 Notes
+- Automatically shares with Grievance Coordinators from Config (column O)
+- Stores folder ID and URL in Grievance Log (columns AG, AH)
+
+**10. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 📋 Grievance Tools > 📋 Setup Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for form submissions
+
+---
+
 **Code Changes:**
 
 *Member Directory (`createMemberDirectory()` lines 497-576):*
@@ -909,6 +948,21 @@ Grievance Log entries automatically sort by status priority (active cases first)
 - Lines 645-682: Days to Deadline heatmap rules
 - Lines 684-731: Progress bar conditional formatting rules
 - Lines 733-739: Apply all rules
+
+*Grievance Form Workflow (Code.gs lines 3254-3813):*
+- Lines 3258-3283: `GRIEVANCE_FORM_CONFIG` with form URL and 18 field entry IDs
+- Lines 3290-3383: `startNewGrievance()` - opens pre-filled form
+- Lines 3389-3412: `getCurrentStewardInfo_()` - get steward from session
+- Lines 3419-3449: `buildGrievanceFormUrl_()` - build pre-filled URL
+- Lines 3465-3561: `onGrievanceFormSubmit(e)` - form submission handler
+- Lines 3568-3609: Helper functions (getFormValue_, parseFormDate_, getExistingGrievanceIds_)
+- Lines 3615-3653: `createGrievanceFolderFromData_()` - create folder with subfolders
+- Lines 3660-3683: `shareWithCoordinators_()` - share folder with coordinators
+- Lines 3690-3780: `setupGrievanceFormTrigger()` - menu-driven trigger setup
+- Lines 3787-3813: `testGrievanceFormSubmission()` - test function
+
+*Menu Update (Code.gs line 42):*
+- Added "📋 Setup Form Trigger" menu item
 
 **Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
 

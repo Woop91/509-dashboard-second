@@ -39,6 +39,7 @@ function onOpen() {
       .addSeparator()
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
       .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+      .addItem('📋 Setup Form Trigger', 'setupGrievanceFormTrigger')
       .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
     .addToUi();
 
@@ -3251,8 +3252,565 @@ function viewActiveGrievances() {
   }
 }
 
+/**
+ * Grievance Form Configuration
+ * Maps form entry IDs to Member Directory fields for pre-filling
+ */
+var GRIEVANCE_FORM_CONFIG = {
+  // Google Form URL (viewform version for pre-filling)
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform',
+
+  // Form field entry IDs mapped to their purpose
+  FIELD_IDS: {
+    MEMBER_ID: 'entry.272049116',
+    MEMBER_FIRST_NAME: 'entry.736822578',
+    MEMBER_LAST_NAME: 'entry.694440931',
+    JOB_TITLE: 'entry.286226203',
+    AGENCY_DEPARTMENT: 'entry.2025752361',
+    REGION: 'entry.352196859',
+    WORK_LOCATION: 'entry.413952220',
+    MANAGERS: 'entry.417314483',
+    MEMBER_EMAIL: 'entry.710401757',
+    STEWARD_FIRST_NAME: 'entry.84740378',
+    STEWARD_LAST_NAME: 'entry.1254106933',
+    STEWARD_EMAIL: 'entry.732806953',
+    DATE_OF_INCIDENT: 'entry.1797903534',
+    ARTICLES_VIOLATED: 'entry.1969613230',
+    REMEDY_SOUGHT: 'entry.1234608137',
+    DATE_FILED: 'entry.361538394',
+    STEP: 'entry.2060308142',
+    CONFIDENTIAL_WAIVER: 'entry.473442818'
+  }
+};
+
+/**
+ * Start a new grievance for a member
+ * Opens pre-filled Google Form with member info from Member Directory
+ * Can be triggered from Member Directory "Start Grievance" checkbox or menu
+ */
 function startNewGrievance() {
-  SpreadsheetApp.getUi().alert('Start New Grievance feature - Coming soon!\n\nFor now, add grievances directly to the Grievance Log sheet.');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getActiveSheet();
+  var activeCell = sheet.getActiveCell();
+
+  // Get member data based on context
+  var memberData = null;
+
+  // If on Member Directory, get selected member's data
+  if (sheet.getName() === SHEETS.MEMBER_DIR) {
+    var row = activeCell.getRow();
+    if (row < 2) {
+      ui.alert('📋 Start Grievance', 'Please select a member row (not the header).', ui.ButtonSet.OK);
+      return;
+    }
+
+    var rowData = sheet.getRange(row, 1, 1, MEMBER_COLS.START_GRIEVANCE).getValues()[0];
+    memberData = {
+      memberId: rowData[MEMBER_COLS.MEMBER_ID - 1] || '',
+      firstName: rowData[MEMBER_COLS.FIRST_NAME - 1] || '',
+      lastName: rowData[MEMBER_COLS.LAST_NAME - 1] || '',
+      jobTitle: rowData[MEMBER_COLS.JOB_TITLE - 1] || '',
+      workLocation: rowData[MEMBER_COLS.WORK_LOCATION - 1] || '',
+      unit: rowData[MEMBER_COLS.UNIT - 1] || '',
+      email: rowData[MEMBER_COLS.EMAIL - 1] || '',
+      manager: rowData[MEMBER_COLS.MANAGER - 1] || ''
+    };
+
+    if (!memberData.memberId) {
+      ui.alert('📋 Start Grievance', 'This row does not have a Member ID.', ui.ButtonSet.OK);
+      return;
+    }
+  } else {
+    // Show member selection dialog
+    var response = ui.prompt('📋 Start Grievance',
+      'Enter the Member ID to start a grievance for:',
+      ui.ButtonSet.OK_CANCEL);
+
+    if (response.getSelectedButton() !== ui.Button.OK) {
+      return;
+    }
+
+    var memberId = response.getResponseText().trim();
+    if (!memberId) {
+      ui.alert('No Member ID entered.');
+      return;
+    }
+
+    // Look up member in Member Directory
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (!memberSheet) {
+      ui.alert('Member Directory not found.');
+      return;
+    }
+
+    var memberDataRange = memberSheet.getDataRange().getValues();
+    for (var i = 1; i < memberDataRange.length; i++) {
+      if (memberDataRange[i][MEMBER_COLS.MEMBER_ID - 1] === memberId) {
+        memberData = {
+          memberId: memberDataRange[i][MEMBER_COLS.MEMBER_ID - 1] || '',
+          firstName: memberDataRange[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+          lastName: memberDataRange[i][MEMBER_COLS.LAST_NAME - 1] || '',
+          jobTitle: memberDataRange[i][MEMBER_COLS.JOB_TITLE - 1] || '',
+          workLocation: memberDataRange[i][MEMBER_COLS.WORK_LOCATION - 1] || '',
+          unit: memberDataRange[i][MEMBER_COLS.UNIT - 1] || '',
+          email: memberDataRange[i][MEMBER_COLS.EMAIL - 1] || '',
+          manager: memberDataRange[i][MEMBER_COLS.MANAGER - 1] || ''
+        };
+        break;
+      }
+    }
+
+    if (!memberData) {
+      ui.alert('Member ID "' + memberId + '" not found in Member Directory.');
+      return;
+    }
+  }
+
+  // Get current user as steward (if they're a steward)
+  var stewardData = getCurrentStewardInfo_(ss);
+
+  // Build pre-filled form URL
+  var formUrl = buildGrievanceFormUrl_(memberData, stewardData);
+
+  // Open form in new window
+  var html = HtmlService.createHtmlOutput(
+    '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+  ).setWidth(200).setHeight(50);
+
+  ui.showModalDialog(html, 'Opening Grievance Form...');
+
+  ss.toast('Grievance form opened for ' + memberData.firstName + ' ' + memberData.lastName, '📋 Form Opened', 3);
+}
+
+/**
+ * Get current user's steward info from Member Directory
+ * @private
+ */
+function getCurrentStewardInfo_(ss) {
+  var currentUserEmail = Session.getActiveUser().getEmail();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet || !currentUserEmail) {
+    return { firstName: '', lastName: '', email: currentUserEmail || '' };
+  }
+
+  var data = memberSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var email = data[i][MEMBER_COLS.EMAIL - 1];
+    var isSteward = data[i][MEMBER_COLS.IS_STEWARD - 1];
+
+    if (email && email.toLowerCase() === currentUserEmail.toLowerCase() && isSteward === 'Yes') {
+      return {
+        firstName: data[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: data[i][MEMBER_COLS.LAST_NAME - 1] || '',
+        email: email
+      };
+    }
+  }
+
+  // Return email only if not found as steward
+  return { firstName: '', lastName: '', email: currentUserEmail };
+}
+
+/**
+ * Build pre-filled grievance form URL
+ * @private
+ */
+function buildGrievanceFormUrl_(memberData, stewardData) {
+  var baseUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+  var fields = GRIEVANCE_FORM_CONFIG.FIELD_IDS;
+
+  var params = [];
+
+  // Member info
+  if (memberData.memberId) params.push(fields.MEMBER_ID + '=' + encodeURIComponent(memberData.memberId));
+  if (memberData.firstName) params.push(fields.MEMBER_FIRST_NAME + '=' + encodeURIComponent(memberData.firstName));
+  if (memberData.lastName) params.push(fields.MEMBER_LAST_NAME + '=' + encodeURIComponent(memberData.lastName));
+  if (memberData.jobTitle) params.push(fields.JOB_TITLE + '=' + encodeURIComponent(memberData.jobTitle));
+  if (memberData.unit) params.push(fields.AGENCY_DEPARTMENT + '=' + encodeURIComponent(memberData.unit));
+  if (memberData.workLocation) {
+    params.push(fields.REGION + '=' + encodeURIComponent(memberData.workLocation));
+    params.push(fields.WORK_LOCATION + '=' + encodeURIComponent(memberData.workLocation));
+  }
+  if (memberData.manager) params.push(fields.MANAGERS + '=' + encodeURIComponent(memberData.manager));
+  if (memberData.email) params.push(fields.MEMBER_EMAIL + '=' + encodeURIComponent(memberData.email));
+
+  // Steward info
+  if (stewardData.firstName) params.push(fields.STEWARD_FIRST_NAME + '=' + encodeURIComponent(stewardData.firstName));
+  if (stewardData.lastName) params.push(fields.STEWARD_LAST_NAME + '=' + encodeURIComponent(stewardData.lastName));
+  if (stewardData.email) params.push(fields.STEWARD_EMAIL + '=' + encodeURIComponent(stewardData.email));
+
+  // Default values
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  params.push(fields.DATE_FILED + '=' + encodeURIComponent(today));
+  params.push(fields.STEP + '=' + encodeURIComponent('I'));
+
+  return baseUrl + '?usp=pp_url&' + params.join('&');
+}
+
+// ============================================================================
+// GRIEVANCE FORM SUBMISSION HANDLER
+// ============================================================================
+
+/**
+ * Handle grievance form submission
+ * This function is triggered when a grievance form is submitted.
+ * It adds the grievance to the Grievance Log and creates a Drive folder.
+ *
+ * To set up: Run setupGrievanceFormTrigger() once, or manually add an
+ * installable trigger for this function on the form.
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onGrievanceFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!grievanceSheet) {
+    Logger.log('Grievance Log sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Map form fields to grievance data
+    var memberId = getFormValue_(responses, 'Member ID');
+    var firstName = getFormValue_(responses, 'Member First Name');
+    var lastName = getFormValue_(responses, 'Member Last Name');
+    var jobTitle = getFormValue_(responses, 'Job Title');
+    var unit = getFormValue_(responses, 'Agency/Department');
+    var workLocation = getFormValue_(responses, 'Work Location') || getFormValue_(responses, 'Region');
+    var manager = getFormValue_(responses, 'Manager(s)');
+    var memberEmail = getFormValue_(responses, 'Member Email');
+    var stewardFirstName = getFormValue_(responses, 'Steward First Name');
+    var stewardLastName = getFormValue_(responses, 'Steward Last Name');
+    var stewardEmail = getFormValue_(responses, 'Steward Email');
+    var incidentDate = getFormValue_(responses, 'Date of Incident');
+    var articlesViolated = getFormValue_(responses, 'Articles Violated');
+    var remedySought = getFormValue_(responses, 'Remedy Sought');
+    var dateFiled = getFormValue_(responses, 'Date Filed');
+    var step = getFormValue_(responses, 'Step (I/II/III)') || 'Step I';
+    var confidentialWaiver = getFormValue_(responses, 'Confidential Waiver Attached?');
+
+    // Generate Grievance ID
+    var existingIds = getExistingGrievanceIds_(grievanceSheet);
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingIds);
+
+    // Combine steward name for Assigned Steward column
+    var stewardName = ((stewardFirstName || '') + ' ' + (stewardLastName || '')).trim();
+
+    // Create Drive folder for this grievance
+    var folderInfo = createGrievanceFolderFromData_(grievanceId, memberId, firstName, lastName);
+
+    // Build row data array matching GRIEVANCE_COLS order
+    var newRow = [];
+    newRow[GRIEVANCE_COLS.GRIEVANCE_ID - 1] = grievanceId;
+    newRow[GRIEVANCE_COLS.MEMBER_ID - 1] = memberId;
+    newRow[GRIEVANCE_COLS.FIRST_NAME - 1] = firstName;
+    newRow[GRIEVANCE_COLS.LAST_NAME - 1] = lastName;
+    newRow[GRIEVANCE_COLS.STATUS - 1] = 'Open';
+    newRow[GRIEVANCE_COLS.CURRENT_STEP - 1] = step;
+    newRow[GRIEVANCE_COLS.INCIDENT_DATE - 1] = parseFormDate_(incidentDate);
+    newRow[GRIEVANCE_COLS.FILING_DEADLINE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.DATE_FILED - 1] = parseFormDate_(dateFiled) || new Date();
+    newRow[GRIEVANCE_COLS.STEP1_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP1_RCVD - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP2_APPEAL_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP2_APPEAL_FILED - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP2_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP2_RCVD - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP3_APPEAL_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP3_APPEAL_FILED - 1] = '';
+    newRow[GRIEVANCE_COLS.DATE_CLOSED - 1] = '';
+    newRow[GRIEVANCE_COLS.DAYS_OPEN - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.ARTICLES - 1] = articlesViolated;
+    newRow[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] = '';
+    newRow[GRIEVANCE_COLS.MEMBER_EMAIL - 1] = memberEmail;
+    newRow[GRIEVANCE_COLS.UNIT - 1] = unit;
+    newRow[GRIEVANCE_COLS.LOCATION - 1] = workLocation;
+    newRow[GRIEVANCE_COLS.STEWARD - 1] = stewardName;
+    newRow[GRIEVANCE_COLS.RESOLUTION - 1] = '';
+    newRow[GRIEVANCE_COLS.MESSAGE_ALERT - 1] = false;
+    newRow[GRIEVANCE_COLS.COORDINATOR_MESSAGE - 1] = '';
+    newRow[GRIEVANCE_COLS.ACKNOWLEDGED_BY - 1] = '';
+    newRow[GRIEVANCE_COLS.ACKNOWLEDGED_DATE - 1] = '';
+    newRow[GRIEVANCE_COLS.DRIVE_FOLDER_ID - 1] = folderInfo.id;
+    newRow[GRIEVANCE_COLS.DRIVE_FOLDER_URL - 1] = folderInfo.url;
+
+    // Append row to Grievance Log
+    grievanceSheet.appendRow(newRow);
+
+    // Refresh formulas to calculate deadlines
+    syncGrievanceFormulasToLog();
+
+    // Sort by status
+    sortGrievanceLogByStatus();
+
+    // Update Member Directory grievance status
+    syncGrievanceToMemberDirectory();
+
+    Logger.log('Grievance ' + grievanceId + ' created successfully with folder: ' + folderInfo.url);
+
+  } catch (error) {
+    Logger.log('Error processing grievance form submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get a value from form named responses
+ * @private
+ */
+function getFormValue_(responses, fieldName) {
+  if (responses[fieldName] && responses[fieldName].length > 0) {
+    return responses[fieldName][0];
+  }
+  return '';
+}
+
+/**
+ * Parse a date string from form submission
+ * @private
+ */
+function parseFormDate_(dateStr) {
+  if (!dateStr) return '';
+
+  try {
+    var date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return dateStr; // Return as-is if can't parse
+    }
+    return date;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+/**
+ * Get existing grievance IDs for collision detection
+ * @private
+ */
+function getExistingGrievanceIds_(sheet) {
+  var ids = {};
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var id = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    if (id) {
+      ids[id] = true;
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Create a Drive folder for a grievance from form data
+ * @private
+ */
+function createGrievanceFolderFromData_(grievanceId, memberId, firstName, lastName) {
+  try {
+    // Get or create root folder
+    var rootFolder = getOrCreateDashboardFolder_();
+
+    // Create folder name: GXXX123 - FirstName LastName (MemberID)
+    var memberName = ((firstName || '') + ' ' + (lastName || '')).trim() || 'Unknown';
+    var folderName = grievanceId + ' - ' + memberName;
+    if (memberId) {
+      folderName += ' (' + memberId + ')';
+    }
+
+    // Check if folder already exists
+    var folders = rootFolder.getFoldersByName(folderName);
+    var folder;
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = rootFolder.createFolder(folderName);
+
+      // Create subfolders for organization
+      folder.createFolder('📄 Documents');
+      folder.createFolder('📧 Correspondence');
+      folder.createFolder('📝 Notes');
+    }
+
+    // Share with grievance coordinators from Config
+    shareWithCoordinators_(folder);
+
+    return {
+      id: folder.getId(),
+      url: folder.getUrl()
+    };
+
+  } catch (e) {
+    Logger.log('Error creating grievance folder: ' + e.message);
+    return { id: '', url: '' };
+  }
+}
+
+/**
+ * Share folder with grievance coordinators from Config sheet
+ * @private
+ */
+function shareWithCoordinators_(folder) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+    if (!configSheet) return;
+
+    // Get coordinator emails from Config (column O = GRIEVANCE_COORDINATORS)
+    var coordData = configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_COORDINATORS,
+                                          configSheet.getLastRow() - 1, 1).getValues();
+
+    for (var i = 0; i < coordData.length; i++) {
+      var email = coordData[i][0];
+      if (email && email.toString().trim() !== '') {
+        try {
+          folder.addEditor(email.toString().trim());
+        } catch (shareError) {
+          Logger.log('Could not share with ' + email + ': ' + shareError.message);
+        }
+      }
+    }
+  } catch (e) {
+    Logger.log('Error sharing with coordinators: ' + e.message);
+  }
+}
+
+/**
+ * Set up the grievance form submission trigger
+ * Run this once to enable automatic processing of form submissions
+ */
+function setupGrievanceFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasGrievanceTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onGrievanceFormSubmit') {
+      hasGrievanceTrigger = true;
+      break;
+    }
+  }
+
+  if (hasGrievanceTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A grievance form trigger already exists.\n\n' +
+      'Form submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📋 Setup Grievance Form Trigger',
+    'This will set up automatic processing of grievance form submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):\n' +
+    '(Leave blank to use the configured form)',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  try {
+    var formId;
+
+    if (formUrl) {
+      // Extract form ID from URL
+      var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+        return;
+      }
+      formId = match[1];
+    } else {
+      // Use configured form
+      var configFormUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+      var match = configFormUrl.match(/\/d\/e\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        ui.alert('❌ No Form Configured',
+          'No form URL provided and could not extract ID from config.\n\n' +
+          'Please provide the form edit URL.',
+          ui.ButtonSet.OK);
+        return;
+      }
+      // Note: The /e/ URL is the published version, we need the actual form ID
+      ui.alert('ℹ️ Form URL Needed',
+        'Please provide the form edit URL (the one ending in /edit).\n\n' +
+        'You can find this by opening the form in edit mode.',
+        ui.ButtonSet.OK);
+      return;
+    }
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onGrievanceFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Grievance form trigger has been set up!\n\n' +
+      'When a grievance form is submitted:\n' +
+      '• A new row will be added to Grievance Log\n' +
+      '• A Drive folder will be created automatically\n' +
+      '• Deadlines will be calculated\n' +
+      '• Member Directory will be updated',
+      ui.ButtonSet.OK);
+
+    ss.toast('Form trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Manually process a grievance from form data (for testing or re-processing)
+ * Call this with test data to verify the form submission handler works
+ */
+function testGrievanceFormSubmission() {
+  var testEvent = {
+    namedValues: {
+      'Member ID': ['TEST001'],
+      'Member First Name': ['Test'],
+      'Member Last Name': ['Member'],
+      'Job Title': ['Test Position'],
+      'Agency/Department': ['Test Unit'],
+      'Region': ['Test Location'],
+      'Work Location': ['Test Location'],
+      'Manager(s)': ['Test Manager'],
+      'Member Email': ['test@example.com'],
+      'Steward First Name': ['Test'],
+      'Steward Last Name': ['Steward'],
+      'Steward Email': ['steward@example.com'],
+      'Date of Incident': [new Date().toISOString()],
+      'Articles Violated': ['Art. 6 - Hours of Work'],
+      'Remedy Sought': ['Test remedy'],
+      'Date Filed': [new Date().toISOString()],
+      'Step (I/II/III)': ['Step I'],
+      'Confidential Waiver Attached?': ['Yes']
+    }
+  };
+
+  onGrievanceFormSubmit(testEvent);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Test grievance created!', '✅ Test Complete', 3);
 }
 
 /**
