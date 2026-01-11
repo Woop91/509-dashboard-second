@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-11T23:49:06.606Z
+ * - Build Date: 2026-01-11T23:54:36.973Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -8845,6 +8845,26 @@ function onEditAutoSync(e) {
   var sheet = e.range.getSheet();
   var sheetName = sheet.getName();
 
+  // Check for Start Grievance checkbox BEFORE debounce (needs immediate response)
+  if (sheetName === SHEETS.MEMBER_DIR) {
+    var col = e.range.getColumn();
+    var row = e.range.getRow();
+
+    // Handle Start Grievance checkbox
+    if (col === MEMBER_COLS.START_GRIEVANCE && row >= 2 && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open the grievance form for this member
+      try {
+        openGrievanceFormForRow_(sheet, row);
+      } catch (err) {
+        Logger.log('Error opening grievance form: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+  }
+
   // Debounce - use cache to prevent rapid re-syncs
   var cache = CacheService.getScriptCache();
   var cacheKey = 'lastSync_' + sheetName;
@@ -8872,6 +8892,50 @@ function onEditAutoSync(e) {
   } catch (error) {
     Logger.log('Auto-sync error: ' + error.message);
   }
+}
+
+/**
+ * Open the grievance form pre-populated with member data from a specific row
+ * @param {Sheet} sheet - The Member Directory sheet
+ * @param {number} row - The row number to get member data from
+ * @private
+ */
+function openGrievanceFormForRow_(sheet, row) {
+  var rowData = sheet.getRange(row, 1, 1, MEMBER_COLS.START_GRIEVANCE).getValues()[0];
+  var memberId = rowData[MEMBER_COLS.MEMBER_ID - 1];
+
+  if (!memberId) {
+    SpreadsheetApp.getActiveSpreadsheet().toast('This row has no Member ID', '⚠️ Cannot Start Grievance', 3);
+    return;
+  }
+
+  var memberData = {
+    memberId: memberId,
+    firstName: rowData[MEMBER_COLS.FIRST_NAME - 1] || '',
+    lastName: rowData[MEMBER_COLS.LAST_NAME - 1] || '',
+    jobTitle: rowData[MEMBER_COLS.JOB_TITLE - 1] || '',
+    workLocation: rowData[MEMBER_COLS.WORK_LOCATION - 1] || '',
+    unit: rowData[MEMBER_COLS.UNIT - 1] || '',
+    email: rowData[MEMBER_COLS.EMAIL - 1] || '',
+    manager: rowData[MEMBER_COLS.MANAGER - 1] || ''
+  };
+
+  // Get current user as steward
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var stewardData = getCurrentStewardInfo_(ss);
+
+  // Build pre-filled form URL
+  var formUrl = buildGrievanceFormUrl_(memberData, stewardData);
+
+  // Open form in new window
+  var ui = SpreadsheetApp.getUi();
+  var html = HtmlService.createHtmlOutput(
+    '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+  ).setWidth(200).setHeight(50);
+
+  ui.showModalDialog(html, 'Opening Grievance Form...');
+
+  ss.toast('Grievance form opened for ' + memberData.firstName + ' ' + memberData.lastName, '📋 Form Opened', 3);
 }
 
 /**
