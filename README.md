@@ -421,6 +421,13 @@ Features include:
 - Grievance snapshot fields (columns 26-28) automatically populate from Grievance Log
 - Data validation prevents invalid entries
 - All engagement metrics in one place for easy analysis
+- **Sortable columns** - Filter dropdown on header row enables sorting A-Z/Z-A on all columns
+- **Validation highlighting** - Red background for empty Email/Phone fields (data quality check)
+- **Days to Deadline heatmap** - Color-coded urgency for grievance deadlines:
+  - 🔴 Red: Overdue or 0 days remaining
+  - 🟠 Orange: 1-3 days remaining
+  - 🟡 Yellow: 4-7 days remaining
+  - 🟢 Green: 8+ days remaining (on track)
 
 ### 3. Grievance Log - Complete Grievance Tracking
 

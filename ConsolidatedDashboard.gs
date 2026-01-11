@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-04T22:45:27.733Z
+ * - Build Date: 2026-01-11T21:10:49.132Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -846,6 +846,7 @@ function onOpen() {
   ui.createMenu('👤 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
     .addItem('🎯 Custom View', 'showInteractiveDashboardTab')
+    .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
     .addSeparator()
     .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
@@ -5624,6 +5625,944 @@ function fixOverdueTextToNumbers() {
   } else {
     ss.toast('No "Overdue" text found to fix.', '✅ All Good', 3);
   }
+}
+
+// ============================================================================
+// MEMBER SATISFACTION DASHBOARD
+// ============================================================================
+
+/**
+ * Shows the Member Satisfaction Dashboard modal popup
+ * Menu Location: 👤 Dashboard > 📊 Member Satisfaction
+ */
+function showSatisfactionDashboard() {
+  var html = HtmlService.createHtmlOutput(getSatisfactionDashboardHtml())
+    .setWidth(900)
+    .setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Member Satisfaction');
+}
+
+/**
+ * Returns the HTML for the Member Satisfaction Dashboard with tabs
+ */
+function getSatisfactionDashboardHtml() {
+  return '<!DOCTYPE html>' +
+    '<html><head>' +
+    '<base target="_top">' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">' +
+    '<style>' +
+    // CSS Reset and base styles
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#f5f5f5;min-height:100vh}' +
+
+    // Header - Green theme for satisfaction
+    '.header{background:linear-gradient(135deg,#059669,#047857);color:white;padding:20px;text-align:center}' +
+    '.header h1{font-size:clamp(18px,4vw,24px);margin-bottom:5px}' +
+    '.header .subtitle{font-size:clamp(11px,2.5vw,13px);opacity:0.9}' +
+
+    // Tab navigation
+    '.tabs{display:flex;background:white;border-bottom:2px solid #e0e0e0;position:sticky;top:0;z-index:100}' +
+    '.tab{flex:1;padding:clamp(12px,3vw,16px);text-align:center;font-size:clamp(12px,2.5vw,14px);font-weight:600;color:#666;' +
+    'border:none;background:none;cursor:pointer;border-bottom:3px solid transparent;transition:all 0.2s;min-height:44px}' +
+    '.tab:hover{background:#f0fdf4;color:#059669}' +
+    '.tab.active{color:#059669;border-bottom-color:#059669;background:#f0fdf4}' +
+    '.tab-icon{display:block;font-size:18px;margin-bottom:4px}' +
+
+    // Tab content
+    '.tab-content{display:none;padding:15px;animation:fadeIn 0.3s}' +
+    '.tab-content.active{display:block}' +
+    '@keyframes fadeIn{from{opacity:0}to{opacity:1}}' +
+
+    // Stats grid
+    '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-bottom:20px}' +
+    '.stat-card{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);text-align:center;transition:transform 0.2s}' +
+    '.stat-card:hover{transform:translateY(-2px)}' +
+    '.stat-value{font-size:clamp(24px,5vw,32px);font-weight:bold;color:#059669}' +
+    '.stat-label{font-size:clamp(10px,2vw,12px);color:#666;text-transform:uppercase;margin-top:5px}' +
+    '.stat-card.green .stat-value{color:#059669}' +
+    '.stat-card.red .stat-value{color:#DC2626}' +
+    '.stat-card.orange .stat-value{color:#F97316}' +
+    '.stat-card.blue .stat-value{color:#2563EB}' +
+    '.stat-card.purple .stat-value{color:#7C3AED}' +
+
+    // Score indicator with color gradient
+    '.score-indicator{display:inline-block;padding:4px 12px;border-radius:20px;font-size:14px;font-weight:bold}' +
+    '.score-high{background:#d1fae5;color:#059669}' +
+    '.score-mid{background:#fef3c7;color:#d97706}' +
+    '.score-low{background:#fee2e2;color:#dc2626}' +
+
+    // Data table
+    '.data-table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)}' +
+    '.data-table th{background:#059669;color:white;padding:12px;text-align:left;font-size:13px}' +
+    '.data-table td{padding:12px;border-bottom:1px solid #eee;font-size:13px}' +
+    '.data-table tr:hover{background:#f0fdf4}' +
+    '.data-table tr:last-child td{border-bottom:none}' +
+
+    // Section cards
+    '.section-card{background:white;padding:15px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:12px}' +
+    '.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}' +
+    '.section-title{font-weight:600;color:#1f2937;font-size:14px}' +
+    '.section-score{font-size:20px;font-weight:bold}' +
+
+    // Progress bar for scores
+    '.progress-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-top:8px}' +
+    '.progress-fill{height:100%;border-radius:4px;transition:width 0.5s}' +
+    '.progress-green{background:linear-gradient(90deg,#059669,#10b981)}' +
+    '.progress-yellow{background:linear-gradient(90deg,#f59e0b,#fbbf24)}' +
+    '.progress-red{background:linear-gradient(90deg,#dc2626,#ef4444)}' +
+
+    // Action buttons
+    '.action-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:none;border-radius:8px;' +
+    'cursor:pointer;font-size:13px;font-weight:500;transition:all 0.2s;min-height:44px}' +
+    '.action-btn-primary{background:#059669;color:white}' +
+    '.action-btn-primary:hover{background:#047857}' +
+    '.action-btn-secondary{background:#f3f4f6;color:#374151}' +
+    '.action-btn-secondary:hover{background:#e5e7eb}' +
+
+    // List items for responses
+    '.list-container{display:flex;flex-direction:column;gap:10px}' +
+    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
+    '.list-item:hover{box-shadow:0 4px 8px rgba(0,0,0,0.1)}' +
+    '.list-item-main{flex:1;min-width:200px}' +
+    '.list-item-title{font-weight:600;color:#1f2937;margin-bottom:3px}' +
+    '.list-item-subtitle{font-size:12px;color:#666}' +
+
+    // Search input
+    '.search-container{position:relative;margin-bottom:15px}' +
+    '.search-input{width:100%;padding:12px 12px 12px 40px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;transition:border-color 0.2s}' +
+    '.search-input:focus{outline:none;border-color:#059669}' +
+    '.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;color:#9ca3af}' +
+
+    // Filter buttons
+    '.filter-group{display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap}' +
+
+    // Charts section
+    '.chart-container{background:white;padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:15px}' +
+    '.chart-title{font-weight:600;color:#1f2937;margin-bottom:15px;font-size:14px}' +
+    '.bar-chart{display:flex;flex-direction:column;gap:10px}' +
+    '.bar-row{display:flex;align-items:center;gap:10px}' +
+    '.bar-label{width:140px;font-size:12px;color:#666;text-align:right}' +
+    '.bar-container{flex:1;background:#e5e7eb;border-radius:4px;height:24px;overflow:hidden}' +
+    '.bar-fill{height:100%;border-radius:4px;transition:width 0.5s;display:flex;align-items:center;justify-content:flex-end;padding-right:8px}' +
+    '.bar-value{width:50px;font-size:12px;font-weight:600;color:#374151}' +
+    '.bar-inner-value{font-size:11px;font-weight:600;color:white}' +
+
+    // Gauge chart
+    '.gauge-container{display:flex;flex-wrap:wrap;gap:20px;justify-content:center}' +
+    '.gauge{text-align:center;padding:15px}' +
+    '.gauge-value{font-size:36px;font-weight:bold;margin-bottom:5px}' +
+    '.gauge-label{font-size:12px;color:#666}' +
+    '.gauge-ring{width:100px;height:100px;border-radius:50%;margin:0 auto 10px;position:relative;display:flex;align-items:center;justify-content:center}' +
+    '.gauge-ring::before{content:"";position:absolute;inset:8px;background:white;border-radius:50%}' +
+    '.gauge-ring span{position:relative;z-index:1;font-size:24px;font-weight:bold}' +
+
+    // Trend arrows
+    '.trend-up{color:#059669}' +
+    '.trend-down{color:#dc2626}' +
+    '.trend-neutral{color:#6b7280}' +
+
+    // Insights card
+    '.insight-card{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-left:4px solid #059669;padding:15px;border-radius:0 8px 8px 0;margin-bottom:12px}' +
+    '.insight-card.warning{background:linear-gradient(135deg,#fef3c7,#fde68a);border-left-color:#f59e0b}' +
+    '.insight-card.alert{background:linear-gradient(135deg,#fee2e2,#fecaca);border-left-color:#dc2626}' +
+    '.insight-title{font-weight:600;color:#1f2937;margin-bottom:5px}' +
+    '.insight-text{font-size:13px;color:#374151}' +
+
+    // Heatmap styles
+    '.heatmap-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px}' +
+    '.heatmap-cell{padding:12px;border-radius:8px;text-align:center;font-weight:600;font-size:14px}' +
+
+    // Empty state
+    '.empty-state{text-align:center;padding:40px;color:#9ca3af}' +
+    '.empty-state-icon{font-size:48px;margin-bottom:10px}' +
+
+    // Loading
+    '.loading{text-align:center;padding:40px;color:#666}' +
+    '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin 1s linear infinite}' +
+    '@keyframes spin{to{transform:rotate(360deg)}}' +
+
+    // Responsive
+    '@media (max-width:600px){' +
+    '  .stats-grid{grid-template-columns:repeat(2,1fr)}' +
+    '  .list-item{flex-direction:column;align-items:flex-start}' +
+    '  .tab-icon{font-size:16px}' +
+    '  .bar-label{width:100px}' +
+    '  .gauge-container{flex-direction:column;align-items:center}' +
+    '}' +
+
+    '</style>' +
+    '</head><body>' +
+
+    // Header
+    '<div class="header">' +
+    '<h1>📊 Member Satisfaction</h1>' +
+    '<div class="subtitle">Survey results and satisfaction trends</div>' +
+    '</div>' +
+
+    // Tab Navigation
+    '<div class="tabs">' +
+    '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'responses\',this)" id="tab-responses"><span class="tab-icon">📝</span>Responses</button>' +
+    '<button class="tab" onclick="switchTab(\'sections\',this)" id="tab-sections"><span class="tab-icon">📈</span>By Section</button>' +
+    '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">🔍</span>Insights</button>' +
+    '</div>' +
+
+    // Overview Tab
+    '<div class="tab-content active" id="content-overview">' +
+    '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
+    '<div id="overview-gauges"></div>' +
+    '<div id="overview-insights" style="margin-top:15px"></div>' +
+    '</div>' +
+
+    // Responses Tab
+    '<div class="tab-content" id="content-responses">' +
+    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="response-search" placeholder="Search by worksite or role..." oninput="filterResponses(this.value)"></div>' +
+    '<div class="filter-group">' +
+    '<button class="action-btn action-btn-primary" onclick="filterResponsesBy(\'all\')">All</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterResponsesBy(\'high\')">High Satisfaction</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterResponsesBy(\'mid\')">Medium</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="filterResponsesBy(\'low\')">Needs Attention</button>' +
+    '</div>' +
+    '<div class="list-container" id="responses-list"><div class="loading"><div class="spinner"></div><p>Loading responses...</p></div></div>' +
+    '</div>' +
+
+    // Sections Tab
+    '<div class="tab-content" id="content-sections">' +
+    '<div id="sections-charts"><div class="loading"><div class="spinner"></div><p>Loading section scores...</p></div></div>' +
+    '</div>' +
+
+    // Analytics Tab
+    '<div class="tab-content" id="content-analytics">' +
+    '<div id="analytics-content"><div class="loading"><div class="spinner"></div><p>Loading insights...</p></div></div>' +
+    '</div>' +
+
+    // JavaScript
+    '<script>' +
+    'var allResponses=[];var currentFilter="all";var analyticsLoaded=false;var sectionsLoaded=false;' +
+
+    // Tab switching
+    'function switchTab(tabName,btn){' +
+    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
+    '  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
+    '  btn.classList.add("active");' +
+    '  document.getElementById("content-"+tabName).classList.add("active");' +
+    '  if(tabName==="responses"&&allResponses.length===0)loadResponses();' +
+    '  if(tabName==="sections"&&!sectionsLoaded)loadSections();' +
+    '  if(tabName==="analytics"&&!analyticsLoaded)loadAnalytics();' +
+    '}' +
+
+    // Score color helper
+    'function getScoreClass(score){' +
+    '  if(score>=7)return"high";' +
+    '  if(score>=5)return"mid";' +
+    '  return"low";' +
+    '}' +
+    'function getScoreColor(score){' +
+    '  if(score>=7)return"#059669";' +
+    '  if(score>=5)return"#f59e0b";' +
+    '  return"#dc2626";' +
+    '}' +
+    'function getProgressClass(score){' +
+    '  if(score>=7)return"progress-green";' +
+    '  if(score>=5)return"progress-yellow";' +
+    '  return"progress-red";' +
+    '}' +
+
+    // Load overview data
+    'function loadOverview(){' +
+    '  google.script.run.withSuccessHandler(function(data){renderOverview(data)}).getSatisfactionOverviewData();' +
+    '}' +
+
+    // Render overview
+    'function renderOverview(data){' +
+    '  var html="";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
+    '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.avgOverall.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction</div></div>";' +
+    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">NPS Score</div></div>";' +
+    '  html+="<div class=\\"stat-card purple\\"><div class=\\"stat-value\\">"+data.responseRate+"</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"green":data.avgSteward>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"green":data.avgLeadership>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
+    '  document.getElementById("overview-stats").innerHTML=html;' +
+    // Gauge display
+    '  var gauges="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Key Metrics at a Glance</div><div class=\\"gauge-container\\">";' +
+    '  gauges+=renderGauge(data.avgOverall,"Overall\\nSatisfaction");' +
+    '  gauges+=renderGauge(data.avgTrust,"Trust in\\nUnion");' +
+    '  gauges+=renderGauge(data.avgProtected,"Feel\\nProtected");' +
+    '  gauges+=renderGauge(data.avgRecommend,"Would\\nRecommend");' +
+    '  gauges+="</div></div>";' +
+    '  document.getElementById("overview-gauges").innerHTML=gauges;' +
+    // Insights
+    '  var insights="";' +
+    '  if(data.insights&&data.insights.length>0){' +
+    '    data.insights.forEach(function(i){' +
+    '      insights+="<div class=\\"insight-card "+i.type+"\\"><div class=\\"insight-title\\">"+i.icon+" "+i.title+"</div><div class=\\"insight-text\\">"+i.text+"</div></div>";' +
+    '    });' +
+    '  }' +
+    '  document.getElementById("overview-insights").innerHTML=insights;' +
+    '}' +
+
+    // Render gauge
+    'function renderGauge(value,label){' +
+    '  var color=getScoreColor(value);' +
+    '  var pct=value*10;' +
+    '  return"<div class=\\"gauge\\"><div class=\\"gauge-ring\\" style=\\"background:conic-gradient("+color+" "+pct+"%,#e5e7eb "+pct+"%)\\"><span style=\\"color:"+color+"\\">"+value.toFixed(1)+"</span></div><div class=\\"gauge-label\\">"+label.replace("\\n","<br>")+"</div></div>";' +
+    '}' +
+
+    // Load responses
+    'function loadResponses(){' +
+    '  google.script.run.withSuccessHandler(function(data){allResponses=data;renderResponses(data)}).getSatisfactionResponseData();' +
+    '}' +
+
+    // Render responses
+    'function renderResponses(data){' +
+    '  var c=document.getElementById("responses-list");' +
+    '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">📝</div><p>No responses found</p></div>";return}' +
+    '  c.innerHTML=data.slice(0,50).map(function(r){' +
+    '    var scoreClass=getScoreClass(r.avgScore);' +
+    '    var scoreColor=getScoreColor(r.avgScore);' +
+    '    return"<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+r.worksite+" - "+r.role+"</div><div class=\\"list-item-subtitle\\">"+r.shift+" • "+r.timeInRole+" • "+r.date+"</div></div><div><span class=\\"score-indicator score-"+scoreClass+"\\" style=\\"color:"+scoreColor+"\\">"+r.avgScore.toFixed(1)+"/10</span></div></div>";' +
+    '  }).join("");' +
+    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" responses</p></div>";' +
+    '}' +
+
+    // Filter responses
+    'function filterResponses(query){' +
+    '  if(!query||query.length<2){applyFilters();return}' +
+    '  query=query.toLowerCase();' +
+    '  var filtered=allResponses.filter(function(r){return r.worksite.toLowerCase().indexOf(query)>=0||r.role.toLowerCase().indexOf(query)>=0||r.shift.toLowerCase().indexOf(query)>=0});' +
+    '  if(currentFilter!=="all")filtered=applyScoreFilter(filtered,currentFilter);' +
+    '  renderResponses(filtered);' +
+    '}' +
+
+    // Filter by satisfaction level
+    'function filterResponsesBy(level){' +
+    '  currentFilter=level;' +
+    '  applyFilters();' +
+    '}' +
+
+    // Apply filters
+    'function applyFilters(){' +
+    '  var query=document.getElementById("response-search").value.toLowerCase();' +
+    '  var filtered=allResponses;' +
+    '  if(currentFilter!=="all")filtered=applyScoreFilter(filtered,currentFilter);' +
+    '  if(query&&query.length>=2)filtered=filtered.filter(function(r){return r.worksite.toLowerCase().indexOf(query)>=0||r.role.toLowerCase().indexOf(query)>=0});' +
+    '  renderResponses(filtered);' +
+    '}' +
+
+    // Score filter helper
+    'function applyScoreFilter(data,level){' +
+    '  return data.filter(function(r){' +
+    '    if(level==="high")return r.avgScore>=7;' +
+    '    if(level==="mid")return r.avgScore>=5&&r.avgScore<7;' +
+    '    if(level==="low")return r.avgScore<5;' +
+    '    return true;' +
+    '  });' +
+    '}' +
+
+    // Load sections data
+    'function loadSections(){' +
+    '  sectionsLoaded=true;' +
+    '  google.script.run.withSuccessHandler(function(data){renderSections(data)}).getSatisfactionSectionData();' +
+    '}' +
+
+    // Render sections
+    'function renderSections(data){' +
+    '  var c=document.getElementById("sections-charts");' +
+    '  var html="";' +
+    // Section scores bar chart
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Average Score by Section</div><div class=\\"bar-chart\\">";' +
+    '  var maxScore=10;' +
+    '  data.sections.forEach(function(s){' +
+    '    var pct=(s.avg/maxScore)*100;' +
+    '    var color=getScoreColor(s.avg);' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+s.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+s.responseCount+"</div></div>";' +
+    '  });' +
+    '  html+="</div></div>";' +
+    // Section detail cards
+    '  html+="<div class=\\"chart-title\\" style=\\"margin-bottom:15px\\">📋 Section Details</div>";' +
+    '  data.sections.forEach(function(s){' +
+    '    var color=getScoreColor(s.avg);' +
+    '    var pct=(s.avg/10)*100;' +
+    '    var progressClass=getProgressClass(s.avg);' +
+    '    html+="<div class=\\"section-card\\"><div class=\\"section-header\\"><div class=\\"section-title\\">"+s.name+"</div><div class=\\"section-score\\" style=\\"color:"+color+"\\">"+s.avg.toFixed(1)+"/10</div></div>";' +
+    '    html+="<div class=\\"progress-bar\\"><div class=\\"progress-fill "+progressClass+"\\" style=\\"width:"+pct+"%25\\"></div></div>";' +
+    '    if(s.questions&&s.questions.length>0){' +
+    '      html+="<div style=\\"margin-top:10px;font-size:12px;color:#666\\">"+s.questions.length+" questions • "+s.responseCount+" responses</div>";' +
+    '    }' +
+    '    html+="</div>";' +
+    '  });' +
+    '  c.innerHTML=html;' +
+    '}' +
+
+    // Load analytics
+    'function loadAnalytics(){' +
+    '  analyticsLoaded=true;' +
+    '  google.script.run.withSuccessHandler(function(data){renderAnalytics(data)}).getSatisfactionAnalyticsData();' +
+    '}' +
+
+    // Render analytics/insights
+    'function renderAnalytics(data){' +
+    '  var c=document.getElementById("analytics-content");' +
+    '  var html="";' +
+    // Key insights
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">💡 Key Insights</div>";' +
+    '  if(data.insights&&data.insights.length>0){' +
+    '    data.insights.forEach(function(i){' +
+    '      html+="<div class=\\"insight-card "+i.type+"\\" style=\\"margin-bottom:10px\\"><div class=\\"insight-title\\">"+i.icon+" "+i.title+"</div><div class=\\"insight-text\\">"+i.text+"</div></div>";' +
+    '    });' +
+    '  }else{html+="<div class=\\"empty-state\\">No insights available</div>";}' +
+    '  html+="</div>";' +
+    // By worksite breakdown
+    '  if(data.byWorksite&&data.byWorksite.length>0){' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Satisfaction by Worksite</div><div class=\\"bar-chart\\">";' +
+    '    data.byWorksite.forEach(function(w){' +
+    '      var pct=(w.avg/10)*100;' +
+    '      var color=getScoreColor(w.avg);' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">n="+w.count+"</div></div>";' +
+    '    });' +
+    '    html+="</div></div>";' +
+    '  }' +
+    // By role breakdown
+    '  if(data.byRole&&data.byRole.length>0){' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">👤 Satisfaction by Role</div><div class=\\"bar-chart\\">";' +
+    '    data.byRole.forEach(function(r){' +
+    '      var pct=(r.avg/10)*100;' +
+    '      var color=getScoreColor(r.avg);' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+r.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+r.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">n="+r.count+"</div></div>";' +
+    '    });' +
+    '    html+="</div></div>";' +
+    '  }' +
+    // Steward contact impact
+    '  if(data.stewardImpact){' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🤝 Impact of Steward Contact</div>";' +
+    '    html+="<div class=\\"stats-grid\\">";' +
+    '    html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.stewardImpact.withContact.toFixed(1)+"</div><div class=\\"stat-label\\">With Steward Contact (n="+data.stewardImpact.withContactCount+")</div></div>";' +
+    '    html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.stewardImpact.withoutContact.toFixed(1)+"</div><div class=\\"stat-label\\">Without Contact (n="+data.stewardImpact.withoutContactCount+")</div></div>";' +
+    '    html+="</div>";' +
+    '    var diff=data.stewardImpact.withContact-data.stewardImpact.withoutContact;' +
+    '    if(diff>0){' +
+    '      html+="<div class=\\"insight-card\\" style=\\"margin-top:10px\\"><div class=\\"insight-text\\">Members with steward contact report <strong>+"+diff.toFixed(1)+"</strong> higher satisfaction on average.</div></div>";' +
+    '    }' +
+    '    html+="</div>";' +
+    '  }' +
+    // Top priorities
+    '  if(data.topPriorities&&data.topPriorities.length>0){' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🎯 Top Member Priorities</div><div class=\\"bar-chart\\">";' +
+    '    var maxP=Math.max.apply(null,data.topPriorities.map(function(p){return p.count}))||1;' +
+    '    data.topPriorities.forEach(function(p){' +
+    '      var pct=(p.count/maxP)*100;' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+p.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+p.count+"</div></div>";' +
+    '    });' +
+    '    html+="</div></div>";' +
+    '  }' +
+    '  c.innerHTML=html;' +
+    '}' +
+
+    // Initialize
+    'loadOverview();' +
+    '</script>' +
+
+    '</body></html>';
+}
+
+/**
+ * Get overview data for satisfaction dashboard
+ */
+function getSatisfactionOverviewData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var data = {
+    totalResponses: 0,
+    avgOverall: 0,
+    avgSteward: 0,
+    avgLeadership: 0,
+    avgTrust: 0,
+    avgProtected: 0,
+    avgRecommend: 0,
+    npsScore: 0,
+    responseRate: 'N/A',
+    insights: []
+  };
+
+  if (!sheet) return data;
+
+  // Check if there's data by looking at column A (Timestamp)
+  var lastRow = 1;
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      lastRow = i;
+      break;
+    }
+    lastRow = i + 1;
+  }
+
+  if (lastRow <= 1) return data;
+
+  data.totalResponses = lastRow - 1;
+
+  // Get satisfaction scores (Q6-Q9 are columns G-J, 1-indexed as 7-10)
+  var satisfactionRange = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, data.totalResponses, 4).getValues();
+
+  var sumOverall = 0, sumTrust = 0, sumProtected = 0, sumRecommend = 0;
+  var promoters = 0, detractors = 0;
+  var validCount = 0;
+
+  satisfactionRange.forEach(function(row) {
+    var satisfied = parseFloat(row[0]) || 0;
+    var trust = parseFloat(row[1]) || 0;
+    var protected_ = parseFloat(row[2]) || 0;
+    var recommend = parseFloat(row[3]) || 0;
+
+    if (satisfied > 0) {
+      sumOverall += satisfied;
+      sumTrust += trust;
+      sumProtected += protected_;
+      sumRecommend += recommend;
+      validCount++;
+
+      // NPS calculation (based on recommend score 1-10)
+      if (recommend >= 9) promoters++;
+      else if (recommend <= 6) detractors++;
+    }
+  });
+
+  if (validCount > 0) {
+    data.avgOverall = sumOverall / validCount;
+    data.avgTrust = sumTrust / validCount;
+    data.avgProtected = sumProtected / validCount;
+    data.avgRecommend = sumRecommend / validCount;
+    data.npsScore = Math.round(((promoters - detractors) / validCount) * 100);
+  }
+
+  // Get steward ratings (Q10-Q16, columns K-Q)
+  var stewardRange = sheet.getRange(2, SATISFACTION_COLS.Q10_TIMELY_RESPONSE, data.totalResponses, 7).getValues();
+  var sumSteward = 0, stewardCount = 0;
+
+  stewardRange.forEach(function(row) {
+    var rowSum = 0, rowCount = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { rowSum += v; rowCount++; }
+    });
+    if (rowCount > 0) {
+      sumSteward += rowSum / rowCount;
+      stewardCount++;
+    }
+  });
+
+  if (stewardCount > 0) {
+    data.avgSteward = sumSteward / stewardCount;
+  }
+
+  // Get leadership ratings (Q26-Q31, columns AA-AF)
+  var leadershipRange = sheet.getRange(2, SATISFACTION_COLS.Q26_DECISIONS_CLEAR, data.totalResponses, 6).getValues();
+  var sumLeadership = 0, leadershipCount = 0;
+
+  leadershipRange.forEach(function(row) {
+    var rowSum = 0, rowCount = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { rowSum += v; rowCount++; }
+    });
+    if (rowCount > 0) {
+      sumLeadership += rowSum / rowCount;
+      leadershipCount++;
+    }
+  });
+
+  if (leadershipCount > 0) {
+    data.avgLeadership = sumLeadership / leadershipCount;
+  }
+
+  // Calculate response rate if we have member directory
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var totalMembers = memberSheet.getLastRow() - 1;
+    var rate = Math.round((data.totalResponses / totalMembers) * 100);
+    data.responseRate = rate + '%';
+  }
+
+  // Generate insights
+  if (data.avgOverall >= 8) {
+    data.insights.push({
+      type: '',
+      icon: '🌟',
+      title: 'High Overall Satisfaction',
+      text: 'Members report strong satisfaction with union representation (avg ' + data.avgOverall.toFixed(1) + '/10).'
+    });
+  } else if (data.avgOverall < 5) {
+    data.insights.push({
+      type: 'alert',
+      icon: '⚠️',
+      title: 'Low Satisfaction Alert',
+      text: 'Overall satisfaction is below target at ' + data.avgOverall.toFixed(1) + '/10. Consider reviewing member concerns.'
+    });
+  }
+
+  if (data.npsScore >= 50) {
+    data.insights.push({
+      type: '',
+      icon: '🎯',
+      title: 'Strong NPS Score',
+      text: 'Net Promoter Score of ' + data.npsScore + ' indicates members actively recommend the union.'
+    });
+  } else if (data.npsScore < 0) {
+    data.insights.push({
+      type: 'warning',
+      icon: '📊',
+      title: 'NPS Needs Improvement',
+      text: 'Current NPS of ' + data.npsScore + ' suggests more detractors than promoters.'
+    });
+  }
+
+  if (data.avgSteward >= 8) {
+    data.insights.push({
+      type: '',
+      icon: '🤝',
+      title: 'Excellent Steward Performance',
+      text: 'Stewards are rated highly at ' + data.avgSteward.toFixed(1) + '/10 on average.'
+    });
+  } else if (data.avgSteward < 6 && stewardCount > 0) {
+    data.insights.push({
+      type: 'warning',
+      icon: '👤',
+      title: 'Steward Training Opportunity',
+      text: 'Steward ratings averaging ' + data.avgSteward.toFixed(1) + '/10 suggest room for improvement.'
+    });
+  }
+
+  return data;
+}
+
+/**
+ * Get individual response data for satisfaction dashboard
+ */
+function getSatisfactionResponseData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+  if (!sheet) return [];
+
+  // Check if there's data
+  var lastRow = 1;
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      lastRow = i;
+      break;
+    }
+    lastRow = i + 1;
+  }
+
+  if (lastRow <= 1) return [];
+
+  var numRows = lastRow - 1;
+
+  // Get worksite, role, shift, time in role, and satisfaction scores
+  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
+  var shiftData = sheet.getRange(2, SATISFACTION_COLS.Q3_SHIFT, numRows, 1).getValues();
+  var timeData = sheet.getRange(2, SATISFACTION_COLS.Q4_TIME_IN_ROLE, numRows, 1).getValues();
+  var timestampData = sheet.getRange(2, 1, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  var responses = [];
+  for (var i = 0; i < numRows; i++) {
+    // Calculate average satisfaction score
+    var scores = satisfactionData[i];
+    var sum = 0, count = 0;
+    scores.forEach(function(s) {
+      var v = parseFloat(s);
+      if (v > 0) { sum += v; count++; }
+    });
+    var avgScore = count > 0 ? sum / count : 0;
+
+    var ts = timestampData[i][0];
+    var dateStr = ts instanceof Date ? Utilities.formatDate(ts, Session.getScriptTimeZone(), 'MM/dd/yyyy') : (ts || 'N/A');
+
+    responses.push({
+      worksite: worksiteData[i][0] || 'Unknown',
+      role: roleData[i][0] || 'Unknown',
+      shift: shiftData[i][0] || 'N/A',
+      timeInRole: timeData[i][0] || 'N/A',
+      date: dateStr,
+      avgScore: avgScore
+    });
+  }
+
+  // Sort by date (most recent first)
+  responses.sort(function(a, b) {
+    return b.date.localeCompare(a.date);
+  });
+
+  return responses;
+}
+
+/**
+ * Get section-level data for satisfaction dashboard
+ */
+function getSatisfactionSectionData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { sections: [] };
+  if (!sheet) return result;
+
+  // Check if there's data
+  var lastRow = 1;
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      lastRow = i;
+      break;
+    }
+    lastRow = i + 1;
+  }
+
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+
+  // Define sections with their column ranges
+  var sectionDefs = [
+    { name: 'Overall Satisfaction', startCol: SATISFACTION_COLS.Q6_SATISFIED_REP, numCols: 4 },
+    { name: 'Steward Ratings', startCol: SATISFACTION_COLS.Q10_TIMELY_RESPONSE, numCols: 7 },
+    { name: 'Steward Access', startCol: SATISFACTION_COLS.Q18_KNOW_CONTACT, numCols: 3 },
+    { name: 'Chapter Effectiveness', startCol: SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES, numCols: 5 },
+    { name: 'Local Leadership', startCol: SATISFACTION_COLS.Q26_DECISIONS_CLEAR, numCols: 6 },
+    { name: 'Contract Enforcement', startCol: SATISFACTION_COLS.Q32_ENFORCES_CONTRACT, numCols: 4 },
+    { name: 'Representation Process', startCol: SATISFACTION_COLS.Q37_UNDERSTOOD_STEPS, numCols: 4 },
+    { name: 'Communication Quality', startCol: SATISFACTION_COLS.Q41_CLEAR_ACTIONABLE, numCols: 5 },
+    { name: 'Member Voice & Culture', startCol: SATISFACTION_COLS.Q46_VOICE_MATTERS, numCols: 5 },
+    { name: 'Value & Collective Action', startCol: SATISFACTION_COLS.Q51_GOOD_VALUE, numCols: 5 },
+    { name: 'Scheduling/Office Days', startCol: SATISFACTION_COLS.Q56_UNDERSTAND_CHANGES, numCols: 7 }
+  ];
+
+  sectionDefs.forEach(function(section) {
+    var data = sheet.getRange(2, section.startCol, numRows, section.numCols).getValues();
+    var sum = 0, count = 0;
+
+    data.forEach(function(row) {
+      row.forEach(function(val) {
+        var v = parseFloat(val);
+        if (v > 0 && v <= 10) {
+          sum += v;
+          count++;
+        }
+      });
+    });
+
+    result.sections.push({
+      name: section.name,
+      avg: count > 0 ? sum / count : 0,
+      responseCount: Math.floor(count / section.numCols),
+      questions: section.numCols
+    });
+  });
+
+  // Sort by score (lowest first to highlight areas needing attention)
+  result.sections.sort(function(a, b) { return a.avg - b.avg; });
+
+  return result;
+}
+
+/**
+ * Get analytics data for satisfaction dashboard insights
+ */
+function getSatisfactionAnalyticsData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    insights: [],
+    byWorksite: [],
+    byRole: [],
+    stewardImpact: null,
+    topPriorities: []
+  };
+
+  if (!sheet) return result;
+
+  // Check if there's data
+  var lastRow = 1;
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      lastRow = i;
+      break;
+    }
+    lastRow = i + 1;
+  }
+
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+
+  // Get all relevant data in one batch
+  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
+  var stewardContactData = sheet.getRange(2, SATISFACTION_COLS.Q5_STEWARD_CONTACT, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+  var prioritiesData = sheet.getRange(2, SATISFACTION_COLS.Q64_TOP_PRIORITIES, numRows, 1).getValues();
+
+  // Calculate average score for each response
+  var scores = [];
+  for (var i = 0; i < numRows; i++) {
+    var row = satisfactionData[i];
+    var sum = 0, count = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { sum += v; count++; }
+    });
+    scores.push(count > 0 ? sum / count : 0);
+  }
+
+  // By Worksite analysis
+  var worksiteMap = {};
+  for (var i = 0; i < numRows; i++) {
+    var ws = worksiteData[i][0] || 'Unknown';
+    if (!worksiteMap[ws]) worksiteMap[ws] = { sum: 0, count: 0 };
+    if (scores[i] > 0) {
+      worksiteMap[ws].sum += scores[i];
+      worksiteMap[ws].count++;
+    }
+  }
+
+  for (var ws in worksiteMap) {
+    if (worksiteMap[ws].count > 0) {
+      result.byWorksite.push({
+        name: ws,
+        avg: worksiteMap[ws].sum / worksiteMap[ws].count,
+        count: worksiteMap[ws].count
+      });
+    }
+  }
+  result.byWorksite.sort(function(a, b) { return b.avg - a.avg; });
+
+  // By Role analysis
+  var roleMap = {};
+  for (var i = 0; i < numRows; i++) {
+    var role = roleData[i][0] || 'Unknown';
+    if (!roleMap[role]) roleMap[role] = { sum: 0, count: 0 };
+    if (scores[i] > 0) {
+      roleMap[role].sum += scores[i];
+      roleMap[role].count++;
+    }
+  }
+
+  for (var role in roleMap) {
+    if (roleMap[role].count > 0) {
+      result.byRole.push({
+        name: role,
+        avg: roleMap[role].sum / roleMap[role].count,
+        count: roleMap[role].count
+      });
+    }
+  }
+  result.byRole.sort(function(a, b) { return b.avg - a.avg; });
+
+  // Steward contact impact
+  var withContactSum = 0, withContactCount = 0;
+  var withoutContactSum = 0, withoutContactCount = 0;
+
+  for (var i = 0; i < numRows; i++) {
+    var contact = String(stewardContactData[i][0]).toLowerCase();
+    if (scores[i] > 0) {
+      if (contact === 'yes') {
+        withContactSum += scores[i];
+        withContactCount++;
+      } else if (contact === 'no') {
+        withoutContactSum += scores[i];
+        withoutContactCount++;
+      }
+    }
+  }
+
+  if (withContactCount > 0 || withoutContactCount > 0) {
+    result.stewardImpact = {
+      withContact: withContactCount > 0 ? withContactSum / withContactCount : 0,
+      withContactCount: withContactCount,
+      withoutContact: withoutContactCount > 0 ? withoutContactSum / withoutContactCount : 0,
+      withoutContactCount: withoutContactCount
+    };
+  }
+
+  // Top priorities analysis
+  var priorityMap = {};
+  for (var i = 0; i < numRows; i++) {
+    var priorities = String(prioritiesData[i][0] || '');
+    if (priorities) {
+      // Split by comma and count each priority
+      var items = priorities.split(',');
+      items.forEach(function(item) {
+        var p = item.trim();
+        if (p) {
+          priorityMap[p] = (priorityMap[p] || 0) + 1;
+        }
+      });
+    }
+  }
+
+  for (var p in priorityMap) {
+    result.topPriorities.push({ name: p, count: priorityMap[p] });
+  }
+  result.topPriorities.sort(function(a, b) { return b.count - a.count; });
+  result.topPriorities = result.topPriorities.slice(0, 10); // Top 10
+
+  // Generate insights
+  // Lowest scoring worksite
+  if (result.byWorksite.length > 0) {
+    var lowest = result.byWorksite[result.byWorksite.length - 1];
+    if (lowest.avg < 6 && lowest.count >= 3) {
+      result.insights.push({
+        type: 'warning',
+        icon: '📍',
+        title: 'Worksite Attention Needed',
+        text: lowest.name + ' has the lowest satisfaction score (' + lowest.avg.toFixed(1) + '/10) with ' + lowest.count + ' responses.'
+      });
+    }
+  }
+
+  // Steward impact insight
+  if (result.stewardImpact && result.stewardImpact.withContactCount > 0 && result.stewardImpact.withoutContactCount > 0) {
+    var diff = result.stewardImpact.withContact - result.stewardImpact.withoutContact;
+    if (diff > 1) {
+      result.insights.push({
+        type: '',
+        icon: '🤝',
+        title: 'Steward Contact Matters',
+        text: 'Members who contacted a steward report ' + diff.toFixed(1) + ' points higher satisfaction on average.'
+      });
+    }
+  }
+
+  // Role insights
+  if (result.byRole.length >= 2) {
+    var topRole = result.byRole[0];
+    var bottomRole = result.byRole[result.byRole.length - 1];
+    if (topRole.avg - bottomRole.avg > 2 && bottomRole.count >= 3) {
+      result.insights.push({
+        type: 'warning',
+        icon: '👤',
+        title: 'Role Disparity',
+        text: bottomRole.name + ' roles report lower satisfaction (' + bottomRole.avg.toFixed(1) + ') than ' + topRole.name + ' (' + topRole.avg.toFixed(1) + ').'
+      });
+    }
+  }
+
+  // Top priority insight
+  if (result.topPriorities.length > 0) {
+    var topP = result.topPriorities[0];
+    result.insights.push({
+      type: '',
+      icon: '🎯',
+      title: 'Top Member Priority',
+      text: '"' + topP.name + '" is the most cited priority with ' + topP.count + ' mentions.'
+    });
+  }
+
+  return result;
 }
 
 

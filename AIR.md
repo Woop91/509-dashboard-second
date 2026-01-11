@@ -844,6 +844,39 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
+### Version 1.9.0 (2026-01-11) - Member Directory Validation & Heatmap
+
+**New Features: Data Validation Highlighting & Deadline Heatmap**
+
+Added visual data quality indicators and deadline urgency heatmap to the Member Directory sheet.
+
+**1. Empty Field Validation (Red Background)**
+- Email field (Column H): Red background (`#ffcdd2`) when empty but Member ID exists
+- Phone field (Column I): Red background (`#ffcdd2`) when empty but Member ID exists
+- Formula: `=AND($A2<>"",ISBLANK($H2))` ensures only rows with members are highlighted
+
+**2. Days to Deadline Heatmap (Column AD)**
+| Days Remaining | Background | Text Color | Style |
+|----------------|------------|------------|-------|
+| Overdue or ≤0  | `#ffebee` (red) | `#c62828` | Bold |
+| 1-3 days       | `#fff3e0` (orange) | `#e65100` | Bold |
+| 4-7 days       | `#fffde7` (yellow) | `#f57f17` | Normal |
+| 8+ days        | `#e8f5e9` (green) | `#2e7d32` | Normal |
+
+**3. Column Sorting via Filter**
+- Added filter row to Member Directory header
+- All columns now sortable via dropdown (A-Z, Z-A)
+- Sortable columns include: Last Name, Job Title, Work Location, Unit, Office Days, Preferred Communication, Best Time to Contact, Supervisor, Manager, Committees, Assigned Steward, Last Virtual Mtg, Last In-Person Mtg, Open Rate %, Volunteer Hours, Interest fields, Home Town, Recent Contact Date, Contact Steward, Contact Notes, Has Open Grievance?, Grievance Status, Days to Deadline
+
+**Code Changes (Code.gs `createMemberDirectory()`):**
+- Lines 497-515: Added `emptyEmailRule` and `emptyPhoneRule` conditional formatting
+- Lines 517-554: Added 4 heatmap rules for Days to Deadline column
+- Lines 560-576: Added filter creation for sortable columns
+
+**Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
+
+---
+
 ### Version 1.8.0 (2026-01-06) - Member Satisfaction Dashboard
 
 **New Feature: Interactive Satisfaction Dashboard Modal**
