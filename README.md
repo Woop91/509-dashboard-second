@@ -1095,14 +1095,16 @@ The grievance workflow now includes:
    - Prerequisites: Valid email addresses and Gmail API permissions
 
 ### 🔧 Technical Tasks:
-5. Add grievance folder URL column to Grievance Log sheet for tracking
-6. Update `addGrievanceToLog()` to store folder URL in new column
+5. ✅ Add grievance folder URL column to Grievance Log sheet for tracking
+   - GRIEVANCE_COLS.DRIVE_FOLDER_ID (column AG) and DRIVE_FOLDER_URL (column AH) implemented
+6. ✅ Update `onGrievanceFormSubmit()` to store folder URL in new column
+   - Folder ID and URL stored automatically when grievance form is submitted
 7. Test complete workflow from member selection through folder sharing
 8. Verify email delivery and folder permissions work correctly
 
 ### ✅ Implementation Status:
-- **Committed**: Branch `claude/add-grievance-coordinator-fields-01KQXAdQS7vbxqQm6hD8RkMo`
-- **Status**: Ready for pull request creation
+- **Folder URL Storage**: Complete - DRIVE_FOLDER_ID (AG) and DRIVE_FOLDER_URL (AH) columns implemented
+- **Form Submission**: Complete - folder created and URL stored automatically on grievance form submit
 - **Foundation**: Complete - folder creation, UI, and sharing infrastructure in place
 
 ## 🔮 Future Features
