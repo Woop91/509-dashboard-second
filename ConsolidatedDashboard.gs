@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-11T23:19:51.437Z
+ * - Build Date: 2026-01-11T23:32:49.022Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -4945,8 +4945,9 @@ function setupContactFormTrigger() {
  * Member Satisfaction Survey Form Configuration
  */
 var SATISFACTION_FORM_CONFIG = {
-  // Google Form URL (viewform version)
+  // Google Form URLs
   FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform',
+  EDIT_URL: 'https://docs.google.com/forms/d/10irg3mZ4kPShcJ5gFHuMoTxvTeZmo_cBs6HGvfasbL0/edit',
 
   // Form field entry IDs (from pre-filled URL)
   FIELD_IDS: {
@@ -5029,10 +5030,10 @@ function onSatisfactionFormSubmit(e) {
     // Timestamp
     newRow[SATISFACTION_COLS.TIMESTAMP - 1] = new Date();
 
-    // Work Context (Q1-5)
+    // Work Context (Q1-5) - Note: Q3_SHIFT not in form, column left empty
     newRow[SATISFACTION_COLS.Q1_WORKSITE - 1] = getFormValue_(responses, 'Worksite / Program / Region');
     newRow[SATISFACTION_COLS.Q2_ROLE - 1] = getFormValue_(responses, 'Role / Job Group');
-    newRow[SATISFACTION_COLS.Q3_SHIFT - 1] = getFormValue_(responses, 'Shift');
+    // Q3_SHIFT skipped - form does not have this question
     newRow[SATISFACTION_COLS.Q4_TIME_IN_ROLE - 1] = getFormValue_(responses, 'Time in current role');
     newRow[SATISFACTION_COLS.Q5_STEWARD_CONTACT - 1] = getFormValue_(responses, 'Contact with steward in past 12 months?');
 
