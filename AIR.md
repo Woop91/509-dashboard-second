@@ -844,11 +844,15 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
-### Version 1.9.0 (2026-01-11) - Member Directory Validation & Heatmap
+### Version 1.9.0 (2026-01-11) - Visual Enhancements & Progress Tracking
 
-**New Features: Data Validation Highlighting & Deadline Heatmap**
+**New Features: Data Validation, Heatmaps & Progress Bar**
 
-Added visual data quality indicators and deadline urgency heatmap to the Member Directory sheet.
+Added visual data quality indicators, deadline heatmaps, and grievance progress tracking.
+
+---
+
+#### Member Directory Enhancements
 
 **1. Empty Field Validation (Red Background)**
 - Email field (Column H): Red background (`#ffcdd2`) when empty but Member ID exists
@@ -866,12 +870,45 @@ Added visual data quality indicators and deadline urgency heatmap to the Member 
 **3. Column Sorting via Filter**
 - Added filter row to Member Directory header
 - All columns now sortable via dropdown (A-Z, Z-A)
-- Sortable columns include: Last Name, Job Title, Work Location, Unit, Office Days, Preferred Communication, Best Time to Contact, Supervisor, Manager, Committees, Assigned Steward, Last Virtual Mtg, Last In-Person Mtg, Open Rate %, Volunteer Hours, Interest fields, Home Town, Recent Contact Date, Contact Steward, Contact Notes, Has Open Grievance?, Grievance Status, Days to Deadline
 
-**Code Changes (Code.gs `createMemberDirectory()`):**
-- Lines 497-515: Added `emptyEmailRule` and `emptyPhoneRule` conditional formatting
-- Lines 517-554: Added 4 heatmap rules for Days to Deadline column
-- Lines 560-576: Added filter creation for sortable columns
+---
+
+#### Grievance Log Enhancements
+
+**4. Days to Deadline Heatmap (Column U)**
+Same color scheme as Member Directory - automatically applied when sheet is created.
+
+**5. Grievance Progress Bar (Columns J-R)**
+Visual progress indicator showing grievance stage via colored backgrounds:
+
+| Current Step | Columns Highlighted | Color |
+|--------------|---------------------|-------|
+| Informal | None | Gray `#fafafa` |
+| Step I | J-K | Soft blue `#e3f2fd` |
+| Step II | J-O | Soft blue `#e3f2fd` |
+| Step III | J-Q | Soft blue `#e3f2fd` |
+| Closed/Won/Denied/Settled/Withdrawn | J-R | Soft green `#e8f5e9` |
+
+- Progress bar spans: Step I Due → Step I Rcvd → Step II Appeal Due → Step II Appeal Filed → Step II Due → Step II Rcvd → Step III Appeal Due → Step III Appeal Filed → Date Closed
+- Columns not yet reached remain light gray
+- Completed grievances show all columns in green
+
+**6. Auto-Sort Confirmation**
+Grievance Log entries automatically sort by status priority (active cases first) and deadline urgency when edited.
+
+---
+
+**Code Changes:**
+
+*Member Directory (`createMemberDirectory()` lines 497-576):*
+- Lines 497-515: Empty Email/Phone validation rules
+- Lines 517-554: Days to Deadline heatmap rules
+- Lines 560-576: Filter for column sorting
+
+*Grievance Log (`createGrievanceLog()` lines 645-739):*
+- Lines 645-682: Days to Deadline heatmap rules
+- Lines 684-731: Progress bar conditional formatting rules
+- Lines 733-739: Apply all rules
 
 **Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
 

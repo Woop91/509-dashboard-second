@@ -641,6 +641,102 @@ function createGrievanceLog(ss) {
   } catch (e) {
     Logger.log('Column group setup skipped: ' + e.toString());
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DAYS TO DEADLINE HEATMAP (Column U)
+  // ═══════════════════════════════════════════════════════════════════════════
+  var daysDeadlineRange = sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, 4999, 1);
+
+  // Rule: Red - Overdue (shows "Overdue" or negative/0 days)
+  var deadlineOverdueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($U2="Overdue",AND(ISNUMBER($U2),$U2<=0))')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Orange - Due in 1-3 days
+  var deadline1to3Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=1,$U2<=3)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Yellow - Due in 4-7 days
+  var deadline4to7Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=4,$U2<=7)')
+    .setBackground('#fffde7')
+    .setFontColor('#f57f17')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Green - On Track (more than 7 days remaining)
+  var deadlineOnTrackRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>7)')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRESS BAR: Colored backgrounds showing grievance stage (Columns J-R)
+  // Based on Current Step (Column F), highlights completed stages
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Progress bar spans: Step I (J-K), Step II (L-O), Step III (P-Q), Date Closed (R)
+  var step1Range = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 2);         // J-K
+  var step2Range = sheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, 4999, 4);  // L-O
+  var step3Range = sheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, 4999, 2);  // P-Q
+  var closedRange = sheet.getRange(2, GRIEVANCE_COLS.DATE_CLOSED, 4999, 1);      // R
+  var allStepsRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 9);      // J-R (all 9 columns)
+
+  // Completed cases: All columns green (Closed, Won, Denied, Settled, Withdrawn)
+  var completedRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($E2="Closed",$E2="Won",$E2="Denied",$E2="Settled",$E2="Withdrawn")')
+    .setBackground('#e8f5e9')  // Soft green
+    .setRanges([allStepsRange])
+    .build();
+
+  // Step III in progress: J-Q highlighted (all except Date Closed)
+  var step3ProgressRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 8);  // J-Q
+  var step3ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step III"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step3ProgressRange])
+    .build();
+
+  // Step II in progress: J-O highlighted
+  var step2ProgressRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 6);  // J-O
+  var step2ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step II"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step2ProgressRange])
+    .build();
+
+  // Step I in progress: J-K highlighted
+  var step1ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step I"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step1Range])
+    .build();
+
+  // Gray out columns not yet reached (applies to all step columns by default)
+  var notReachedRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",$F2<>"")')
+    .setBackground('#fafafa')  // Very light gray (default for uncolored)
+    .setRanges([allStepsRange])
+    .build();
+
+  // Apply all rules (order matters - more specific rules first)
+  var rules = sheet.getConditionalFormatRules();
+  rules.push(
+    deadlineOverdueRule, deadline1to3Rule, deadline4to7Rule, deadlineOnTrackRule,
+    completedRule, step3ProgressRule, step2ProgressRule, step1ProgressRule, notReachedRule
+  );
+  sheet.setConditionalFormatRules(rules);
 }
 
 

@@ -477,7 +477,16 @@ Features include:
 - All deadlines auto-calculate based on contract rules
 - "Next Action Due" intelligently selects the relevant deadline based on current step
 - "Days to Deadline" shows urgency (negative numbers = overdue)
-- Conditional formatting highlights approaching/overdue deadlines
+- **Auto-sort** - Entries automatically sort by status priority (active cases first) and deadline urgency
+- **Days to Deadline heatmap** - Color-coded urgency:
+  - 🔴 Red: Overdue or 0 days remaining
+  - 🟠 Orange: 1-3 days remaining
+  - 🟡 Yellow: 4-7 days remaining
+  - 🟢 Green: 8+ days remaining
+- **Progress bar** - Visual indicator across step columns (J-R) showing grievance stage:
+  - Soft blue highlights columns for current/completed steps
+  - Soft green highlights all columns when grievance is resolved
+  - Gray background for steps not yet reached
 
 ### 4. Dashboard - Real-Time Analytics
 
