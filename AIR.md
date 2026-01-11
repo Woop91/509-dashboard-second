@@ -146,6 +146,13 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `createGrievanceFolderFromData_()` - Create folder with subfolders (Documents, Correspondence, Notes)
   - `shareWithCoordinators_()` - Share folder with coordinators from Config
   - `testGrievanceFormSubmission()` - Test function with sample data
+- Contact Info Form Workflow:
+  - `CONTACT_FORM_CONFIG` - Form URL and field entry ID configuration for member contact updates
+  - `sendContactInfoForm()` - Opens pre-filled contact form for selected member (with copy link option)
+  - `buildContactFormUrl_()` - Build pre-filled form URL with member's current data
+  - `onContactFormSubmit(e)` - Form submission trigger handler (updates Member Directory)
+  - `setupContactFormTrigger()` - Menu-driven trigger setup for contact form submissions
+  - `getFormMultiValue_()` - Helper for multi-select checkbox responses
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -931,9 +938,30 @@ Grievance Log entries automatically sort by status priority (active cases first)
 - Stores folder ID and URL in Grievance Log (columns AG, AH)
 
 **10. Easy Trigger Setup**
-- New menu: 👤 Dashboard > 📋 Grievance Tools > 📋 Setup Form Trigger
+- New menu: 👤 Dashboard > 📋 Grievance Tools > 📋 Setup Grievance Form Trigger
 - Prompts for Google Form edit URL
 - Creates installable trigger for form submissions
+
+---
+
+#### Personal Contact Info Form (New)
+
+**11. Pre-filled Contact Update Form**
+- `sendContactInfoForm()`: Opens pre-filled Google Form with member's current data
+- Stewards can send form link to members to update their contact info
+- Form fields: First/Last Name, Job Title, Unit, Work Location, Office Days, Communication Preferences, Best Time, Supervisor, Manager, Email, Phone, Interest levels
+- Option to open form or copy link to send to member
+
+**12. Automatic Member Directory Updates**
+- `onContactFormSubmit(e)`: Trigger handler for contact form submissions
+- Matches member by First Name + Last Name
+- Updates all submitted fields in Member Directory
+- Handles multi-select fields (Office Days, Preferred Communication, Best Time)
+
+**13. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 👤 Member Tools > 📋 Setup Contact Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for contact form submissions
 
 ---
 
@@ -961,8 +989,19 @@ Grievance Log entries automatically sort by status priority (active cases first)
 - Lines 3690-3780: `setupGrievanceFormTrigger()` - menu-driven trigger setup
 - Lines 3787-3813: `testGrievanceFormSubmission()` - test function
 
-*Menu Update (Code.gs line 42):*
-- Added "📋 Setup Form Trigger" menu item
+*Contact Info Form Workflow (Code.gs lines 3844-4100):*
+- Lines 3286-3311: `CONTACT_FORM_CONFIG` with form URL and 15 field entry IDs
+- Lines 3854-3945: `sendContactInfoForm()` - opens pre-filled form with copy link option
+- Lines 3951-3995: `buildContactFormUrl_()` - build pre-filled URL with multi-select support
+- Lines 4001-4076: `onContactFormSubmit(e)` - form submission handler (updates Member Directory)
+- Lines 4082-4091: `getFormMultiValue_()` - helper for checkbox responses
+- Lines 4097-4150: `setupContactFormTrigger()` - menu-driven trigger setup
+
+*Menu Update (Code.gs lines 35-47):*
+- Added "📋 Setup Grievance Form Trigger" to Grievance Tools submenu
+- Added new "👤 Member Tools" submenu with:
+  - "📋 Send Contact Info Form"
+  - "📋 Setup Contact Form Trigger"
 
 **Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
 

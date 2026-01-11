@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-11T22:13:10.587Z
+ * - Build Date: 2026-01-11T22:21:09.671Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -860,8 +860,11 @@ function onOpen() {
       .addSeparator()
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
       .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
-      .addItem('📋 Setup Form Trigger', 'setupGrievanceFormTrigger')
+      .addItem('📋 Setup Grievance Form Trigger', 'setupGrievanceFormTrigger')
       .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
+    .addSubMenu(ui.createMenu('👤 Member Tools')
+      .addItem('📋 Send Contact Info Form', 'sendContactInfoForm')
+      .addItem('📋 Setup Contact Form Trigger', 'setupContactFormTrigger'))
     .addToUi();
 
   // Member Search Menu (standalone for quick access)
@@ -4105,6 +4108,34 @@ var GRIEVANCE_FORM_CONFIG = {
 };
 
 /**
+ * Personal Contact Info Form Configuration
+ * Maps form entry IDs to Member Directory fields for updating member contact info
+ */
+var CONTACT_FORM_CONFIG = {
+  // Google Form URL (viewform version for pre-filling)
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform',
+
+  // Form field entry IDs mapped to Member Directory columns
+  FIELD_IDS: {
+    FIRST_NAME: 'entry.1970622040',
+    LAST_NAME: 'entry.1536025015',
+    JOB_TITLE: 'entry.1856093463',
+    UNIT: 'entry.290280210',
+    WORK_LOCATION: 'entry.776695410',
+    OFFICE_DAYS: 'entry.1779089574',           // Multi-select
+    PREFERRED_COMM: 'entry.1201030790',        // Multi-select
+    BEST_TIME: 'entry.1790968369',             // Multi-select
+    SUPERVISOR: 'entry.781564445',
+    MANAGER: 'entry.236404577',
+    EMAIL: 'entry.736229769',
+    PHONE: 'entry.1824028805',
+    INTEREST_ALLIED: 'entry.919302622',        // Willing to support other chapters
+    INTEREST_CHAPTER: 'entry.513494211',       // Willing to be active in sub-chapter
+    INTEREST_LOCAL: 'entry.1902862430'         // Willing to join direct actions
+  }
+};
+
+/**
  * Start a new grievance for a member
  * Opens pre-filled Google Form with member info from Member Directory
  * Can be triggered from Member Directory "Start Grievance" checkbox or menu
@@ -4632,6 +4663,347 @@ function testGrievanceFormSubmission() {
 
   onGrievanceFormSubmit(testEvent);
   SpreadsheetApp.getActiveSpreadsheet().toast('Test grievance created!', '✅ Test Complete', 3);
+}
+
+// ============================================================================
+// PERSONAL CONTACT INFO FORM HANDLER
+// ============================================================================
+
+/**
+ * Open the Personal Contact Info form for a member to update their info
+ * Pre-fills the form with existing member data from Member Directory
+ */
+function sendContactInfoForm() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getActiveSheet();
+  var activeCell = sheet.getActiveCell();
+
+  // Must be on Member Directory
+  if (sheet.getName() !== SHEETS.MEMBER_DIR) {
+    ui.alert('📋 Contact Info Form',
+      'Please select a member row in the Member Directory first.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var row = activeCell.getRow();
+  if (row < 2) {
+    ui.alert('📋 Contact Info Form',
+      'Please select a member row (not the header).',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Get member data from current row
+  var rowData = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var memberId = rowData[MEMBER_COLS.MEMBER_ID - 1];
+
+  if (!memberId) {
+    ui.alert('📋 Contact Info Form',
+      'This row has no Member ID.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  var memberData = {
+    memberId: memberId,
+    firstName: rowData[MEMBER_COLS.FIRST_NAME - 1] || '',
+    lastName: rowData[MEMBER_COLS.LAST_NAME - 1] || '',
+    jobTitle: rowData[MEMBER_COLS.JOB_TITLE - 1] || '',
+    unit: rowData[MEMBER_COLS.UNIT - 1] || '',
+    workLocation: rowData[MEMBER_COLS.WORK_LOCATION - 1] || '',
+    officeDays: rowData[MEMBER_COLS.OFFICE_DAYS - 1] || '',
+    preferredComm: rowData[MEMBER_COLS.PREFERRED_COMM - 1] || '',
+    bestTime: rowData[MEMBER_COLS.BEST_TIME - 1] || '',
+    supervisor: rowData[MEMBER_COLS.SUPERVISOR - 1] || '',
+    manager: rowData[MEMBER_COLS.MANAGER - 1] || '',
+    email: rowData[MEMBER_COLS.EMAIL - 1] || '',
+    phone: rowData[MEMBER_COLS.PHONE - 1] || '',
+    interestLocal: rowData[MEMBER_COLS.INTEREST_LOCAL - 1] || '',
+    interestChapter: rowData[MEMBER_COLS.INTEREST_CHAPTER - 1] || '',
+    interestAllied: rowData[MEMBER_COLS.INTEREST_ALLIED - 1] || ''
+  };
+
+  // Build pre-filled form URL
+  var formUrl = buildContactFormUrl_(memberData);
+
+  // Show confirmation with option to copy link or open
+  var response = ui.alert('📋 Contact Info Form',
+    'Send contact info update form to: ' + memberData.firstName + ' ' + memberData.lastName + '\n\n' +
+    'Options:\n' +
+    '• Click YES to open the form (you can share the link)\n' +
+    '• Click NO to copy the link to clipboard\n\n' +
+    'The form is pre-filled with their current info.',
+    ui.ButtonSet.YES_NO_CANCEL);
+
+  if (response === ui.Button.YES) {
+    // Open form in new window
+    var html = HtmlService.createHtmlOutput(
+      '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+    ).setWidth(1).setHeight(1);
+    ui.showModalDialog(html, 'Opening form...');
+    ss.toast('Form opened in new window', '📋 Contact Form', 3);
+  } else if (response === ui.Button.NO) {
+    // Show link to copy
+    var copyHtml = HtmlService.createHtmlOutput(
+      '<div style="font-family: Arial, sans-serif; padding: 10px;">' +
+      '<p>Copy this link and send to the member:</p>' +
+      '<textarea id="link" style="width: 100%; height: 100px; font-size: 12px;">' + formUrl + '</textarea>' +
+      '<br><br>' +
+      '<button onclick="copyLink()" style="padding: 8px 16px; cursor: pointer;">📋 Copy to Clipboard</button>' +
+      '<span id="copied" style="color: green; margin-left: 10px; display: none;">Copied!</span>' +
+      '<script>' +
+      'function copyLink() {' +
+      '  var ta = document.getElementById("link");' +
+      '  ta.select();' +
+      '  document.execCommand("copy");' +
+      '  document.getElementById("copied").style.display = "inline";' +
+      '}' +
+      '</script>' +
+      '</div>'
+    ).setWidth(500).setHeight(200);
+    ui.showModalDialog(copyHtml, '📋 Contact Form Link');
+  }
+}
+
+/**
+ * Build a pre-filled contact form URL with member data
+ * @private
+ */
+function buildContactFormUrl_(memberData) {
+  var baseUrl = CONTACT_FORM_CONFIG.FORM_URL;
+  var fields = CONTACT_FORM_CONFIG.FIELD_IDS;
+
+  var params = [];
+
+  // Add simple text fields
+  if (memberData.firstName) params.push(fields.FIRST_NAME + '=' + encodeURIComponent(memberData.firstName));
+  if (memberData.lastName) params.push(fields.LAST_NAME + '=' + encodeURIComponent(memberData.lastName));
+  if (memberData.jobTitle) params.push(fields.JOB_TITLE + '=' + encodeURIComponent(memberData.jobTitle));
+  if (memberData.unit) params.push(fields.UNIT + '=' + encodeURIComponent(memberData.unit));
+  if (memberData.workLocation) params.push(fields.WORK_LOCATION + '=' + encodeURIComponent(memberData.workLocation));
+  if (memberData.supervisor) params.push(fields.SUPERVISOR + '=' + encodeURIComponent(memberData.supervisor));
+  if (memberData.manager) params.push(fields.MANAGER + '=' + encodeURIComponent(memberData.manager));
+  if (memberData.email) params.push(fields.EMAIL + '=' + encodeURIComponent(memberData.email));
+  if (memberData.phone) params.push(fields.PHONE + '=' + encodeURIComponent(memberData.phone));
+
+  // Handle multi-select fields (comma-separated values become multiple params)
+  if (memberData.officeDays) {
+    var days = memberData.officeDays.split(',');
+    for (var i = 0; i < days.length; i++) {
+      var day = days[i].trim();
+      if (day) params.push(fields.OFFICE_DAYS + '=' + encodeURIComponent(day));
+    }
+  }
+
+  if (memberData.preferredComm) {
+    var methods = memberData.preferredComm.split(',');
+    for (var i = 0; i < methods.length; i++) {
+      var method = methods[i].trim();
+      if (method) params.push(fields.PREFERRED_COMM + '=' + encodeURIComponent(method));
+    }
+  }
+
+  if (memberData.bestTime) {
+    var times = memberData.bestTime.split(',');
+    for (var i = 0; i < times.length; i++) {
+      var time = times[i].trim();
+      if (time) params.push(fields.BEST_TIME + '=' + encodeURIComponent(time));
+    }
+  }
+
+  // Handle Yes/No interest fields
+  if (memberData.interestLocal && memberData.interestLocal.toLowerCase() === 'yes') {
+    params.push(fields.INTEREST_LOCAL + '=' + encodeURIComponent('Yes'));
+  }
+  if (memberData.interestChapter && memberData.interestChapter.toLowerCase() === 'yes') {
+    params.push(fields.INTEREST_CHAPTER + '=' + encodeURIComponent('Yes'));
+  }
+  if (memberData.interestAllied && memberData.interestAllied.toLowerCase() === 'yes') {
+    params.push(fields.INTEREST_ALLIED + '=' + encodeURIComponent('Yes'));
+  }
+
+  return baseUrl + '?usp=pp_url&' + params.join('&');
+}
+
+/**
+ * Handle contact form submission
+ * Updates the member's record in Member Directory with submitted data
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onContactFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet) {
+    Logger.log('Member Directory sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Extract form data
+    var firstName = getFormValue_(responses, 'First Name');
+    var lastName = getFormValue_(responses, 'Last Name');
+    var jobTitle = getFormValue_(responses, 'Job Title / Position');
+    var unit = getFormValue_(responses, 'Department / Unit');
+    var workLocation = getFormValue_(responses, 'Worksite / Office Location');
+    var officeDays = getFormMultiValue_(responses, 'Work Schedule / Office Days');
+    var preferredComm = getFormMultiValue_(responses, 'Please select your preferred communication methods (check all that apply):');
+    var bestTime = getFormMultiValue_(responses, 'What time(s) are best for us to reach you? (check all that apply)');
+    var supervisor = getFormValue_(responses, 'Immediate Supervisor');
+    var manager = getFormValue_(responses, 'Manager / Program Director');
+    var email = getFormValue_(responses, 'Personal Email');
+    var phone = getFormValue_(responses, 'Personal Phone Number');
+    var interestAllied = getFormValue_(responses, 'Willing to support other chapters (DDS, DCF, Public Sector, etc.)?');
+    var interestChapter = getFormValue_(responses, 'Willing to be active in sub-chapter (at other worksites within your agency of employment)?');
+    var interestLocal = getFormValue_(responses, 'Willing to join direct actions (e.g., at your place of employment)?');
+
+    // Find the member by first name + last name
+    var data = memberSheet.getDataRange().getValues();
+    var memberRow = -1;
+
+    for (var i = 1; i < data.length; i++) {
+      var rowFirstName = (data[i][MEMBER_COLS.FIRST_NAME - 1] || '').toString().trim().toLowerCase();
+      var rowLastName = (data[i][MEMBER_COLS.LAST_NAME - 1] || '').toString().trim().toLowerCase();
+
+      if (rowFirstName === firstName.toLowerCase().trim() &&
+          rowLastName === lastName.toLowerCase().trim()) {
+        memberRow = i + 1; // Convert to 1-indexed row number
+        break;
+      }
+    }
+
+    if (memberRow === -1) {
+      Logger.log('Member not found: ' + firstName + ' ' + lastName);
+      return;
+    }
+
+    // Update member record with form data
+    var updates = [];
+
+    // Only update non-empty values from form
+    if (jobTitle) updates.push({ col: MEMBER_COLS.JOB_TITLE, value: jobTitle });
+    if (unit) updates.push({ col: MEMBER_COLS.UNIT, value: unit });
+    if (workLocation) updates.push({ col: MEMBER_COLS.WORK_LOCATION, value: workLocation });
+    if (officeDays) updates.push({ col: MEMBER_COLS.OFFICE_DAYS, value: officeDays });
+    if (preferredComm) updates.push({ col: MEMBER_COLS.PREFERRED_COMM, value: preferredComm });
+    if (bestTime) updates.push({ col: MEMBER_COLS.BEST_TIME, value: bestTime });
+    if (supervisor) updates.push({ col: MEMBER_COLS.SUPERVISOR, value: supervisor });
+    if (manager) updates.push({ col: MEMBER_COLS.MANAGER, value: manager });
+    if (email) updates.push({ col: MEMBER_COLS.EMAIL, value: email });
+    if (phone) updates.push({ col: MEMBER_COLS.PHONE, value: phone });
+    if (interestLocal) updates.push({ col: MEMBER_COLS.INTEREST_LOCAL, value: interestLocal });
+    if (interestChapter) updates.push({ col: MEMBER_COLS.INTEREST_CHAPTER, value: interestChapter });
+    if (interestAllied) updates.push({ col: MEMBER_COLS.INTEREST_ALLIED, value: interestAllied });
+
+    // Apply updates
+    for (var j = 0; j < updates.length; j++) {
+      memberSheet.getRange(memberRow, updates[j].col).setValue(updates[j].value);
+    }
+
+    Logger.log('Updated contact info for ' + firstName + ' ' + lastName + ' (row ' + memberRow + ')');
+
+  } catch (error) {
+    Logger.log('Error processing contact form submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get multiple values from form response (for checkbox questions)
+ * Returns comma-separated string
+ * @private
+ */
+function getFormMultiValue_(responses, fieldName) {
+  if (responses[fieldName] && responses[fieldName].length > 0) {
+    // Filter out empty values and join with comma
+    var values = responses[fieldName].filter(function(v) { return v && v.trim() !== ''; });
+    return values.join(', ');
+  }
+  return '';
+}
+
+/**
+ * Set up the contact form submission trigger
+ * Run this once to enable automatic processing of form submissions
+ */
+function setupContactFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasContactTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onContactFormSubmit') {
+      hasContactTrigger = true;
+      break;
+    }
+  }
+
+  if (hasContactTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A contact form trigger already exists.\n\n' +
+      'Form submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📋 Setup Contact Form Trigger',
+    'This will set up automatic processing of contact info form submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  if (!formUrl) {
+    ui.alert('❌ No URL', 'Please provide the form edit URL.', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    // Extract form ID from URL
+    var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+      return;
+    }
+    var formId = match[1];
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onContactFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Contact form trigger has been set up!\n\n' +
+      'When a contact form is submitted:\n' +
+      '• The member\'s record will be updated in Member Directory\n' +
+      '• Contact info, preferences, and interests will be saved',
+      ui.ButtonSet.OK);
+
+    ss.toast('Form trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
 }
 
 /**
