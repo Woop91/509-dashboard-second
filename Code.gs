@@ -42,8 +42,8 @@ function onOpen() {
       .addItem('📋 Setup Grievance Form Trigger', 'setupGrievanceFormTrigger')
       .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
     .addSubMenu(ui.createMenu('👤 Member Tools')
-      .addItem('📋 Send Contact Info Form', 'sendContactInfoForm')
-      .addItem('📋 Setup Contact Form Trigger', 'setupContactFormTrigger'))
+      .addItem('📋 Get Contact Info Form Link', 'sendContactInfoForm')
+      .addItem('⚙️ Setup Contact Form Trigger', 'setupContactFormTrigger'))
     .addToUi();
 
   // Member Search Menu (standalone for quick access)
@@ -3849,71 +3849,21 @@ function testGrievanceFormSubmission() {
 // ============================================================================
 
 /**
- * Open the Personal Contact Info form for a member to update their info
- * Pre-fills the form with existing member data from Member Directory
+ * Show the Personal Contact Info form link
+ * Members fill out the blank form and data is written to Member Directory on submit
  */
 function sendContactInfoForm() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var ui = SpreadsheetApp.getUi();
-  var sheet = ss.getActiveSheet();
-  var activeCell = sheet.getActiveCell();
+  var formUrl = CONTACT_FORM_CONFIG.FORM_URL;
 
-  // Must be on Member Directory
-  if (sheet.getName() !== SHEETS.MEMBER_DIR) {
-    ui.alert('📋 Contact Info Form',
-      'Please select a member row in the Member Directory first.',
-      ui.ButtonSet.OK);
-    return;
-  }
-
-  var row = activeCell.getRow();
-  if (row < 2) {
-    ui.alert('📋 Contact Info Form',
-      'Please select a member row (not the header).',
-      ui.ButtonSet.OK);
-    return;
-  }
-
-  // Get member data from current row
-  var rowData = sheet.getRange(row, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var memberId = rowData[MEMBER_COLS.MEMBER_ID - 1];
-
-  if (!memberId) {
-    ui.alert('📋 Contact Info Form',
-      'This row has no Member ID.',
-      ui.ButtonSet.OK);
-    return;
-  }
-
-  var memberData = {
-    memberId: memberId,
-    firstName: rowData[MEMBER_COLS.FIRST_NAME - 1] || '',
-    lastName: rowData[MEMBER_COLS.LAST_NAME - 1] || '',
-    jobTitle: rowData[MEMBER_COLS.JOB_TITLE - 1] || '',
-    unit: rowData[MEMBER_COLS.UNIT - 1] || '',
-    workLocation: rowData[MEMBER_COLS.WORK_LOCATION - 1] || '',
-    officeDays: rowData[MEMBER_COLS.OFFICE_DAYS - 1] || '',
-    preferredComm: rowData[MEMBER_COLS.PREFERRED_COMM - 1] || '',
-    bestTime: rowData[MEMBER_COLS.BEST_TIME - 1] || '',
-    supervisor: rowData[MEMBER_COLS.SUPERVISOR - 1] || '',
-    manager: rowData[MEMBER_COLS.MANAGER - 1] || '',
-    email: rowData[MEMBER_COLS.EMAIL - 1] || '',
-    phone: rowData[MEMBER_COLS.PHONE - 1] || '',
-    interestLocal: rowData[MEMBER_COLS.INTEREST_LOCAL - 1] || '',
-    interestChapter: rowData[MEMBER_COLS.INTEREST_CHAPTER - 1] || '',
-    interestAllied: rowData[MEMBER_COLS.INTEREST_ALLIED - 1] || ''
-  };
-
-  // Build pre-filled form URL
-  var formUrl = buildContactFormUrl_(memberData);
-
-  // Show confirmation with option to copy link or open
-  var response = ui.alert('📋 Contact Info Form',
-    'Send contact info update form to: ' + memberData.firstName + ' ' + memberData.lastName + '\n\n' +
-    'Options:\n' +
-    '• Click YES to open the form (you can share the link)\n' +
-    '• Click NO to copy the link to clipboard\n\n' +
-    'The form is pre-filled with their current info.',
+  // Show dialog with form link options
+  var response = ui.alert('📋 Personal Contact Info Form',
+    'Share this form with members to collect their contact information.\n\n' +
+    'When submitted, the data will be written to the Member Directory:\n' +
+    '• Existing members (matched by name) will be updated\n' +
+    '• New members will be added automatically\n\n' +
+    '• Click YES to open the form\n' +
+    '• Click NO to copy the link',
     ui.ButtonSet.YES_NO_CANCEL);
 
   if (response === ui.Button.YES) {
@@ -3922,13 +3872,12 @@ function sendContactInfoForm() {
       '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
     ).setWidth(1).setHeight(1);
     ui.showModalDialog(html, 'Opening form...');
-    ss.toast('Form opened in new window', '📋 Contact Form', 3);
   } else if (response === ui.Button.NO) {
     // Show link to copy
     var copyHtml = HtmlService.createHtmlOutput(
       '<div style="font-family: Arial, sans-serif; padding: 10px;">' +
-      '<p>Copy this link and send to the member:</p>' +
-      '<textarea id="link" style="width: 100%; height: 100px; font-size: 12px;">' + formUrl + '</textarea>' +
+      '<p>Copy this link and share with members:</p>' +
+      '<textarea id="link" style="width: 100%; height: 80px; font-size: 12px;">' + formUrl + '</textarea>' +
       '<br><br>' +
       '<button onclick="copyLink()" style="padding: 8px 16px; cursor: pointer;">📋 Copy to Clipboard</button>' +
       '<span id="copied" style="color: green; margin-left: 10px; display: none;">Copied!</span>' +
@@ -3941,74 +3890,14 @@ function sendContactInfoForm() {
       '}' +
       '</script>' +
       '</div>'
-    ).setWidth(500).setHeight(200);
+    ).setWidth(450).setHeight(180);
     ui.showModalDialog(copyHtml, '📋 Contact Form Link');
   }
 }
 
 /**
- * Build a pre-filled contact form URL with member data
- * @private
- */
-function buildContactFormUrl_(memberData) {
-  var baseUrl = CONTACT_FORM_CONFIG.FORM_URL;
-  var fields = CONTACT_FORM_CONFIG.FIELD_IDS;
-
-  var params = [];
-
-  // Add simple text fields
-  if (memberData.firstName) params.push(fields.FIRST_NAME + '=' + encodeURIComponent(memberData.firstName));
-  if (memberData.lastName) params.push(fields.LAST_NAME + '=' + encodeURIComponent(memberData.lastName));
-  if (memberData.jobTitle) params.push(fields.JOB_TITLE + '=' + encodeURIComponent(memberData.jobTitle));
-  if (memberData.unit) params.push(fields.UNIT + '=' + encodeURIComponent(memberData.unit));
-  if (memberData.workLocation) params.push(fields.WORK_LOCATION + '=' + encodeURIComponent(memberData.workLocation));
-  if (memberData.supervisor) params.push(fields.SUPERVISOR + '=' + encodeURIComponent(memberData.supervisor));
-  if (memberData.manager) params.push(fields.MANAGER + '=' + encodeURIComponent(memberData.manager));
-  if (memberData.email) params.push(fields.EMAIL + '=' + encodeURIComponent(memberData.email));
-  if (memberData.phone) params.push(fields.PHONE + '=' + encodeURIComponent(memberData.phone));
-
-  // Handle multi-select fields (comma-separated values become multiple params)
-  if (memberData.officeDays) {
-    var days = memberData.officeDays.split(',');
-    for (var i = 0; i < days.length; i++) {
-      var day = days[i].trim();
-      if (day) params.push(fields.OFFICE_DAYS + '=' + encodeURIComponent(day));
-    }
-  }
-
-  if (memberData.preferredComm) {
-    var methods = memberData.preferredComm.split(',');
-    for (var i = 0; i < methods.length; i++) {
-      var method = methods[i].trim();
-      if (method) params.push(fields.PREFERRED_COMM + '=' + encodeURIComponent(method));
-    }
-  }
-
-  if (memberData.bestTime) {
-    var times = memberData.bestTime.split(',');
-    for (var i = 0; i < times.length; i++) {
-      var time = times[i].trim();
-      if (time) params.push(fields.BEST_TIME + '=' + encodeURIComponent(time));
-    }
-  }
-
-  // Handle Yes/No interest fields
-  if (memberData.interestLocal && memberData.interestLocal.toLowerCase() === 'yes') {
-    params.push(fields.INTEREST_LOCAL + '=' + encodeURIComponent('Yes'));
-  }
-  if (memberData.interestChapter && memberData.interestChapter.toLowerCase() === 'yes') {
-    params.push(fields.INTEREST_CHAPTER + '=' + encodeURIComponent('Yes'));
-  }
-  if (memberData.interestAllied && memberData.interestAllied.toLowerCase() === 'yes') {
-    params.push(fields.INTEREST_ALLIED + '=' + encodeURIComponent('Yes'));
-  }
-
-  return baseUrl + '?usp=pp_url&' + params.join('&');
-}
-
-/**
  * Handle contact form submission
- * Updates the member's record in Member Directory with submitted data
+ * Writes member data to Member Directory (updates existing or creates new)
  *
  * @param {Object} e - Form submission event object
  */
@@ -4042,6 +3931,12 @@ function onContactFormSubmit(e) {
     var interestChapter = getFormValue_(responses, 'Willing to be active in sub-chapter (at other worksites within your agency of employment)?');
     var interestLocal = getFormValue_(responses, 'Willing to join direct actions (e.g., at your place of employment)?');
 
+    // Require at least first and last name
+    if (!firstName || !lastName) {
+      Logger.log('Contact form submission missing name: ' + firstName + ' ' + lastName);
+      return;
+    }
+
     // Find the member by first name + last name
     var data = memberSheet.getDataRange().getValues();
     var memberRow = -1;
@@ -4058,34 +3953,67 @@ function onContactFormSubmit(e) {
     }
 
     if (memberRow === -1) {
-      Logger.log('Member not found: ' + firstName + ' ' + lastName);
-      return;
+      // Member not found - create new member
+      Logger.log('Creating new member: ' + firstName + ' ' + lastName);
+
+      // Generate Member ID
+      var existingIds = {};
+      for (var k = 1; k < data.length; k++) {
+        var id = data[k][MEMBER_COLS.MEMBER_ID - 1];
+        if (id) existingIds[id] = true;
+      }
+      var memberId = generateNameBasedId('M', firstName, lastName, existingIds);
+
+      // Build new row array
+      var newRow = [];
+      newRow[MEMBER_COLS.MEMBER_ID - 1] = memberId;
+      newRow[MEMBER_COLS.FIRST_NAME - 1] = firstName;
+      newRow[MEMBER_COLS.LAST_NAME - 1] = lastName;
+      newRow[MEMBER_COLS.JOB_TITLE - 1] = jobTitle || '';
+      newRow[MEMBER_COLS.WORK_LOCATION - 1] = workLocation || '';
+      newRow[MEMBER_COLS.UNIT - 1] = unit || '';
+      newRow[MEMBER_COLS.OFFICE_DAYS - 1] = officeDays || '';
+      newRow[MEMBER_COLS.EMAIL - 1] = email || '';
+      newRow[MEMBER_COLS.PHONE - 1] = phone || '';
+      newRow[MEMBER_COLS.PREFERRED_COMM - 1] = preferredComm || '';
+      newRow[MEMBER_COLS.BEST_TIME - 1] = bestTime || '';
+      newRow[MEMBER_COLS.SUPERVISOR - 1] = supervisor || '';
+      newRow[MEMBER_COLS.MANAGER - 1] = manager || '';
+      newRow[MEMBER_COLS.IS_STEWARD - 1] = 'No';
+      newRow[MEMBER_COLS.INTEREST_LOCAL - 1] = interestLocal || '';
+      newRow[MEMBER_COLS.INTEREST_CHAPTER - 1] = interestChapter || '';
+      newRow[MEMBER_COLS.INTEREST_ALLIED - 1] = interestAllied || '';
+
+      // Append new member row
+      memberSheet.appendRow(newRow);
+      Logger.log('Created new member ' + memberId + ': ' + firstName + ' ' + lastName);
+
+    } else {
+      // Update existing member record with form data
+      var updates = [];
+
+      // Update all fields from form (even if they change existing values)
+      if (jobTitle) updates.push({ col: MEMBER_COLS.JOB_TITLE, value: jobTitle });
+      if (unit) updates.push({ col: MEMBER_COLS.UNIT, value: unit });
+      if (workLocation) updates.push({ col: MEMBER_COLS.WORK_LOCATION, value: workLocation });
+      if (officeDays) updates.push({ col: MEMBER_COLS.OFFICE_DAYS, value: officeDays });
+      if (preferredComm) updates.push({ col: MEMBER_COLS.PREFERRED_COMM, value: preferredComm });
+      if (bestTime) updates.push({ col: MEMBER_COLS.BEST_TIME, value: bestTime });
+      if (supervisor) updates.push({ col: MEMBER_COLS.SUPERVISOR, value: supervisor });
+      if (manager) updates.push({ col: MEMBER_COLS.MANAGER, value: manager });
+      if (email) updates.push({ col: MEMBER_COLS.EMAIL, value: email });
+      if (phone) updates.push({ col: MEMBER_COLS.PHONE, value: phone });
+      if (interestLocal) updates.push({ col: MEMBER_COLS.INTEREST_LOCAL, value: interestLocal });
+      if (interestChapter) updates.push({ col: MEMBER_COLS.INTEREST_CHAPTER, value: interestChapter });
+      if (interestAllied) updates.push({ col: MEMBER_COLS.INTEREST_ALLIED, value: interestAllied });
+
+      // Apply updates
+      for (var j = 0; j < updates.length; j++) {
+        memberSheet.getRange(memberRow, updates[j].col).setValue(updates[j].value);
+      }
+
+      Logger.log('Updated contact info for ' + firstName + ' ' + lastName + ' (row ' + memberRow + ')');
     }
-
-    // Update member record with form data
-    var updates = [];
-
-    // Only update non-empty values from form
-    if (jobTitle) updates.push({ col: MEMBER_COLS.JOB_TITLE, value: jobTitle });
-    if (unit) updates.push({ col: MEMBER_COLS.UNIT, value: unit });
-    if (workLocation) updates.push({ col: MEMBER_COLS.WORK_LOCATION, value: workLocation });
-    if (officeDays) updates.push({ col: MEMBER_COLS.OFFICE_DAYS, value: officeDays });
-    if (preferredComm) updates.push({ col: MEMBER_COLS.PREFERRED_COMM, value: preferredComm });
-    if (bestTime) updates.push({ col: MEMBER_COLS.BEST_TIME, value: bestTime });
-    if (supervisor) updates.push({ col: MEMBER_COLS.SUPERVISOR, value: supervisor });
-    if (manager) updates.push({ col: MEMBER_COLS.MANAGER, value: manager });
-    if (email) updates.push({ col: MEMBER_COLS.EMAIL, value: email });
-    if (phone) updates.push({ col: MEMBER_COLS.PHONE, value: phone });
-    if (interestLocal) updates.push({ col: MEMBER_COLS.INTEREST_LOCAL, value: interestLocal });
-    if (interestChapter) updates.push({ col: MEMBER_COLS.INTEREST_CHAPTER, value: interestChapter });
-    if (interestAllied) updates.push({ col: MEMBER_COLS.INTEREST_ALLIED, value: interestAllied });
-
-    // Apply updates
-    for (var j = 0; j < updates.length; j++) {
-      memberSheet.getRange(memberRow, updates[j].col).setValue(updates[j].value);
-    }
-
-    Logger.log('Updated contact info for ' + firstName + ' ' + lastName + ' (row ' + memberRow + ')');
 
   } catch (error) {
     Logger.log('Error processing contact form submission: ' + error.message);
