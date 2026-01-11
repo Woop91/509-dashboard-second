@@ -157,6 +157,8 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `getSatisfactionSurveyLink()` - Shows survey link for members to fill out (with copy link option)
   - `onSatisfactionFormSubmit(e)` - Form submission trigger handler (writes to Member Satisfaction sheet)
   - `setupSatisfactionFormTrigger()` - Menu-driven trigger setup for survey submissions
+- Form URL Configuration:
+  - `saveFormUrlsToConfig()` - Saves all form URLs (Grievance, Contact, Survey) to Config tab columns P, Q, AR
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -706,6 +708,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── DIAGNOSE SETUP
 ├── Verify Hidden Sheets
 └── Setup & Triggers (submenu)
+    ├── Setup All Hidden Sheets
+    ├── Repair All Hidden Sheets
+    ├── Install Auto-Sync Trigger
+    ├── Remove Auto-Sync Trigger
+    └── Save Form URLs to Config
 ```
 
 ---
@@ -722,13 +729,17 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 | F | Supervisors | User populates |
 | G | Managers | User populates |
 | H | Stewards | User populates |
-| I | Grievance Status | Open, Pending Info, Settled, etc. (preset) |
-| J | Grievance Step | Informal, Step I, Step II, etc. (preset) |
-| K | Issue Category | Discipline, Workload, etc. (preset) |
-| L | Articles Violated | Art. 1 - Art. 26 (preset) |
-| M | Communication Methods | Email, Phone, Text, In Person (preset) |
+| I | Steward Committees | User populates |
+| J | Grievance Status | Open, Pending Info, Settled, etc. (preset) |
+| K | Grievance Step | Informal, Step I, Step II, etc. (preset) |
+| L | Issue Category | Discipline, Workload, etc. (preset) |
+| M | Articles Violated | Art. 1 - Art. 26 (preset) |
+| N | Communication Methods | Email, Phone, Text, In Person (preset) |
 | O | Grievance Coordinators | User populates |
+| **P** | **Grievance Form URL** | Auto-set via Save Form URLs to Config |
+| **Q** | **Contact Form URL** | Auto-set via Save Form URLs to Config |
 | AF | Home Towns | User populates |
+| **AR** | **Satisfaction Survey URL** | Auto-set via Save Form URLs to Config |
 
 ---
 

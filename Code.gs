@@ -158,7 +158,9 @@ function onOpen() {
       .addItem('🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets')
       .addItem('🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets')
       .addItem('⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger')
-      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'))
+      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger')
+      .addSeparator()
+      .addItem('📋 Save Form URLs to Config', 'saveFormUrlsToConfig'))
     .addSeparator()
     .addSubMenu(ui.createMenu('🔄 Manual Sync')
       .addItem('🔄 Sync All Data Now', 'syncAllData')
@@ -4182,6 +4184,37 @@ function getSatisfactionSurveyLink() {
     ).setWidth(450).setHeight(180);
     ui.showModalDialog(copyHtml, '📊 Survey Link');
   }
+}
+
+/**
+ * Save form URLs to the Config tab for easy reference and updating
+ * Writes Grievance Form, Contact Form, and Satisfaction Survey URLs to Config columns P, Q, AR
+ */
+function saveFormUrlsToConfig() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!configSheet) {
+    SpreadsheetApp.getUi().alert('Config sheet not found');
+    return;
+  }
+
+  // Set headers in row 1
+  configSheet.getRange(1, CONFIG_COLS.GRIEVANCE_FORM_URL).setValue('Grievance Form URL');
+  configSheet.getRange(1, CONFIG_COLS.CONTACT_FORM_URL).setValue('Contact Form URL');
+  configSheet.getRange(1, CONFIG_COLS.SATISFACTION_FORM_URL).setValue('Satisfaction Survey URL');
+
+  // Set form URLs in row 2
+  configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_FORM_URL).setValue(GRIEVANCE_FORM_CONFIG.FORM_URL);
+  configSheet.getRange(2, CONFIG_COLS.CONTACT_FORM_URL).setValue(CONTACT_FORM_CONFIG.FORM_URL);
+  configSheet.getRange(2, CONFIG_COLS.SATISFACTION_FORM_URL).setValue(SATISFACTION_FORM_CONFIG.FORM_URL);
+
+  // Format as links
+  configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+  configSheet.getRange(2, CONFIG_COLS.CONTACT_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+  configSheet.getRange(2, CONFIG_COLS.SATISFACTION_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+
+  SpreadsheetApp.getActiveSpreadsheet().toast('Form URLs saved to Config tab (columns P, Q, AR)', '✅ Saved', 3);
 }
 
 /**
