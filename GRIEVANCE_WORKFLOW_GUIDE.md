@@ -69,8 +69,8 @@ To enable the full workflow with automatic form submissions:
 
 5. **Update the Configuration in Code:**
    - Open the Google Sheets Apps Script editor
-   - Find the file **GrievanceWorkflow.gs**
-   - Update the `GRIEVANCE_FORM_CONFIG` object at the top:
+   - Find the file **Code.gs** (or **ConsolidatedDashboard.gs** if deployed)
+   - Update the `GRIEVANCE_FORM_CONFIG` object:
 
 ```javascript
 const GRIEVANCE_FORM_CONFIG = {
@@ -166,7 +166,7 @@ When a grievance is submitted through the form:
 
 **Problem**: Form fields are empty when opened
 **Solution**:
-- Check that field entry IDs are correct in `GrievanceWorkflow.gs`
+- Check that field entry IDs are correct in `Code.gs`
 - Verify steward contact info is entered in Config tab
 - Ensure member has complete information in Member Directory
 

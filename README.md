@@ -1082,16 +1082,16 @@ The grievance workflow now includes:
 2. **Set Up Grievance Email Address**
    - Current State: Placeholder email `grievances@seiu509.org`
    - Action Needed: Configure actual union grievance inbox email
-   - Location: `GrievanceWorkflow.gs` line 543
+   - Location: `Code.gs` in the grievance workflow functions
 
 3. **Enable Folder Sharing**
-   - Current State: Commented out in `shareGrievanceWithRecipients()` function
-   - Action Needed: Uncomment `folder.addEditor(email)` line 769
+   - Current State: Folder sharing may need to be enabled
+   - Action Needed: Ensure `folder.addEditor(email)` is active in `Code.gs`
    - Prerequisites: Valid email addresses configured for all coordinators
 
 4. **Enable Email Notifications**
-   - Current State: Email sending commented out (lines 792-796)
-   - Action Needed: Uncomment `GmailApp.sendEmail()` calls
+   - Current State: Email sending may be commented out
+   - Action Needed: Enable `GmailApp.sendEmail()` calls in `Code.gs`
    - Prerequisites: Valid email addresses and Gmail API permissions
 
 ### 🔧 Technical Tasks:
