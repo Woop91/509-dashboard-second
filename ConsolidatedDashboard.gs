@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-11T22:32:08.728Z
+ * - Build Date: 2026-01-11T23:15:00.087Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -865,6 +865,9 @@ function onOpen() {
     .addSubMenu(ui.createMenu('👤 Member Tools')
       .addItem('📋 Get Contact Info Form Link', 'sendContactInfoForm')
       .addItem('⚙️ Setup Contact Form Trigger', 'setupContactFormTrigger'))
+    .addSubMenu(ui.createMenu('📊 Survey Tools')
+      .addItem('📊 Get Satisfaction Survey Link', 'getSatisfactionSurveyLink')
+      .addItem('⚙️ Setup Survey Form Trigger', 'setupSatisfactionFormTrigger'))
     .addToUi();
 
   // Member Search Menu (standalone for quick access)
@@ -4925,6 +4928,281 @@ function setupContactFormTrigger() {
       ui.ButtonSet.OK);
 
     ss.toast('Form trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// MEMBER SATISFACTION SURVEY FORM HANDLER
+// ============================================================================
+
+/**
+ * Member Satisfaction Survey Form Configuration
+ */
+var SATISFACTION_FORM_CONFIG = {
+  // Google Form URL (viewform version)
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform',
+
+  // Form field entry IDs (from pre-filled URL)
+  FIELD_IDS: {
+    WORKSITE: 'entry.829990399',
+    TOP_PRIORITIES: 'entry.1290096581',      // Multi-select checkboxes
+    ONE_CHANGE: 'entry.1926319061',
+    KEEP_DOING: 'entry.1554906279',
+    ADDITIONAL_COMMENTS: 'entry.650574503'
+  }
+};
+
+/**
+ * Show the Member Satisfaction Survey form link
+ * Survey responses are written to the Member Satisfaction sheet
+ */
+function getSatisfactionSurveyLink() {
+  var ui = SpreadsheetApp.getUi();
+  var formUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+
+  // Show dialog with form link options
+  var response = ui.alert('📊 Member Satisfaction Survey',
+    'Share this survey with members to collect feedback.\n\n' +
+    'When submitted, responses will be written to the\n' +
+    '📊 Member Satisfaction sheet.\n\n' +
+    '• Click YES to open the survey\n' +
+    '• Click NO to copy the link',
+    ui.ButtonSet.YES_NO_CANCEL);
+
+  if (response === ui.Button.YES) {
+    // Open form in new window
+    var html = HtmlService.createHtmlOutput(
+      '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+    ).setWidth(1).setHeight(1);
+    ui.showModalDialog(html, 'Opening survey...');
+  } else if (response === ui.Button.NO) {
+    // Show link to copy
+    var copyHtml = HtmlService.createHtmlOutput(
+      '<div style="font-family: Arial, sans-serif; padding: 10px;">' +
+      '<p>Copy this link and share with members:</p>' +
+      '<textarea id="link" style="width: 100%; height: 80px; font-size: 12px;">' + formUrl + '</textarea>' +
+      '<br><br>' +
+      '<button onclick="copyLink()" style="padding: 8px 16px; cursor: pointer;">📋 Copy to Clipboard</button>' +
+      '<span id="copied" style="color: green; margin-left: 10px; display: none;">Copied!</span>' +
+      '<script>' +
+      'function copyLink() {' +
+      '  var ta = document.getElementById("link");' +
+      '  ta.select();' +
+      '  document.execCommand("copy");' +
+      '  document.getElementById("copied").style.display = "inline";' +
+      '}' +
+      '</script>' +
+      '</div>'
+    ).setWidth(450).setHeight(180);
+    ui.showModalDialog(copyHtml, '📊 Survey Link');
+  }
+}
+
+/**
+ * Handle satisfaction survey form submission
+ * Writes survey responses to the Member Satisfaction sheet
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onSatisfactionFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet) {
+    Logger.log('Member Satisfaction sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Build row data array matching SATISFACTION_COLS order
+    var newRow = [];
+
+    // Timestamp
+    newRow[SATISFACTION_COLS.TIMESTAMP - 1] = new Date();
+
+    // Work Context (Q1-5)
+    newRow[SATISFACTION_COLS.Q1_WORKSITE - 1] = getFormValue_(responses, 'Worksite / Program / Region');
+    newRow[SATISFACTION_COLS.Q2_ROLE - 1] = getFormValue_(responses, 'Role / Job Group');
+    newRow[SATISFACTION_COLS.Q3_SHIFT - 1] = getFormValue_(responses, 'Shift');
+    newRow[SATISFACTION_COLS.Q4_TIME_IN_ROLE - 1] = getFormValue_(responses, 'Time in current role');
+    newRow[SATISFACTION_COLS.Q5_STEWARD_CONTACT - 1] = getFormValue_(responses, 'Contact with steward in past 12 months?');
+
+    // Overall Satisfaction (Q6-9)
+    newRow[SATISFACTION_COLS.Q6_SATISFIED_REP - 1] = getFormValue_(responses, 'Satisfied with union representation');
+    newRow[SATISFACTION_COLS.Q7_TRUST_UNION - 1] = getFormValue_(responses, 'Trust union to act in best interests');
+    newRow[SATISFACTION_COLS.Q8_FEEL_PROTECTED - 1] = getFormValue_(responses, 'Feel more protected at work');
+    newRow[SATISFACTION_COLS.Q9_RECOMMEND - 1] = getFormValue_(responses, 'Voted during the last election');
+
+    // Steward Ratings 3A (Q10-17)
+    newRow[SATISFACTION_COLS.Q10_TIMELY_RESPONSE - 1] = getFormValue_(responses, 'Responded in timely manner');
+    newRow[SATISFACTION_COLS.Q11_TREATED_RESPECT - 1] = getFormValue_(responses, 'Treated me with respect');
+    newRow[SATISFACTION_COLS.Q12_EXPLAINED_OPTIONS - 1] = getFormValue_(responses, 'Explained options clearly');
+    newRow[SATISFACTION_COLS.Q13_FOLLOWED_THROUGH - 1] = getFormValue_(responses, 'Followed through on commitments');
+    newRow[SATISFACTION_COLS.Q14_ADVOCATED - 1] = getFormValue_(responses, 'Advocated effectively');
+    newRow[SATISFACTION_COLS.Q15_SAFE_CONCERNS - 1] = getFormValue_(responses, 'Felt safe raising concerns');
+    newRow[SATISFACTION_COLS.Q16_CONFIDENTIALITY - 1] = getFormValue_(responses, 'Handled confidentiality appropriately');
+    newRow[SATISFACTION_COLS.Q17_STEWARD_IMPROVE - 1] = getFormValue_(responses, 'What should stewards improve?');
+
+    // Steward Access 3B (Q18-20)
+    newRow[SATISFACTION_COLS.Q18_KNOW_CONTACT - 1] = getFormValue_(responses, 'Know how to contact steward/rep');
+    newRow[SATISFACTION_COLS.Q19_CONFIDENT_HELP - 1] = getFormValue_(responses, 'Confident I would get help');
+    newRow[SATISFACTION_COLS.Q20_EASY_FIND - 1] = getFormValue_(responses, 'Easy to figure out who to contact');
+
+    // Chapter Effectiveness (Q21-25)
+    newRow[SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES - 1] = getFormValue_(responses, 'Reps understand my workplace issues');
+    newRow[SATISFACTION_COLS.Q22_CHAPTER_COMM - 1] = getFormValue_(responses, 'Chapter communication is regular and clear');
+    newRow[SATISFACTION_COLS.Q23_ORGANIZES - 1] = getFormValue_(responses, 'Chapter organizes members effectively');
+    newRow[SATISFACTION_COLS.Q24_REACH_CHAPTER - 1] = getFormValue_(responses, 'Know how to reach chapter contact');
+    newRow[SATISFACTION_COLS.Q25_FAIR_REP - 1] = getFormValue_(responses, 'Representation is fair across roles/shifts');
+
+    // Local Leadership (Q26-31)
+    newRow[SATISFACTION_COLS.Q26_DECISIONS_CLEAR - 1] = getFormValue_(responses, 'Leadership communicates decisions clearly');
+    newRow[SATISFACTION_COLS.Q27_UNDERSTAND_PROCESS - 1] = getFormValue_(responses, 'Understand how decisions are made');
+    newRow[SATISFACTION_COLS.Q28_TRANSPARENT_FINANCE - 1] = getFormValue_(responses, 'Union is transparent about finances');
+    newRow[SATISFACTION_COLS.Q29_ACCOUNTABLE - 1] = getFormValue_(responses, 'Leadership is accountable to feedback');
+    newRow[SATISFACTION_COLS.Q30_FAIR_PROCESSES - 1] = getFormValue_(responses, 'Internal processes feel fair');
+    newRow[SATISFACTION_COLS.Q31_WELCOMES_OPINIONS - 1] = getFormValue_(responses, 'Union welcomes differing opinions');
+
+    // Contract Enforcement (Q32-36)
+    newRow[SATISFACTION_COLS.Q32_ENFORCES_CONTRACT - 1] = getFormValue_(responses, 'Union enforces contract effectively');
+    newRow[SATISFACTION_COLS.Q33_REALISTIC_TIMELINES - 1] = getFormValue_(responses, 'Communicates realistic timelines');
+    newRow[SATISFACTION_COLS.Q34_CLEAR_UPDATES - 1] = getFormValue_(responses, 'Provides clear updates on issues');
+    newRow[SATISFACTION_COLS.Q35_FRONTLINE_PRIORITY - 1] = getFormValue_(responses, 'Prioritizes frontline conditions');
+    newRow[SATISFACTION_COLS.Q36_FILED_GRIEVANCE - 1] = getFormValue_(responses, 'Filed grievance in past 24 months?');
+
+    // Representation Process 6A (Q37-40)
+    newRow[SATISFACTION_COLS.Q37_UNDERSTOOD_STEPS - 1] = getFormValue_(responses, 'Understood steps and timeline');
+    newRow[SATISFACTION_COLS.Q38_FELT_SUPPORTED - 1] = getFormValue_(responses, 'Felt supported throughout');
+    newRow[SATISFACTION_COLS.Q39_UPDATES_OFTEN - 1] = getFormValue_(responses, 'Received updates often enough');
+    newRow[SATISFACTION_COLS.Q40_OUTCOME_JUSTIFIED - 1] = getFormValue_(responses, 'Outcome feels justified');
+
+    // Communication Quality (Q41-45)
+    newRow[SATISFACTION_COLS.Q41_CLEAR_ACTIONABLE - 1] = getFormValue_(responses, 'Communications are clear and actionable');
+    newRow[SATISFACTION_COLS.Q42_ENOUGH_INFO - 1] = getFormValue_(responses, 'Receive enough information');
+    newRow[SATISFACTION_COLS.Q43_FIND_EASILY - 1] = getFormValue_(responses, 'Can find information easily');
+    newRow[SATISFACTION_COLS.Q44_ALL_SHIFTS - 1] = getFormValue_(responses, 'Communications reach all locations');
+    newRow[SATISFACTION_COLS.Q45_MEETINGS_WORTH - 1] = getFormValue_(responses, 'Meetings are worth attending');
+
+    // Member Voice & Culture (Q46-50)
+    newRow[SATISFACTION_COLS.Q46_VOICE_MATTERS - 1] = getFormValue_(responses, 'My voice matters in the union');
+    newRow[SATISFACTION_COLS.Q47_SEEKS_INPUT - 1] = getFormValue_(responses, 'Union actively seeks input');
+    newRow[SATISFACTION_COLS.Q48_DIGNITY - 1] = getFormValue_(responses, 'Members treated with dignity');
+    newRow[SATISFACTION_COLS.Q49_NEWER_SUPPORTED - 1] = getFormValue_(responses, 'Newer members are supported');
+    newRow[SATISFACTION_COLS.Q50_CONFLICT_RESPECT - 1] = getFormValue_(responses, 'Internal conflict handled respectfully');
+
+    // Value & Collective Action (Q51-55)
+    newRow[SATISFACTION_COLS.Q51_GOOD_VALUE - 1] = getFormValue_(responses, 'Union provides good value for dues');
+    newRow[SATISFACTION_COLS.Q52_PRIORITIES_NEEDS - 1] = getFormValue_(responses, 'Priorities reflect member needs');
+    newRow[SATISFACTION_COLS.Q53_PREPARED_MOBILIZE - 1] = getFormValue_(responses, 'Union prepared to mobilize');
+    newRow[SATISFACTION_COLS.Q54_HOW_INVOLVED - 1] = getFormValue_(responses, 'Understand how to get involved');
+    newRow[SATISFACTION_COLS.Q55_WIN_TOGETHER - 1] = getFormValue_(responses, 'Acting together, we can win improvements');
+
+    // Scheduling/Office Days (Q56-63)
+    newRow[SATISFACTION_COLS.Q56_UNDERSTAND_CHANGES - 1] = getFormValue_(responses, 'Understand proposed changes');
+    newRow[SATISFACTION_COLS.Q57_ADEQUATELY_INFORMED - 1] = getFormValue_(responses, 'Feel adequately informed');
+    newRow[SATISFACTION_COLS.Q58_CLEAR_CRITERIA - 1] = getFormValue_(responses, 'Decisions use clear criteria');
+    newRow[SATISFACTION_COLS.Q59_WORK_EXPECTATIONS - 1] = getFormValue_(responses, 'Work can be done under expectations');
+    newRow[SATISFACTION_COLS.Q60_EFFECTIVE_OUTCOMES - 1] = getFormValue_(responses, 'Approach supports effective outcomes');
+    newRow[SATISFACTION_COLS.Q61_SUPPORTS_WELLBEING - 1] = getFormValue_(responses, 'Approach supports my wellbeing');
+    newRow[SATISFACTION_COLS.Q62_CONCERNS_SERIOUS - 1] = getFormValue_(responses, 'My concerns would be taken seriously');
+    newRow[SATISFACTION_COLS.Q63_SCHEDULING_CHALLENGE - 1] = getFormValue_(responses, 'Biggest scheduling challenge?');
+
+    // Priorities & Close (Q64-67)
+    newRow[SATISFACTION_COLS.Q64_TOP_PRIORITIES - 1] = getFormMultiValue_(responses, 'Top 3 priorities (6-12 mo)');
+    newRow[SATISFACTION_COLS.Q65_ONE_CHANGE - 1] = getFormValue_(responses, '#1 change union should make');
+    newRow[SATISFACTION_COLS.Q66_KEEP_DOING - 1] = getFormValue_(responses, 'One thing union should keep doing');
+    newRow[SATISFACTION_COLS.Q67_ADDITIONAL - 1] = getFormValue_(responses, 'Additional comments (no names)');
+
+    // Append row to satisfaction sheet
+    satSheet.appendRow(newRow);
+
+    Logger.log('Satisfaction survey response recorded at ' + new Date());
+
+  } catch (error) {
+    Logger.log('Error processing satisfaction survey submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Set up the satisfaction survey form submission trigger
+ * Run this once to enable automatic processing of survey submissions
+ */
+function setupSatisfactionFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasSatisfactionTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onSatisfactionFormSubmit') {
+      hasSatisfactionTrigger = true;
+      break;
+    }
+  }
+
+  if (hasSatisfactionTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A satisfaction survey trigger already exists.\n\n' +
+      'Survey submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📊 Setup Satisfaction Survey Trigger',
+    'This will set up automatic processing of survey submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  if (!formUrl) {
+    ui.alert('❌ No URL', 'Please provide the form edit URL.', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    // Extract form ID from URL
+    var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+      return;
+    }
+    var formId = match[1];
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onSatisfactionFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Satisfaction survey trigger has been set up!\n\n' +
+      'When a survey is submitted:\n' +
+      '• Response will be added to 📊 Member Satisfaction sheet\n' +
+      '• All 68 questions will be recorded\n' +
+      '• Dashboard will reflect new data',
+      ui.ButtonSet.OK);
+
+    ss.toast('Survey trigger created successfully!', '✅ Success', 3);
 
   } catch (e) {
     ui.alert('❌ Error',
