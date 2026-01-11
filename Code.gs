@@ -556,6 +556,24 @@ function createMemberDirectory(ss) {
   var rules = sheet.getConditionalFormatRules();
   rules.push(redRule, emptyEmailRule, emptyPhoneRule, deadlineOverdueRule, deadline1to3Rule, deadline4to7Rule, deadlineOnTrackRule);
   sheet.setConditionalFormatRules(rules);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILTER: Enable sorting on all columns via filter dropdown
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Remove existing filter if any
+  var existingFilter = sheet.getFilter();
+  if (existingFilter) {
+    existingFilter.remove();
+  }
+
+  // Create filter on entire data range (all columns)
+  // This enables sorting via dropdown on: Last Name, Job Title, Work Location, Unit,
+  // Office Days, Preferred Communication, Best Time to Contact, Supervisor, Manager,
+  // Committees, Assigned Steward, Last Virtual Mtg, Last In-Person Mtg, Open Rate %,
+  // Volunteer Hours, Interest: Local/Chapter/Allied, Home Town, Recent Contact Date,
+  // Contact Steward, Contact Notes, Has Open Grievance?, Grievance Status, Days to Deadline
+  var filterRange = sheet.getRange(1, 1, 5000, headers.length);
+  filterRange.createFilter();
 }
 
 /**
