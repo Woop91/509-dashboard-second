@@ -494,8 +494,67 @@ function createMemberDirectory(ss) {
     .setRanges([hasOpenGrievanceRange])
     .build();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VALIDATION HIGHLIGHTING: Red background for empty Email and Phone fields
+  // ═══════════════════════════════════════════════════════════════════════════
+  var emailRange = sheet.getRange(2, MEMBER_COLS.EMAIL, 4999, 1);
+  var phoneRange = sheet.getRange(2, MEMBER_COLS.PHONE, 4999, 1);
+
+  // Rule: Red background for empty Email
+  var emptyEmailRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",ISBLANK($H2))')
+    .setBackground('#ffcdd2')  // Red background for missing email
+    .setRanges([emailRange])
+    .build();
+
+  // Rule: Red background for empty Phone
+  var emptyPhoneRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",ISBLANK($I2))')
+    .setBackground('#ffcdd2')  // Red background for missing phone
+    .setRanges([phoneRange])
+    .build();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEADLINE HEATMAP: Color-coded Days to Deadline (Column AD)
+  // ═══════════════════════════════════════════════════════════════════════════
+  var daysDeadlineRange = sheet.getRange(2, MEMBER_COLS.NEXT_DEADLINE, 4999, 1);
+
+  // Rule: Red - Overdue (shows "Overdue" or negative/0 days)
+  var deadlineOverdueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($AD2="Overdue",AND(ISNUMBER($AD2),$AD2<=0))')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Orange - Due in 1-3 days
+  var deadline1to3Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>=1,$AD2<=3)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Yellow - Due in 4-7 days
+  var deadline4to7Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>=4,$AD2<=7)')
+    .setBackground('#fffde7')
+    .setFontColor('#f57f17')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Green - On Track (more than 7 days remaining)
+  var deadlineOnTrackRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>7)')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setRanges([daysDeadlineRange])
+    .build();
+
   var rules = sheet.getConditionalFormatRules();
-  rules.push(redRule);
+  rules.push(redRule, emptyEmailRule, emptyPhoneRule, deadlineOverdueRule, deadline1to3Rule, deadline4to7Rule, deadlineOnTrackRule);
   sheet.setConditionalFormatRules(rules);
 }
 
