@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-11T23:46:12.419Z
+ * - Build Date: 2026-01-11T23:49:06.606Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1073,6 +1073,10 @@ function CREATE_509_DASHBOARD() {
     // Create Menu Checklist (function reference guide with 13 phases)
     createMenuChecklistSheet_();
     ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
+
+    // Save form URLs to Config sheet
+    saveFormUrlsToConfig_silent(ss);
+    ss.toast('Saved form URLs to Config', '🏗️ Progress', 2);
 
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
@@ -5016,10 +5020,20 @@ function getSatisfactionSurveyLink() {
  */
 function saveFormUrlsToConfig() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  saveFormUrlsToConfig_silent(ss);
+  ss.toast('Form URLs saved to Config tab (columns P, Q, AR)', '✅ Saved', 3);
+}
+
+/**
+ * Silent version - used during CREATE_509_DASHBOARD setup
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
+function saveFormUrlsToConfig_silent(ss) {
   var configSheet = ss.getSheetByName(SHEETS.CONFIG);
 
   if (!configSheet) {
-    SpreadsheetApp.getUi().alert('Config sheet not found');
+    Logger.log('Config sheet not found - cannot save form URLs');
     return;
   }
 
@@ -5037,8 +5051,6 @@ function saveFormUrlsToConfig() {
   configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
   configSheet.getRange(2, CONFIG_COLS.CONTACT_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
   configSheet.getRange(2, CONFIG_COLS.SATISFACTION_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
-
-  SpreadsheetApp.getActiveSpreadsheet().toast('Form URLs saved to Config tab (columns P, Q, AR)', '✅ Saved', 3);
 }
 
 /**
