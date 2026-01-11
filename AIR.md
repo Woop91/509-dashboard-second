@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.9.0 (Grievance Form Workflow + Visual Enhancements)
+**Version:** 1.9.0 (Form Workflows: Grievance, Contact Info, Satisfaction Survey)
 **Last Updated:** 2026-01-11
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -148,11 +148,15 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `testGrievanceFormSubmission()` - Test function with sample data
 - Contact Info Form Workflow:
   - `CONTACT_FORM_CONFIG` - Form URL and field entry ID configuration for member contact updates
-  - `sendContactInfoForm()` - Opens pre-filled contact form for selected member (with copy link option)
-  - `buildContactFormUrl_()` - Build pre-filled form URL with member's current data
-  - `onContactFormSubmit(e)` - Form submission trigger handler (updates Member Directory)
+  - `sendContactInfoForm()` - Shows blank form link for members to fill out (with copy link option)
+  - `onContactFormSubmit(e)` - Form submission trigger handler (creates new member or updates existing)
   - `setupContactFormTrigger()` - Menu-driven trigger setup for contact form submissions
   - `getFormMultiValue_()` - Helper for multi-select checkbox responses
+- Satisfaction Survey Form Workflow:
+  - `SATISFACTION_FORM_CONFIG` - Survey form URL and known field entry IDs
+  - `getSatisfactionSurveyLink()` - Shows survey link for members to fill out (with copy link option)
+  - `onSatisfactionFormSubmit(e)` - Form submission trigger handler (writes to Member Satisfaction sheet)
+  - `setupSatisfactionFormTrigger()` - Menu-driven trigger setup for survey submissions
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -946,22 +950,43 @@ Grievance Log entries automatically sort by status priority (active cases first)
 
 #### Personal Contact Info Form (New)
 
-**11. Pre-filled Contact Update Form**
-- `sendContactInfoForm()`: Opens pre-filled Google Form with member's current data
-- Stewards can send form link to members to update their contact info
+**11. Blank Form for Member Self-Registration**
+- `sendContactInfoForm()`: Shows form link to share with members (open or copy)
+- Form is blank - members fill out their own contact information
 - Form fields: First/Last Name, Job Title, Unit, Work Location, Office Days, Communication Preferences, Best Time, Supervisor, Manager, Email, Phone, Interest levels
-- Option to open form or copy link to send to member
 
 **12. Automatic Member Directory Updates**
 - `onContactFormSubmit(e)`: Trigger handler for contact form submissions
 - Matches member by First Name + Last Name
-- Updates all submitted fields in Member Directory
+- **Existing members**: Updates all submitted fields in Member Directory
+- **New members**: Creates new row with auto-generated Member ID (MXXXX123 format)
 - Handles multi-select fields (Office Days, Preferred Communication, Best Time)
 
 **13. Easy Trigger Setup**
-- New menu: 👤 Dashboard > 👤 Member Tools > 📋 Setup Contact Form Trigger
+- New menu: 👤 Dashboard > 👤 Member Tools > 📋 Get Contact Info Form Link
+- New menu: 👤 Dashboard > 👤 Member Tools > ⚙️ Setup Contact Form Trigger
 - Prompts for Google Form edit URL
 - Creates installable trigger for contact form submissions
+
+---
+
+#### Member Satisfaction Survey Form (New)
+
+**14. Survey Link Distribution**
+- `getSatisfactionSurveyLink()`: Shows survey link to share with members (open or copy)
+- Survey is blank - members fill out 68 questions about union satisfaction
+
+**15. Automatic Response Recording**
+- `onSatisfactionFormSubmit(e)`: Trigger handler for survey submissions
+- Writes all 68 question responses to 📊 Member Satisfaction sheet
+- Maps questions to SATISFACTION_COLS (A-BQ columns)
+- Sections: Work Context, Overall Satisfaction, Steward Ratings, Steward Access, Chapter Effectiveness, Local Leadership, Contract Enforcement, Representation Process, Communication Quality, Member Voice & Culture, Value & Collective Action, Scheduling, Priorities
+
+**16. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 📊 Survey Tools > 📊 Get Satisfaction Survey Link
+- New menu: 👤 Dashboard > 📊 Survey Tools > ⚙️ Setup Survey Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for survey submissions
 
 ---
 
@@ -989,19 +1014,27 @@ Grievance Log entries automatically sort by status priority (active cases first)
 - Lines 3690-3780: `setupGrievanceFormTrigger()` - menu-driven trigger setup
 - Lines 3787-3813: `testGrievanceFormSubmission()` - test function
 
-*Contact Info Form Workflow (Code.gs lines 3844-4100):*
-- Lines 3286-3311: `CONTACT_FORM_CONFIG` with form URL and 15 field entry IDs
-- Lines 3854-3945: `sendContactInfoForm()` - opens pre-filled form with copy link option
-- Lines 3951-3995: `buildContactFormUrl_()` - build pre-filled URL with multi-select support
-- Lines 4001-4076: `onContactFormSubmit(e)` - form submission handler (updates Member Directory)
-- Lines 4082-4091: `getFormMultiValue_()` - helper for checkbox responses
-- Lines 4097-4150: `setupContactFormTrigger()` - menu-driven trigger setup
+*Contact Info Form Workflow (Code.gs):*
+- `CONTACT_FORM_CONFIG` with form URL and 15 field entry IDs
+- `sendContactInfoForm()` - shows blank form link (open or copy)
+- `onContactFormSubmit(e)` - form submission handler (creates new or updates existing member)
+- `getFormMultiValue_()` - helper for checkbox responses
+- `setupContactFormTrigger()` - menu-driven trigger setup
 
-*Menu Update (Code.gs lines 35-47):*
+*Satisfaction Survey Form Workflow (Code.gs):*
+- `SATISFACTION_FORM_CONFIG` with survey form URL
+- `getSatisfactionSurveyLink()` - shows survey link (open or copy)
+- `onSatisfactionFormSubmit(e)` - form submission handler (writes to Member Satisfaction sheet)
+- `setupSatisfactionFormTrigger()` - menu-driven trigger setup
+
+*Menu Update (Code.gs):*
 - Added "📋 Setup Grievance Form Trigger" to Grievance Tools submenu
 - Added new "👤 Member Tools" submenu with:
-  - "📋 Send Contact Info Form"
-  - "📋 Setup Contact Form Trigger"
+  - "📋 Get Contact Info Form Link"
+  - "⚙️ Setup Contact Form Trigger"
+- Added new "📊 Survey Tools" submenu with:
+  - "📊 Get Satisfaction Survey Link"
+  - "⚙️ Setup Survey Form Trigger"
 
 **Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
 

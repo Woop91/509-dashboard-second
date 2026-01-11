@@ -3294,7 +3294,7 @@ var GRIEVANCE_FORM_CONFIG = {
  * Maps form entry IDs to Member Directory fields for updating member contact info
  */
 var CONTACT_FORM_CONFIG = {
-  // Google Form URL (viewform version for pre-filling)
+  // Google Form URL - members fill out blank form, data written to Member Directory on submit
   FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform',
 
   // Form field entry IDs mapped to Member Directory columns
