@@ -636,8 +636,9 @@ function syncGrievanceFormulasToLog() {
 
 /**
  * Auto-sort the Grievance Log by status priority
- * Active cases (Open, Pending Info, In Arbitration, Appealed) appear first,
- * resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
+ * Message Alert rows appear FIRST (highlighted),
+ * then active cases (Open, Pending Info, In Arbitration, Appealed),
+ * then resolved cases (Settled, Won, Denied, Withdrawn, Closed) appear last
  */
 function sortGrievanceLogByStatus() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -652,25 +653,30 @@ function sortGrievanceLogByStatus() {
   var dataRange = sheet.getRange(2, 1, lastRow - 1, 34);
   var data = dataRange.getValues();
 
-  // Sort by status priority (column E = index 4)
+  // Sort with Message Alert first, then by status priority
   data.sort(function(a, b) {
+    // FIRST: Message Alert rows go to the very top
+    var alertA = a[GRIEVANCE_COLS.MESSAGE_ALERT - 1] === true;
+    var alertB = b[GRIEVANCE_COLS.MESSAGE_ALERT - 1] === true;
+
+    if (alertA && !alertB) return -1; // A has alert, B doesn't - A goes first
+    if (!alertA && alertB) return 1;  // B has alert, A doesn't - B goes first
+
+    // SECOND: Sort by status priority
     var statusA = a[GRIEVANCE_COLS.STATUS - 1] || '';
     var statusB = b[GRIEVANCE_COLS.STATUS - 1] || '';
 
-    // Get priority (default to 99 for unknown statuses)
     var priorityA = GRIEVANCE_STATUS_PRIORITY[statusA] || 99;
     var priorityB = GRIEVANCE_STATUS_PRIORITY[statusB] || 99;
 
-    // Primary sort: by status priority (lower number = higher priority)
     if (priorityA !== priorityB) {
       return priorityA - priorityB;
     }
 
-    // Secondary sort: by Days to Deadline (column U = index 20) - most urgent first
+    // THIRD: Sort by Days to Deadline - most urgent first
     var daysA = a[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
     var daysB = b[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
 
-    // Handle empty/non-numeric values
     if (daysA === '' || daysA === null) daysA = 9999;
     if (daysB === '' || daysB === null) daysB = 9999;
 
@@ -685,8 +691,37 @@ function sortGrievanceLogByStatus() {
     sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
+  // Apply highlighting to Message Alert rows
+  applyMessageAlertHighlighting_(sheet, lastRow);
+
   Logger.log('Grievance Log sorted by status priority');
   ss.toast('Grievance Log sorted by status priority', '📊 Sorted', 2);
+}
+
+/**
+ * Apply or remove highlighting for Message Alert rows
+ * @private
+ */
+function applyMessageAlertHighlighting_(sheet, lastRow) {
+  if (lastRow < 2) return;
+
+  var alertCol = GRIEVANCE_COLS.MESSAGE_ALERT;
+  var alertValues = sheet.getRange(2, alertCol, lastRow - 1, 1).getValues();
+  var highlightColor = '#FFF2CC'; // Light yellow/orange
+  var normalColor = null; // Remove background (white)
+
+  for (var i = 0; i < alertValues.length; i++) {
+    var row = i + 2;
+    var rowRange = sheet.getRange(row, 1, 1, 34);
+
+    if (alertValues[i][0] === true) {
+      // Highlight the entire row
+      rowRange.setBackground(highlightColor);
+    } else {
+      // Remove highlighting (reset to white)
+      rowRange.setBackground(normalColor);
+    }
+  }
 }
 
 // ============================================================================
