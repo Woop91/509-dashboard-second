@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-12T02:22:21.476Z
+ * - Build Date: 2026-01-12T02:39:17.849Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1264,11 +1264,14 @@ function createConfigSheet(ss) {
 }
 
 /**
- * Adds a user guide section to the Config sheet starting at row 30
+ * Adds a user guide section to the Config sheet starting at row 50
  * @private
  */
 function addConfigUserGuide_(sheet) {
-  var startRow = 30;
+  var startRow = 50;
+
+  // Clear the area first (rows 50-80, columns A-H)
+  sheet.getRange(startRow, 1, 35, 8).clear();
 
   // Define guide colors
   var headerBg = '#4A90D9';      // Blue header
@@ -1314,18 +1317,16 @@ function addConfigUserGuide_(sheet) {
     .setFontSize(12)
     .setFontColor(textColor);
 
-  row++;
   var howToSteps = [
-    ['Step 1:', 'Find the column for the dropdown you want to modify (e.g., "Job Titles" in Column A)'],
-    ['Step 2:', 'Add new values in empty cells below the existing values - no gaps allowed!'],
-    ['Step 3:', 'The dropdown will automatically include your new values throughout the system'],
-    ['Step 4:', 'To remove a value, delete the cell and shift cells up (don\'t leave blanks)']
+    'Step 1: Find the column for the dropdown you want to modify (e.g., "Job Titles" in Column A)',
+    'Step 2: Add new values in empty cells below the existing values - no gaps allowed!',
+    'Step 3: The dropdown will automatically include your new values throughout the system',
+    'Step 4: To remove a value, delete the cell and shift cells up (don\'t leave blanks)'
   ];
 
   for (var i = 0; i < howToSteps.length; i++) {
     row++;
-    sheet.getRange(row, 1).setValue(howToSteps[i][0]).setFontWeight('bold').setFontColor('#4A90D9');
-    sheet.getRange(row, 2, 1, 7).merge().setValue(howToSteps[i][1]).setFontColor(textColor).setWrap(true);
+    sheet.getRange(row, 1, 1, 8).merge().setValue(howToSteps[i]).setFontColor(textColor).setWrap(true);
   }
 
   // ═══ COLUMN GUIDE ═══
@@ -1338,31 +1339,28 @@ function addConfigUserGuide_(sheet) {
     .setFontColor(textColor);
 
   row++;
-  var columnGuide = [
-    ['Column', 'Name', 'Used In', 'Example Values'],
+  // Simple table header
+  sheet.getRange(row, 1).setValue('Col').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 2).setValue('Name').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 3, 1, 2).merge().setValue('Used In').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 5, 1, 4).merge().setValue('Example Values').setFontWeight('bold').setBackground('#E5E7EB');
+
+  var columnData = [
     ['A', 'Job Titles', 'Member Directory', 'Case Worker, Supervisor, Manager...'],
-    ['B', 'Office Locations', 'Member Dir & Grievance Log', 'Boston Office, Springfield...'],
+    ['B', 'Locations', 'Member Dir & Grievance Log', 'Boston Office, Springfield...'],
     ['C', 'Units', 'Member Dir & Grievance Log', 'Unit 1, Unit 2, Unit 3...'],
     ['H', 'Stewards', 'Member Dir & Grievance Log', 'Names of union stewards'],
-    ['J', 'Grievance Status', 'Grievance Log', 'Open, Pending Info, Settled...'],
-    ['K', 'Grievance Step', 'Grievance Log', 'Informal, Step I, Step II...'],
-    ['L', 'Issue Category', 'Grievance Log', 'Discipline, Workload, Pay...']
+    ['J', 'Status', 'Grievance Log', 'Open, Pending Info, Settled...'],
+    ['K', 'Step', 'Grievance Log', 'Informal, Step I, Step II...'],
+    ['L', 'Category', 'Grievance Log', 'Discipline, Workload, Pay...']
   ];
 
-  for (var j = 0; j < columnGuide.length; j++) {
+  for (var j = 0; j < columnData.length; j++) {
     row++;
-    if (j === 0) {
-      // Header row
-      sheet.getRange(row, 1).setValue(columnGuide[j][0]).setFontWeight('bold').setBackground('#E5E7EB');
-      sheet.getRange(row, 2, 1, 2).merge().setValue(columnGuide[j][1]).setFontWeight('bold').setBackground('#E5E7EB');
-      sheet.getRange(row, 4, 1, 2).merge().setValue(columnGuide[j][2]).setFontWeight('bold').setBackground('#E5E7EB');
-      sheet.getRange(row, 6, 1, 3).merge().setValue(columnGuide[j][3]).setFontWeight('bold').setBackground('#E5E7EB');
-    } else {
-      sheet.getRange(row, 1).setValue(columnGuide[j][0]).setFontColor('#4A90D9').setFontWeight('bold');
-      sheet.getRange(row, 2, 1, 2).merge().setValue(columnGuide[j][1]).setFontColor(textColor);
-      sheet.getRange(row, 4, 1, 2).merge().setValue(columnGuide[j][2]).setFontColor('#6B7280');
-      sheet.getRange(row, 6, 1, 3).merge().setValue(columnGuide[j][3]).setFontColor('#6B7280').setFontStyle('italic');
-    }
+    sheet.getRange(row, 1).setValue(columnData[j][0]).setFontColor('#4A90D9').setFontWeight('bold');
+    sheet.getRange(row, 2).setValue(columnData[j][1]).setFontColor(textColor);
+    sheet.getRange(row, 3, 1, 2).merge().setValue(columnData[j][2]).setFontColor('#6B7280');
+    sheet.getRange(row, 5, 1, 4).merge().setValue(columnData[j][3]).setFontColor('#6B7280').setFontStyle('italic');
   }
 
   // ═══ TIPS ═══
@@ -1374,7 +1372,6 @@ function addConfigUserGuide_(sheet) {
     .setFontSize(12)
     .setFontColor('#92400E');
 
-  row++;
   var tips = [
     '✓ Keep dropdown lists in alphabetical order for easier selection',
     '✓ Use consistent naming conventions (e.g., "Boston Office" not "boston office")',
@@ -1396,7 +1393,6 @@ function addConfigUserGuide_(sheet) {
     .setFontSize(12)
     .setFontColor('#DC2626');
 
-  row++;
   var warnings = [
     '⚠ Do NOT delete values that are already in use in Member Directory or Grievance Log',
     '⚠ Do NOT leave blank cells in the middle of a column - this breaks dropdowns',
@@ -1422,10 +1418,6 @@ function addConfigUserGuide_(sheet) {
     .setValue('Check the "📚 Getting Started" tab for full setup instructions, or the "❓ FAQ" tab for common questions.')
     .setBackground(successBg)
     .setFontColor('#166534');
-
-  // Set borders around the entire guide
-  var guideRange = sheet.getRange(startRow, 1, row - startRow + 1, 8);
-  guideRange.setBorder(true, true, true, true, false, false, '#D1D5DB', SpreadsheetApp.BorderStyle.SOLID);
 }
 
 /**

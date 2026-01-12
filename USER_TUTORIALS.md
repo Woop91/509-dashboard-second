@@ -518,7 +518,7 @@ If something goes wrong, use these repair functions:
 **In-Spreadsheet Help:**
 - **📚 Getting Started** tab - Step-by-step setup instructions
 - **❓ FAQ** tab - Common questions and answers
-- **Config** tab (Row 30+) - User guide for dropdown configuration
+- **Config** tab (Row 50+) - User guide for dropdown configuration
 
 **Documentation Files:**
 - **AIR.md** - Complete technical reference
