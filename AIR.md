@@ -172,7 +172,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (10 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`, `createFunctionChecklistSheet_()`, `createGettingStartedSheet()`, `createFAQSheet()`
-- Config user guide: `addConfigUserGuide_()` - Adds user guide section to Config tab at row 30
+- Config user guide: `addConfigUserGuide_()` - Adds user guide section to Config tab at row 50
 - Grievance Form Workflow:
   - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
   - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory

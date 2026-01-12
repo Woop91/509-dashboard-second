@@ -431,7 +431,7 @@ function createConfigSheet(ss) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // USER GUIDE SECTION (Starting at Row 30)
+  // USER GUIDE SECTION (Starting at Row 50)
   // ═══════════════════════════════════════════════════════════════════════════
   addConfigUserGuide_(sheet);
 }
