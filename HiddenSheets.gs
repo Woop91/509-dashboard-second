@@ -1028,11 +1028,18 @@ function onEditAutoSync(e) {
       syncGrievanceToMemberDirectory();
       // Auto-sort by status priority (active cases first, then by deadline urgency)
       sortGrievanceLogByStatus();
+      // Update Dashboard with new computed values
+      syncDashboardValues();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
       // Member Directory changed - sync to Grievance Log and Config
       syncNewValueToConfig(e);  // Bidirectional: add new values to Config
       syncGrievanceFormulasToLog();
       syncMemberToGrievanceLog();
+      // Update Dashboard with new computed values
+      syncDashboardValues();
+    } else if (sheetName === SHEETS.FEEDBACK) {
+      // Feedback sheet changed - update computed metrics
+      syncFeedbackValues();
     }
   } catch (error) {
     Logger.log('Auto-sync error: ' + error.message);
@@ -1438,6 +1445,904 @@ function syncAllData() {
   } else {
     ss.toast('All data synced! No issues found.', '✅ Success', 3);
   }
+}
+
+// ============================================================================
+// DASHBOARD VALUE SYNC (No formulas in visible sheets)
+// ============================================================================
+
+/**
+ * Sync computed values to Dashboard sheet (no formulas)
+ * Replaces all Dashboard formulas with JavaScript-computed values
+ * Called during CREATE_509_DASHBOARD and on data changes
+ */
+function syncDashboardValues() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dashSheet = ss.getSheetByName(SHEETS.DASHBOARD);
+
+  if (!dashSheet) {
+    Logger.log('Dashboard sheet not found');
+    return;
+  }
+
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!memberSheet || !grievanceSheet) {
+    Logger.log('Required sheets not found for Dashboard sync');
+    return;
+  }
+
+  // Get data from sheets
+  var memberData = memberSheet.getDataRange().getValues();
+  var grievanceData = grievanceSheet.getDataRange().getValues();
+  var configData = configSheet ? configSheet.getDataRange().getValues() : [];
+
+  // Compute all metrics
+  var metrics = computeDashboardMetrics_(memberData, grievanceData, configData);
+
+  // Write values to Dashboard (no formulas)
+  writeDashboardValues_(dashSheet, metrics);
+
+  Logger.log('Dashboard values synced');
+}
+
+/**
+ * Compute all Dashboard metrics from raw data
+ * @private
+ */
+function computeDashboardMetrics_(memberData, grievanceData, configData) {
+  var metrics = {
+    // Quick Stats
+    totalMembers: 0,
+    activeStewards: 0,
+    activeGrievances: 0,
+    winRate: '-',
+    overdueCases: 0,
+    dueThisWeek: 0,
+
+    // Member Metrics
+    avgOpenRate: '-',
+    ytdVolHours: 0,
+
+    // Grievance Metrics
+    open: 0,
+    pendingInfo: 0,
+    settled: 0,
+    won: 0,
+    denied: 0,
+    withdrawn: 0,
+
+    // Timeline Metrics
+    avgDaysOpen: 0,
+    filedThisMonth: 0,
+    closedThisMonth: 0,
+    avgResolutionDays: 0,
+
+    // Category Analysis (top 5)
+    categories: [],
+
+    // Location Breakdown (top 5)
+    locations: [],
+
+    // Month-over-Month Trends
+    trends: {
+      filed: { thisMonth: 0, lastMonth: 0 },
+      closed: { thisMonth: 0, lastMonth: 0 },
+      won: { thisMonth: 0, lastMonth: 0 }
+    },
+
+    // Steward Summary
+    stewardSummary: {
+      total: 0,
+      activeWithCases: 0,
+      avgCasesPerSteward: '-',
+      totalVolHours: 0,
+      contactsThisMonth: 0
+    },
+
+    // Top 30 Busiest Stewards
+    busiestStewards: [],
+
+    // Top 10 Performers (from hidden sheet)
+    topPerformers: [],
+
+    // Bottom 10 (needing support)
+    needingSupport: []
+  };
+
+  var today = new Date();
+  var thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  var lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  var lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+  var oneWeekFromNow = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MEMBER METRICS
+  // ══════════════════════════════════════════════════════════════════════
+  var openRates = [];
+  var stewardCounts = {};
+
+  for (var m = 1; m < memberData.length; m++) {
+    var row = memberData[m];
+    if (!row[MEMBER_COLS.MEMBER_ID - 1]) continue;
+
+    metrics.totalMembers++;
+
+    if (row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes') {
+      metrics.activeStewards++;
+    }
+
+    var openRate = row[MEMBER_COLS.OPEN_RATE - 1];
+    if (typeof openRate === 'number') {
+      openRates.push(openRate);
+    }
+
+    var volHours = row[MEMBER_COLS.VOLUNTEER_HOURS - 1];
+    if (typeof volHours === 'number') {
+      metrics.ytdVolHours += volHours;
+    }
+
+    var contactDate = row[MEMBER_COLS.RECENT_CONTACT_DATE - 1];
+    if (contactDate instanceof Date && contactDate >= thisMonthStart && contactDate <= today) {
+      metrics.stewardSummary.contactsThisMonth++;
+    }
+  }
+
+  if (openRates.length > 0) {
+    var avgRate = openRates.reduce(function(a, b) { return a + b; }, 0) / openRates.length;
+    metrics.avgOpenRate = Math.round(avgRate * 10) / 10 + '%';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // GRIEVANCE METRICS
+  // ══════════════════════════════════════════════════════════════════════
+  var daysOpenValues = [];
+  var closedDaysValues = [];
+  var categoryStats = {};
+  var locationStats = {};
+  var stewardGrievances = {};
+
+  for (var g = 1; g < grievanceData.length; g++) {
+    var gRow = grievanceData[g];
+    if (!gRow[GRIEVANCE_COLS.GRIEVANCE_ID - 1]) continue;
+
+    var status = gRow[GRIEVANCE_COLS.STATUS - 1];
+    var steward = gRow[GRIEVANCE_COLS.STEWARD - 1];
+    var category = gRow[GRIEVANCE_COLS.ISSUE_CATEGORY - 1];
+    var location = gRow[GRIEVANCE_COLS.LOCATION - 1];
+    var dateFiled = gRow[GRIEVANCE_COLS.DATE_FILED - 1];
+    var dateClosed = gRow[GRIEVANCE_COLS.DATE_CLOSED - 1];
+    var daysOpen = gRow[GRIEVANCE_COLS.DAYS_OPEN - 1];
+    var daysToDeadline = gRow[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var nextActionDue = gRow[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+
+    // Status counts
+    if (status === 'Open') metrics.open++;
+    else if (status === 'Pending Info') metrics.pendingInfo++;
+    else if (status === 'Settled') metrics.settled++;
+    else if (status === 'Won') metrics.won++;
+    else if (status === 'Denied') metrics.denied++;
+    else if (status === 'Withdrawn') metrics.withdrawn++;
+
+    // Active grievances
+    if (status === 'Open' || status === 'Pending Info') {
+      metrics.activeGrievances++;
+    }
+
+    // Overdue and due this week
+    if (typeof daysToDeadline === 'number') {
+      if (daysToDeadline < 0) metrics.overdueCases++;
+      else if (daysToDeadline <= 7) metrics.dueThisWeek++;
+    }
+
+    // Days open average
+    if (typeof daysOpen === 'number') {
+      daysOpenValues.push(daysOpen);
+    }
+
+    // Resolution days (for closed cases)
+    if (dateClosed && typeof daysOpen === 'number') {
+      closedDaysValues.push(daysOpen);
+    }
+
+    // Filed this month
+    if (dateFiled instanceof Date && dateFiled >= thisMonthStart && dateFiled <= today) {
+      metrics.filedThisMonth++;
+      metrics.trends.filed.thisMonth++;
+    }
+    if (dateFiled instanceof Date && dateFiled >= lastMonthStart && dateFiled <= lastMonthEnd) {
+      metrics.trends.filed.lastMonth++;
+    }
+
+    // Closed this month
+    if (dateClosed instanceof Date && dateClosed >= thisMonthStart && dateClosed <= today) {
+      metrics.closedThisMonth++;
+      metrics.trends.closed.thisMonth++;
+      if (status === 'Won') {
+        metrics.trends.won.thisMonth++;
+      }
+    }
+    if (dateClosed instanceof Date && dateClosed >= lastMonthStart && dateClosed <= lastMonthEnd) {
+      metrics.trends.closed.lastMonth++;
+      if (status === 'Won') {
+        metrics.trends.won.lastMonth++;
+      }
+    }
+
+    // Category stats
+    if (category) {
+      if (!categoryStats[category]) {
+        categoryStats[category] = { total: 0, open: 0, resolved: 0, won: 0, daysOpen: [] };
+      }
+      categoryStats[category].total++;
+      if (status === 'Open') categoryStats[category].open++;
+      if (status !== 'Open' && status !== 'Pending Info') categoryStats[category].resolved++;
+      if (status === 'Won') categoryStats[category].won++;
+      if (typeof daysOpen === 'number') categoryStats[category].daysOpen.push(daysOpen);
+    }
+
+    // Location stats
+    if (location) {
+      if (!locationStats[location]) {
+        locationStats[location] = { members: 0, grievances: 0, open: 0, won: 0 };
+      }
+      locationStats[location].grievances++;
+      if (status === 'Open') locationStats[location].open++;
+      if (status === 'Won') locationStats[location].won++;
+    }
+
+    // Steward stats
+    if (steward) {
+      if (!stewardGrievances[steward]) {
+        stewardGrievances[steward] = { active: 0, open: 0, pendingInfo: 0, total: 0 };
+      }
+      stewardGrievances[steward].total++;
+      if (status === 'Open') {
+        stewardGrievances[steward].active++;
+        stewardGrievances[steward].open++;
+      } else if (status === 'Pending Info') {
+        stewardGrievances[steward].active++;
+        stewardGrievances[steward].pendingInfo++;
+      }
+    }
+  }
+
+  // Calculate averages
+  if (daysOpenValues.length > 0) {
+    metrics.avgDaysOpen = Math.round(daysOpenValues.reduce(function(a, b) { return a + b; }, 0) / daysOpenValues.length * 10) / 10;
+  }
+  if (closedDaysValues.length > 0) {
+    metrics.avgResolutionDays = Math.round(closedDaysValues.reduce(function(a, b) { return a + b; }, 0) / closedDaysValues.length * 10) / 10;
+  }
+
+  // Win rate
+  var totalOutcomes = metrics.won + metrics.denied + metrics.settled + metrics.withdrawn;
+  if (totalOutcomes > 0) {
+    metrics.winRate = Math.round(metrics.won / totalOutcomes * 100) + '%';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // CATEGORY ANALYSIS (Top 5)
+  // ══════════════════════════════════════════════════════════════════════
+  var defaultCategories = ['Contract Violation', 'Discipline', 'Workload', 'Safety', 'Discrimination'];
+  for (var c = 0; c < defaultCategories.length; c++) {
+    var cat = defaultCategories[c];
+    var catData = categoryStats[cat] || { total: 0, open: 0, resolved: 0, won: 0, daysOpen: [] };
+    var winRate = catData.total > 0 ? Math.round(catData.won / catData.total * 100) + '%' : '-';
+    var avgDays = catData.daysOpen.length > 0 ?
+      Math.round(catData.daysOpen.reduce(function(a, b) { return a + b; }, 0) / catData.daysOpen.length * 10) / 10 : '-';
+
+    metrics.categories.push({
+      name: cat,
+      total: catData.total,
+      open: catData.open,
+      resolved: catData.resolved,
+      winRate: winRate,
+      avgDays: avgDays
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LOCATION BREAKDOWN (Top 5 from Config)
+  // ══════════════════════════════════════════════════════════════════════
+  // Count members per location
+  var memberLocations = {};
+  for (var ml = 1; ml < memberData.length; ml++) {
+    var loc = memberData[ml][MEMBER_COLS.WORK_LOCATION - 1];
+    if (loc) {
+      memberLocations[loc] = (memberLocations[loc] || 0) + 1;
+    }
+  }
+
+  // Get top 5 locations from Config
+  for (var l = 0; l < 5; l++) {
+    var locName = configData[2 + l] ? configData[2 + l][CONFIG_COLS.OFFICE_LOCATIONS - 1] : '';
+    if (locName) {
+      var locData = locationStats[locName] || { members: 0, grievances: 0, open: 0, won: 0 };
+      locData.members = memberLocations[locName] || 0;
+      var locWinRate = locData.grievances > 0 ? Math.round(locData.won / locData.grievances * 100) + '%' : '-';
+
+      metrics.locations.push({
+        name: locName,
+        members: locData.members,
+        grievances: locData.grievances,
+        open: locData.open,
+        winRate: locWinRate,
+        satisfaction: '-'
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // STEWARD SUMMARY
+  // ══════════════════════════════════════════════════════════════════════
+  metrics.stewardSummary.total = metrics.activeStewards;
+  metrics.stewardSummary.totalVolHours = metrics.ytdVolHours;
+
+  var stewardsWithActiveCases = Object.keys(stewardGrievances).filter(function(s) {
+    return stewardGrievances[s].active > 0;
+  }).length;
+  metrics.stewardSummary.activeWithCases = stewardsWithActiveCases;
+
+  if (metrics.activeStewards > 0) {
+    var totalGrievances = grievanceData.length - 1;
+    metrics.stewardSummary.avgCasesPerSteward = Math.round(totalGrievances / metrics.activeStewards * 10) / 10;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TOP 30 BUSIEST STEWARDS
+  // ══════════════════════════════════════════════════════════════════════
+  var stewardArray = Object.keys(stewardGrievances).map(function(name) {
+    return {
+      name: name,
+      active: stewardGrievances[name].active,
+      open: stewardGrievances[name].open,
+      pendingInfo: stewardGrievances[name].pendingInfo,
+      total: stewardGrievances[name].total
+    };
+  });
+
+  stewardArray.sort(function(a, b) { return b.active - a.active; });
+  metrics.busiestStewards = stewardArray.slice(0, 30);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TOP/BOTTOM PERFORMERS (from hidden sheet)
+  // ══════════════════════════════════════════════════════════════════════
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var perfSheet = ss.getSheetByName(SHEETS.STEWARD_PERFORMANCE_CALC);
+  if (perfSheet && perfSheet.getLastRow() > 1) {
+    var perfData = perfSheet.getDataRange().getValues();
+    var performers = [];
+    for (var p = 1; p < perfData.length; p++) {
+      if (perfData[p][0]) {  // Has steward name
+        performers.push({
+          name: perfData[p][0],
+          score: perfData[p][9] || 0,  // Column J (index 9)
+          winRate: perfData[p][5] || '-',  // Column F
+          avgDays: perfData[p][6] || '-',  // Column G
+          overdue: perfData[p][7] || 0  // Column H
+        });
+      }
+    }
+
+    // Sort by score descending for top performers
+    performers.sort(function(a, b) { return b.score - a.score; });
+    metrics.topPerformers = performers.slice(0, 10);
+
+    // Sort by score ascending for needing support
+    performers.sort(function(a, b) { return a.score - b.score; });
+    metrics.needingSupport = performers.slice(0, 10);
+  }
+
+  return metrics;
+}
+
+/**
+ * Write computed values to Dashboard sheet
+ * @private
+ */
+function writeDashboardValues_(sheet, metrics) {
+  // ══════════════════════════════════════════════════════════════════════
+  // QUICK STATS (Row 6)
+  // ══════════════════════════════════════════════════════════════════════
+  sheet.getRange('A6:F6').setValues([[
+    metrics.totalMembers,
+    metrics.activeStewards,
+    metrics.activeGrievances,
+    metrics.winRate,
+    metrics.overdueCases,
+    metrics.dueThisWeek
+  ]]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MEMBER METRICS (Row 10)
+  // ══════════════════════════════════════════════════════════════════════
+  sheet.getRange('A10:D10').setValues([[
+    metrics.totalMembers,
+    metrics.activeStewards,
+    metrics.avgOpenRate,
+    metrics.ytdVolHours
+  ]]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // GRIEVANCE METRICS (Row 14)
+  // ══════════════════════════════════════════════════════════════════════
+  sheet.getRange('A14:F14').setValues([[
+    metrics.open,
+    metrics.pendingInfo,
+    metrics.settled,
+    metrics.won,
+    metrics.denied,
+    metrics.withdrawn
+  ]]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TIMELINE METRICS (Row 18)
+  // ══════════════════════════════════════════════════════════════════════
+  sheet.getRange('A18:D18').setValues([[
+    metrics.avgDaysOpen,
+    metrics.filedThisMonth,
+    metrics.closedThisMonth,
+    metrics.avgResolutionDays
+  ]]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TYPE ANALYSIS (Rows 22-26)
+  // ══════════════════════════════════════════════════════════════════════
+  var categoryRows = [];
+  for (var c = 0; c < metrics.categories.length; c++) {
+    var cat = metrics.categories[c];
+    categoryRows.push([cat.name, cat.total, cat.open, cat.resolved, cat.winRate, cat.avgDays]);
+  }
+  if (categoryRows.length > 0) {
+    sheet.getRange('A22:F' + (21 + categoryRows.length)).setValues(categoryRows);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // LOCATION BREAKDOWN (Rows 30-34)
+  // ══════════════════════════════════════════════════════════════════════
+  var locationRows = [];
+  for (var l = 0; l < metrics.locations.length; l++) {
+    var loc = metrics.locations[l];
+    locationRows.push([loc.name, loc.members, loc.grievances, loc.open, loc.winRate, loc.satisfaction]);
+  }
+  // Pad with empty rows if less than 5
+  while (locationRows.length < 5) {
+    locationRows.push(['', '', '', '', '', '']);
+  }
+  sheet.getRange('A30:F34').setValues(locationRows);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MONTH-OVER-MONTH TRENDS (Rows 38-40)
+  // ══════════════════════════════════════════════════════════════════════
+  var trendRows = [];
+
+  // Filed
+  var filedChange = metrics.trends.filed.thisMonth - metrics.trends.filed.lastMonth;
+  var filedPct = metrics.trends.filed.lastMonth > 0 ? Math.round(filedChange / metrics.trends.filed.lastMonth * 100) + '%' : '-';
+  var filedTrend = filedChange > 0 ? '📈' : (filedChange < 0 ? '📉' : '➡️');
+  trendRows.push(['Grievances Filed', metrics.trends.filed.thisMonth, metrics.trends.filed.lastMonth, filedChange, filedPct, filedTrend]);
+
+  // Closed
+  var closedChange = metrics.trends.closed.thisMonth - metrics.trends.closed.lastMonth;
+  var closedPct = metrics.trends.closed.lastMonth > 0 ? Math.round(closedChange / metrics.trends.closed.lastMonth * 100) + '%' : '-';
+  var closedTrend = closedChange > 0 ? '📈' : (closedChange < 0 ? '📉' : '➡️');
+  trendRows.push(['Grievances Closed', metrics.trends.closed.thisMonth, metrics.trends.closed.lastMonth, closedChange, closedPct, closedTrend]);
+
+  // Won
+  var wonChange = metrics.trends.won.thisMonth - metrics.trends.won.lastMonth;
+  var wonPct = metrics.trends.won.lastMonth > 0 ? Math.round(wonChange / metrics.trends.won.lastMonth * 100) + '%' : '-';
+  var wonTrend = wonChange > 0 ? '📈' : (wonChange < 0 ? '📉' : '➡️');
+  trendRows.push(['Cases Won', metrics.trends.won.thisMonth, metrics.trends.won.lastMonth, wonChange, wonPct, wonTrend]);
+
+  sheet.getRange('A38:F40').setValues(trendRows);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // STEWARD SUMMARY (Row 47)
+  // ══════════════════════════════════════════════════════════════════════
+  sheet.getRange('A47:F47').setValues([[
+    metrics.stewardSummary.total,
+    metrics.stewardSummary.activeWithCases,
+    metrics.stewardSummary.avgCasesPerSteward,
+    metrics.stewardSummary.totalVolHours,
+    metrics.stewardSummary.contactsThisMonth,
+    ''
+  ]]);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TOP 30 BUSIEST STEWARDS (Rows 51-80)
+  // ══════════════════════════════════════════════════════════════════════
+  var busiestRows = [];
+  for (var b = 0; b < 30; b++) {
+    if (b < metrics.busiestStewards.length) {
+      var steward = metrics.busiestStewards[b];
+      busiestRows.push([b + 1, steward.name, steward.active, steward.open, steward.pendingInfo, steward.total]);
+    } else {
+      busiestRows.push(['', '', '', '', '', '']);
+    }
+  }
+  sheet.getRange('A51:F80').setValues(busiestRows);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // TOP 10 PERFORMERS (Rows 84-93)
+  // ══════════════════════════════════════════════════════════════════════
+  var topRows = [];
+  for (var t = 0; t < 10; t++) {
+    if (t < metrics.topPerformers.length) {
+      var perf = metrics.topPerformers[t];
+      topRows.push([t + 1, perf.name, perf.score, perf.winRate, perf.avgDays, perf.overdue]);
+    } else {
+      topRows.push(['', '', '', '', '', '']);
+    }
+  }
+  sheet.getRange('A84:F93').setValues(topRows);
+
+  // ══════════════════════════════════════════════════════════════════════
+  // STEWARDS NEEDING SUPPORT (Rows 97-106)
+  // ══════════════════════════════════════════════════════════════════════
+  var bottomRows = [];
+  for (var n = 0; n < 10; n++) {
+    if (n < metrics.needingSupport.length) {
+      var need = metrics.needingSupport[n];
+      bottomRows.push([n + 1, need.name, need.score, need.winRate, need.avgDays, need.overdue]);
+    } else {
+      bottomRows.push(['', '', '', '', '', '']);
+    }
+  }
+  sheet.getRange('A97:F106').setValues(bottomRows);
+}
+
+/**
+ * Sync Member Satisfaction sheet with computed values (no formulas)
+ * Calculates section averages for all response rows and dashboard summary
+ */
+function syncSatisfactionValues() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!sheet) {
+    Logger.log('Member Satisfaction sheet not found');
+    return;
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    // No data to process, just write empty dashboard
+    writeSatisfactionDashboard_(sheet, [], []);
+    return;
+  }
+
+  // Get all response data (columns A-BK, 1-63)
+  var responseData = sheet.getRange(2, 1, lastRow - 1, 63).getValues();
+
+  // Calculate section averages for each row
+  var sectionAverages = computeSectionAverages_(responseData);
+
+  // Write section averages to columns BT-CD (72-82)
+  if (sectionAverages.length > 0) {
+    sheet.getRange(2, 72, sectionAverages.length, 11).setValues(sectionAverages);
+  }
+
+  // Calculate and write dashboard metrics
+  writeSatisfactionDashboard_(sheet, responseData, sectionAverages);
+
+  Logger.log('Member Satisfaction values synced for ' + responseData.length + ' responses');
+}
+
+/**
+ * Compute section averages for satisfaction survey rows
+ * @param {Array} responseData - 2D array of survey response data
+ * @return {Array} 2D array of section averages (11 columns per row)
+ * @private
+ */
+function computeSectionAverages_(responseData) {
+  var results = [];
+
+  for (var r = 0; r < responseData.length; r++) {
+    var row = responseData[r];
+    if (!row[0]) continue; // Skip empty rows
+
+    var averages = [];
+
+    // Overall Satisfaction (Q6-9: columns G-J, indices 6-9)
+    averages.push(computeAverage_(row, 6, 9));
+
+    // Steward Rating (Q10-16: columns K-Q, indices 10-16)
+    averages.push(computeAverage_(row, 10, 16));
+
+    // Steward Access (Q18-20: columns S-U, indices 18-20)
+    averages.push(computeAverage_(row, 18, 20));
+
+    // Chapter (Q21-25: columns V-Z, indices 21-25)
+    averages.push(computeAverage_(row, 21, 25));
+
+    // Leadership (Q26-31: columns AA-AF, indices 26-31)
+    averages.push(computeAverage_(row, 26, 31));
+
+    // Contract (Q32-35: columns AG-AJ, indices 32-35)
+    averages.push(computeAverage_(row, 32, 35));
+
+    // Representation (Q37-40: columns AL-AO, indices 37-40)
+    averages.push(computeAverage_(row, 37, 40));
+
+    // Communication (Q41-45: columns AP-AT, indices 41-45)
+    averages.push(computeAverage_(row, 41, 45));
+
+    // Member Voice (Q46-50: columns AU-AY, indices 46-50)
+    averages.push(computeAverage_(row, 46, 50));
+
+    // Value/Action (Q51-55: columns AZ-BD, indices 51-55)
+    averages.push(computeAverage_(row, 51, 55));
+
+    // Scheduling (Q56-62: columns BE-BK, indices 56-62)
+    averages.push(computeAverage_(row, 56, 62));
+
+    results.push(averages);
+  }
+
+  return results;
+}
+
+/**
+ * Compute average of numeric values in a row range
+ * @param {Array} row - Single row of data
+ * @param {number} startIdx - Start index (0-based)
+ * @param {number} endIdx - End index (0-based, inclusive)
+ * @return {number|string} Average or empty string if no valid values
+ * @private
+ */
+function computeAverage_(row, startIdx, endIdx) {
+  var values = [];
+  for (var i = startIdx; i <= endIdx; i++) {
+    var val = row[i];
+    if (typeof val === 'number' && !isNaN(val)) {
+      values.push(val);
+    }
+  }
+
+  if (values.length === 0) return '';
+
+  var sum = values.reduce(function(a, b) { return a + b; }, 0);
+  return Math.round(sum / values.length * 100) / 100;
+}
+
+/**
+ * Write satisfaction dashboard summary values
+ * @param {Sheet} sheet - The Satisfaction sheet
+ * @param {Array} responseData - Raw response data
+ * @param {Array} sectionAverages - Computed section averages
+ * @private
+ */
+function writeSatisfactionDashboard_(sheet, responseData, sectionAverages) {
+  var dashStart = 84; // Column CF
+  var demoStart = 87; // Column CH
+  var chartStart = 90; // Column CK
+
+  // Calculate aggregate metrics
+  var totalResponses = responseData.length;
+  var responsePeriod = 'No data';
+  if (totalResponses > 0) {
+    var timestamps = responseData.map(function(r) { return r[0]; }).filter(function(t) { return t instanceof Date; });
+    if (timestamps.length > 0) {
+      var minDate = new Date(Math.min.apply(null, timestamps));
+      var maxDate = new Date(Math.max.apply(null, timestamps));
+      responsePeriod = Utilities.formatDate(minDate, Session.getScriptTimeZone(), 'MM/dd') + ' - ' +
+                       Utilities.formatDate(maxDate, Session.getScriptTimeZone(), 'MM/dd');
+    }
+  }
+
+  // Calculate section score averages
+  var sectionScores = [];
+  var sectionNames = ['Overall Satisfaction', 'Steward Rating', 'Steward Access', 'Chapter Effectiveness',
+                      'Local Leadership', 'Contract Enforcement', 'Representation', 'Communication',
+                      'Member Voice', 'Value & Action', 'Scheduling'];
+
+  for (var s = 0; s < 11; s++) {
+    var values = sectionAverages.map(function(r) { return r[s]; }).filter(function(v) { return typeof v === 'number'; });
+    var avg = values.length > 0 ? Math.round(values.reduce(function(a, b) { return a + b; }, 0) / values.length * 10) / 10 : '';
+    sectionScores.push(avg);
+  }
+
+  // Write Response Summary (rows 4-19, columns CF-CG)
+  var summaryData = [
+    ['Total Responses', totalResponses],
+    ['Response Period', responsePeriod],
+    ['', ''],
+    ['📊 SECTION SCORES', ''],
+    ['Section', 'Avg Score']
+  ];
+  for (var i = 0; i < sectionNames.length; i++) {
+    summaryData.push([sectionNames[i], sectionScores[i]]);
+  }
+  sheet.getRange(4, dashStart, summaryData.length, 2).setValues(summaryData);
+
+  // Calculate demographics
+  var shifts = { Day: 0, Evening: 0, Night: 0, Rotating: 0 };
+  var tenure = { '<1': 0, '1-3': 0, '4-7': 0, '8-15': 0, '15+': 0 };
+  var stewardContact = { Yes: 0, No: 0 };
+  var filedGrievance = { Yes: 0, No: 0 };
+
+  for (var d = 0; d < responseData.length; d++) {
+    var row = responseData[d];
+
+    // Shift (column D, index 3)
+    var shift = row[3];
+    if (shift === 'Day') shifts.Day++;
+    else if (shift === 'Evening') shifts.Evening++;
+    else if (shift === 'Night') shifts.Night++;
+    else if (shift === 'Rotating') shifts.Rotating++;
+
+    // Tenure (column E, index 4)
+    var ten = String(row[4] || '');
+    if (ten.indexOf('<1') >= 0) tenure['<1']++;
+    else if (ten.indexOf('1-3') >= 0) tenure['1-3']++;
+    else if (ten.indexOf('4-7') >= 0) tenure['4-7']++;
+    else if (ten.indexOf('8-15') >= 0) tenure['8-15']++;
+    else if (ten.indexOf('15+') >= 0) tenure['15+']++;
+
+    // Steward contact (column F, index 5)
+    if (row[5] === 'Yes') stewardContact.Yes++;
+    else if (row[5] === 'No') stewardContact.No++;
+
+    // Filed grievance (column AK, index 36)
+    if (row[36] === 'Yes') filedGrievance.Yes++;
+    else if (row[36] === 'No') filedGrievance.No++;
+  }
+
+  // Write Demographics (rows 4-23, columns CH-CI)
+  var demoData = [
+    ['Shift Breakdown', ''],
+    ['Day', shifts.Day],
+    ['Evening', shifts.Evening],
+    ['Night', shifts.Night],
+    ['Rotating', shifts.Rotating],
+    ['', ''],
+    ['Tenure', ''],
+    ['<1 year', tenure['<1']],
+    ['1-3 years', tenure['1-3']],
+    ['4-7 years', tenure['4-7']],
+    ['8-15 years', tenure['8-15']],
+    ['15+ years', tenure['15+']],
+    ['', ''],
+    ['Steward Contact', ''],
+    ['Yes (12 mo)', stewardContact.Yes],
+    ['No', stewardContact.No],
+    ['', ''],
+    ['Filed Grievance', ''],
+    ['Yes (24 mo)', filedGrievance.Yes],
+    ['No', filedGrievance.No]
+  ];
+  sheet.getRange(4, demoStart, demoData.length, 2).setValues(demoData);
+
+  // Write Chart Data (rows 4-15, columns CK-CL)
+  var chartSectionNames = ['Overall Satisfaction', 'Steward Rating', 'Steward Access', 'Chapter',
+                           'Leadership', 'Contract', 'Representation', 'Communication',
+                           'Member Voice', 'Value & Action', 'Scheduling'];
+  var chartData = [['Section', 'Score']];
+  for (var c = 0; c < 11; c++) {
+    var score = typeof sectionScores[c] === 'number' ? Math.round(sectionScores[c] * 100) / 100 : 0;
+    chartData.push([chartSectionNames[c], score]);
+  }
+  sheet.getRange(4, chartStart, chartData.length, 2).setValues(chartData);
+}
+
+/**
+ * Compute section averages for a single new survey response row
+ * Used by onSatisfactionFormSubmit for efficiency (only computes one row)
+ * @param {number} row - Row number of the new response
+ */
+function computeSatisfactionRowAverages(row) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!sheet || row < 2) return;
+
+  // Get the response data for this row (columns A-BK, 1-63)
+  var rowData = sheet.getRange(row, 1, 1, 63).getValues()[0];
+
+  if (!rowData[0]) return; // Skip if no timestamp
+
+  var averages = [];
+
+  // Overall Satisfaction (Q6-9: indices 6-9)
+  averages.push(computeAverage_(rowData, 6, 9));
+  // Steward Rating (Q10-16: indices 10-16)
+  averages.push(computeAverage_(rowData, 10, 16));
+  // Steward Access (Q18-20: indices 18-20)
+  averages.push(computeAverage_(rowData, 18, 20));
+  // Chapter (Q21-25: indices 21-25)
+  averages.push(computeAverage_(rowData, 21, 25));
+  // Leadership (Q26-31: indices 26-31)
+  averages.push(computeAverage_(rowData, 26, 31));
+  // Contract (Q32-35: indices 32-35)
+  averages.push(computeAverage_(rowData, 32, 35));
+  // Representation (Q37-40: indices 37-40)
+  averages.push(computeAverage_(rowData, 37, 40));
+  // Communication (Q41-45: indices 41-45)
+  averages.push(computeAverage_(rowData, 41, 45));
+  // Member Voice (Q46-50: indices 46-50)
+  averages.push(computeAverage_(rowData, 46, 50));
+  // Value/Action (Q51-55: indices 51-55)
+  averages.push(computeAverage_(rowData, 51, 55));
+  // Scheduling (Q56-62: indices 56-62)
+  averages.push(computeAverage_(rowData, 56, 62));
+
+  // Write section averages to this row (columns BT-CD, 72-82)
+  sheet.getRange(row, 72, 1, 11).setValues([averages]);
+}
+
+/**
+ * Sync Feedback sheet with computed values (no formulas)
+ * Calculates feedback metrics and writes values
+ */
+function syncFeedbackValues() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.FEEDBACK);
+
+  if (!sheet) {
+    Logger.log('Feedback sheet not found');
+    return;
+  }
+
+  var lastRow = sheet.getLastRow();
+
+  // Get feedback data
+  var totalItems = 0;
+  var bugs = 0;
+  var features = 0;
+  var improvements = 0;
+  var newOpen = 0;
+  var resolved = 0;
+  var critical = 0;
+
+  if (lastRow >= 2) {
+    // Get data from columns Type, Status, Priority
+    var typeCol = FEEDBACK_COLS.TYPE;
+    var statusCol = FEEDBACK_COLS.STATUS;
+    var priorityCol = FEEDBACK_COLS.PRIORITY;
+
+    var data = sheet.getRange(2, 1, lastRow - 1, Math.max(typeCol, statusCol, priorityCol)).getValues();
+
+    for (var r = 0; r < data.length; r++) {
+      var row = data[r];
+      if (!row[0]) continue; // Skip empty rows
+
+      totalItems++;
+
+      var type = row[typeCol - 1];
+      var status = row[statusCol - 1];
+      var priority = row[priorityCol - 1];
+
+      if (type === 'Bug') bugs++;
+      else if (type === 'Feature Request') features++;
+      else if (type === 'Improvement') improvements++;
+
+      if (status === 'New' || status === 'In Progress') newOpen++;
+      else if (status === 'Resolved') resolved++;
+
+      if (priority === 'Critical') critical++;
+    }
+  }
+
+  var resolutionRate = totalItems > 0 ? Math.round(resolved / totalItems * 1000) / 10 + '%' : '0%';
+
+  // Write metrics to columns M-O (13-15), rows 3-10
+  var metricsData = [
+    ['Total Items', totalItems, 'All feedback items'],
+    ['Bugs', bugs, 'Bug reports'],
+    ['Feature Requests', features, 'New feature asks'],
+    ['Improvements', improvements, 'Enhancement suggestions'],
+    ['New/Open', newOpen, 'Unresolved items'],
+    ['Resolved', resolved, 'Completed items'],
+    ['Critical Priority', critical, 'Urgent items'],
+    ['Resolution Rate', resolutionRate, 'Percentage resolved']
+  ];
+
+  sheet.getRange(3, 13, metricsData.length, 3).setValues(metricsData);
+
+  Logger.log('Feedback values synced');
 }
 
 /**

@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.9.0 (Form Workflows: Grievance, Contact Info, Satisfaction Survey)
-**Last Updated:** 2026-01-11
+**Version:** 2.0.0 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Last Updated:** 2026-01-12
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -69,6 +69,42 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 4. **Insights** - Worksite/role breakdowns, steward contact impact analysis, top member priorities
 
 **Why Added:** Provides interactive survey analysis without leaving the spreadsheet, matching the Custom View pattern.
+
+---
+
+## No Formulas in Visible Sheets Architecture
+
+**Design Principle:** All visible sheets (Dashboard, Member Satisfaction, Feedback) contain only VALUES, never formulas. This provides:
+
+1. **Self-Healing Data** - Values are recomputed by JavaScript on each data change
+2. **Reliability** - No broken formula references when rows are added/deleted
+3. **Performance** - No circular dependency calculations or formula chains
+4. **Consistency** - All data flows through controlled sync functions
+
+### How It Works
+
+| Visible Sheet | Sync Function | When Called |
+|---------------|---------------|-------------|
+| Dashboard | `syncDashboardValues()` | On Grievance Log or Member Directory edit |
+| Member Satisfaction | `syncSatisfactionValues()` | On form submission, sheet creation |
+| Feedback | `syncFeedbackValues()` | On Feedback sheet edit |
+
+### Data Flow
+
+```
+User Edit → onEditAutoSync() → syncDashboardValues() → writeDashboardValues_()
+                                                      └── computeDashboardMetrics_()
+Form Submit → onSatisfactionFormSubmit() → computeSatisfactionRowAverages()
+                                         → syncSatisfactionValues()
+```
+
+### Member Directory: Start Grievance Checkbox
+
+When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
+1. `onEditAutoSync()` detects the checkbox change
+2. Checkbox is immediately unchecked (so it can be reused)
+3. `openGrievanceFormForRow_()` opens a pre-filled grievance form with member data
+4. User completes form → `onGrievanceFormSubmit()` adds to Grievance Log
 
 ---
 
@@ -208,7 +244,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~1500 lines)
+**HiddenSheets.gs** (~2400 lines)
 - `setupAllHiddenSheets()` - Create all 6 hidden calculation sheets
 - Hidden Sheet Setup Functions (6 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -223,8 +259,22 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
   - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
+- **Value Sync Functions (No Formulas in Visible Sheets):**
+  - `syncDashboardValues()` - Compute and write all Dashboard metrics as VALUES (no formulas)
+  - `computeDashboardMetrics_()` - Calculate all 100+ Dashboard metrics from raw data
+  - `writeDashboardValues_()` - Write computed values to Dashboard cells
+  - `syncSatisfactionValues()` - Compute and write all Member Satisfaction metrics as VALUES
+  - `computeSectionAverages_()` - Calculate section averages for survey rows
+  - `computeAverage_()` - Helper for calculating averages
+  - `writeSatisfactionDashboard_()` - Write summary, demographics, chart data
+  - `computeSatisfactionRowAverages(row)` - Compute averages for a single new survey row
+  - `syncFeedbackValues()` - Compute and write Feedback sheet metrics as VALUES
+- Member Directory Actions:
+  - `openGrievanceFormForRow_(sheet, row)` - Opens pre-filled grievance form for member
+  - `getCurrentStewardInfo_(ss)` - Get current user's steward info
+  - `buildGrievanceFormUrl_(memberData, stewardData)` - Build pre-filled form URL
 - Trigger & Repair Functions:
-  - `onEditAutoSync()` - Auto-sync trigger handler
+  - `onEditAutoSync()` - Auto-sync trigger handler (now syncs Dashboard, Satisfaction, Feedback)
   - `installAutoSyncTrigger()` - Install the onEdit trigger
   - `removeAutoSyncTrigger()` - Remove the onEdit trigger
   - `repairAllHiddenSheets()` - Self-healing repair function

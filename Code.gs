@@ -794,18 +794,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Quick stats formulas - reference hidden calculation sheet
-  var quickStatsFormulas = [
-    [
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B2,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B3,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B5+\'' + SHEETS.DASHBOARD_CALC + '\'!B6,0)',
-      '=IFERROR(TEXT(\'' + SHEETS.DASHBOARD_CALC + '\'!B11/100,"0%"),"-")',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B13,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B14,0)'
-    ]
-  ];
-  sheet.getRange('A6:F6').setFormulas(quickStatsFormulas)
+  // Quick stats values (populated by syncDashboardValues)
+  sheet.getRange('A6:F6')
     .setFontSize(20)
     .setHorizontalAlignment('center')
     .setFontWeight('bold');
@@ -825,20 +815,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
-  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
-  var mOpenRateCol = getColumnLetter(MEMBER_COLS.OPEN_RATE);
-  var mVolHoursCol = getColumnLetter(MEMBER_COLS.VOLUNTEER_HOURS);
-
-  var memberMetricFormulas = [
-    [
-      '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1',
-      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")',
-      '=IFERROR(ROUND(AVERAGE(\'' + SHEETS.MEMBER_DIR + '\'!' + mOpenRateCol + ':' + mOpenRateCol + '),1)&"%","-")',
-      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + mVolHoursCol + ':' + mVolHoursCol + ')'
-    ]
-  ];
-  sheet.getRange('A10:D10').setFormulas(memberMetricFormulas)
+  // Member metric values (populated by syncDashboardValues)
+  sheet.getRange('A10:D10')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -857,20 +835,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
-  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
-
-  var grievanceFormulas = [
-    [
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")'
-    ]
-  ];
-  sheet.getRange('A14:F14').setFormulas(grievanceFormulas)
+  // Grievance metric values (populated by syncDashboardValues)
+  sheet.getRange('A14:F14')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -889,19 +855,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gDaysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
-  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
-  var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);
-
-  var timelineFormulas = [
-    [
-      '=IFERROR(ROUND(AVERAGE(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
-      '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)'
-    ]
-  ];
-  sheet.getRange('A18:D18').setFormulas(timelineFormulas)
+  // Timeline metric values (populated by syncDashboardValues)
+  sheet.getRange('A18:D18')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -920,25 +875,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gIssueCatCol = getColumnLetter(GRIEVANCE_COLS.ISSUE_CATEGORY);
-  var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
-
-  // Top 5 issue categories with metrics - using QUERY formulas
-  var categoryFormulas = [];
-  var defaultCategories = ['Contract Violation', 'Discipline', 'Workload', 'Safety', 'Discrimination'];
-  for (var c = 0; c < 5; c++) {
-    var cat = defaultCategories[c];
-    categoryFormulas.push([
-      '="' + cat + '"',  // Wrap text as formula for setFormulas()
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Open")-COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
-      '=IFERROR(TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),"0%"),"-")',
-      '=IFERROR(ROUND(AVERAGEIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),1),"-")'
-    ]);
-  }
-  sheet.getRange('A22:F26').setFormulas(categoryFormulas)
-    .setHorizontalAlignment('center');
+  // Type analysis values (populated by syncDashboardValues)
+  sheet.getRange('A22:F26').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 6: LOCATION BREAKDOWN
@@ -955,26 +893,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
-  var gLocationCol = getColumnLetter(GRIEVANCE_COLS.LOCATION);  // GRIEVANCE_COLS uses LOCATION not WORK_LOCATION
-  var configLocCol = getColumnLetter(CONFIG_COLS.OFFICE_LOCATIONS);
-
-  // Location formulas - pulls top 5 locations from Config and calculates metrics
-  var locationFormulas = [];
-  for (var loc = 0; loc < 5; loc++) {
-    var configRow = 3 + loc;  // Config data starts at row 3
-    var locRef = '\'' + SHEETS.CONFIG + '\'!' + configLocCol + configRow;
-    locationFormulas.push([
-      '=IFERROR(' + locRef + ',"")',
-      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',' + locRef + '),"")',
-      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"")',
-      '=IF(' + locRef + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")',
-      '=IF(AND(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ')>0),TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"0%"),"-")',
-      '="-"'  // Satisfaction requires separate tracking
-    ]);
-  }
-  sheet.getRange('A30:F34').setFormulas(locationFormulas)
-    .setHorizontalAlignment('center');
+  // Location values (populated by syncDashboardValues)
+  sheet.getRange('A30:F34').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 7: MONTH-OVER-MONTH TRENDS (moved up from rows 40-44)
@@ -991,35 +911,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Trend rows: Filed, Closed, Won
-  var trendData = [
-    [
-      '="Grievances Filed"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
-      '=B38-C38',
-      '=IFERROR(TEXT((B38-C38)/C38,"0%"),"-")',
-      '=IF(B38>C38,"📈",IF(B38<C38,"📉","➡️"))'
-    ],
-    [
-      '="Grievances Closed"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
-      '=B39-C39',
-      '=IFERROR(TEXT((B39-C39)/C39,"0%"),"-")',
-      '=IF(B39>C39,"📈",IF(B39<C39,"📉","➡️"))'
-    ],
-    [
-      '="Cases Won"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=B40-C40',
-      '=IFERROR(TEXT((B40-C40)/C40,"0%"),"-")',
-      '=IF(B40>C40,"📈",IF(B40<C40,"📉","➡️"))'
-    ]
-  ];
-  sheet.getRange('A38:F40').setFormulas(trendData)
-    .setHorizontalAlignment('center');
+  // Trend values (populated by syncDashboardValues)
+  sheet.getRange('A38:F40').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 8: STATUS LEGEND (compact - fits in A-F only)
@@ -1040,10 +933,6 @@ function createDashboard(ss) {
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 9: STEWARD PERFORMANCE SUMMARY (moved to near bottom)
   // ═══════════════════════════════════════════════════════════════════════════
-  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
-  var gAssignedStewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);
-  var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
-
   sheet.getRange('A45').setValue('👨‍⚖️ STEWARD PERFORMANCE SUMMARY')
     .setFontWeight('bold')
     .setBackground('#7C3AED')  // Purple
@@ -1056,17 +945,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var stewardFormulas = [
-    [
-      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")',
-      '=IFERROR(ROWS(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + '<>"",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '="Open"))),0)',
-      '=IFERROR(ROUND((COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)/COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes"),1),"-")',
-      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + mVolHoursCol + ':' + mVolHoursCol + ')',
-      '=COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',"<="&TODAY())',
-      '=""'
-    ]
-  ];
-  sheet.getRange('A47:F47').setFormulas(stewardFormulas)
+  // Steward summary values (populated by syncDashboardValues)
+  sheet.getRange('A47:F47')
     .setFontSize(16)
     .setHorizontalAlignment('center');
 
@@ -1085,32 +965,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Use QUERY to get top 30 stewards sorted by active case count (Open + Pending Info)
-  // This properly sorts by workload, not alphabetically
-  var queryFormula = '=IFERROR(QUERY({' +
-    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',' +
-    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '},' +
-    '"SELECT Col1, COUNT(Col1) WHERE Col1 <> \'\' AND Col1 <> \'Assigned Steward\' AND (Col2 = \'Open\' OR Col2 = \'Pending Info\') ' +
-    'GROUP BY Col1 ORDER BY COUNT(Col1) DESC LIMIT 30 LABEL COUNT(Col1) \'\'",' +
-    '0),{"",""})';
-
-  // Place QUERY result starting at B51 - this returns steward names and their active counts
-  sheet.getRange('B51').setFormula(queryFormula);
-
-  // Generate rank numbers and additional metrics for rows 51-80
-  for (var rank = 1; rank <= 30; rank++) {
-    var row = 50 + rank;
-    // Rank number
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-    // Open cases (just Open status)
-    sheet.getRange('D' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")');
-    // Pending Info cases
-    sheet.getRange('E' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),"")');
-    // Total Ever (all cases for this steward)
-    sheet.getRange('F' + row).setFormula('=IF(B' + row + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + '),"")');
-  }
-
-  // Set horizontal alignment for all data rows
+  // Busiest stewards values (populated by syncDashboardValues)
   sheet.getRange('A51:F80').setHorizontalAlignment('center');
 
   // Alternate row coloring for busiest stewards list
@@ -1135,18 +990,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Query hidden sheet for top 10 by Performance Score (descending)
-  var topPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
-    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J DESC LIMIT 10",' +
-    '0),{"","","","",""})';
-  sheet.getRange('B84').setFormula(topPerfQuery);
-
-  // Add rank numbers for top performers
-  for (var rank = 1; rank <= 10; rank++) {
-    var row = 83 + rank;
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-  }
-
+  // Top performers values (populated by syncDashboardValues)
   // Alternate row coloring for top performers
   for (var r = 84; r <= 93; r++) {
     if (r % 2 === 0) {
@@ -1170,18 +1014,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Query hidden sheet for bottom 10 by Performance Score (ascending)
-  var lowPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
-    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J ASC LIMIT 10",' +
-    '0),{"","","","",""})';
-  sheet.getRange('B97').setFormula(lowPerfQuery);
-
-  // Add rank numbers for bottom performers (1 = lowest score)
-  for (var rank = 1; rank <= 10; rank++) {
-    var row = 96 + rank;
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-  }
-
+  // Stewards needing support values (populated by syncDashboardValues)
   // Alternate row coloring for bottom performers
   for (var r = 97; r <= 106; r++) {
     if (r % 2 === 1) {
@@ -1244,6 +1077,9 @@ function createDashboard(ss) {
   // Stewards Needing Support (rows 97-106)
   sheet.getRange('C97:D106').setNumberFormat(decimalFormat);  // Score, Win Rate
   sheet.getRange('E97:F106').setNumberFormat(numberFormat);   // Avg Days, Overdue
+
+  // Populate all values using JavaScript-computed metrics (no formulas in visible sheet)
+  syncDashboardValues();
 }
 
 /**
@@ -1526,31 +1362,8 @@ function createSatisfactionSheet(ss) {
     sheet.setColumnWidth(sc, 65);
   }
 
-  // Add section average formulas for rows 2-500
-  for (var row = 2; row <= 500; row++) {
-    // Overall Satisfaction (Q6-9: G-J, cols 7-10)
-    sheet.getRange(row, 72).setFormula('=IFERROR(AVERAGE(G' + row + ':J' + row + '),"")');
-    // Steward Rating (Q10-16: K-Q, cols 11-17)
-    sheet.getRange(row, 73).setFormula('=IFERROR(AVERAGE(K' + row + ':Q' + row + '),"")');
-    // Steward Access (Q18-20: S-U, cols 19-21)
-    sheet.getRange(row, 74).setFormula('=IFERROR(AVERAGE(S' + row + ':U' + row + '),"")');
-    // Chapter (Q21-25: V-Z, cols 22-26)
-    sheet.getRange(row, 75).setFormula('=IFERROR(AVERAGE(V' + row + ':Z' + row + '),"")');
-    // Leadership (Q26-31: AA-AF, cols 27-32)
-    sheet.getRange(row, 76).setFormula('=IFERROR(AVERAGE(AA' + row + ':AF' + row + '),"")');
-    // Contract (Q32-35: AG-AJ, cols 33-36)
-    sheet.getRange(row, 77).setFormula('=IFERROR(AVERAGE(AG' + row + ':AJ' + row + '),"")');
-    // Representation (Q37-40: AL-AO, cols 38-41)
-    sheet.getRange(row, 78).setFormula('=IFERROR(AVERAGE(AL' + row + ':AO' + row + '),"")');
-    // Communication (Q41-45: AP-AT, cols 42-46)
-    sheet.getRange(row, 79).setFormula('=IFERROR(AVERAGE(AP' + row + ':AT' + row + '),"")');
-    // Member Voice (Q46-50: AU-AY, cols 47-51)
-    sheet.getRange(row, 80).setFormula('=IFERROR(AVERAGE(AU' + row + ':AY' + row + '),"")');
-    // Value/Action (Q51-55: AZ-BD, cols 52-56)
-    sheet.getRange(row, 81).setFormula('=IFERROR(AVERAGE(AZ' + row + ':BD' + row + '),"")');
-    // Scheduling (Q56-62: BE-BK, cols 57-63)
-    sheet.getRange(row, 82).setFormula('=IFERROR(AVERAGE(BE' + row + ':BK' + row + '),"")');
-  }
+  // Section averages (columns BT-CD) are computed by syncSatisfactionValues()
+  // No formulas in visible sheet - values are written by JavaScript
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DASHBOARD / CHART DATA AREA (Columns CF onwards - col 84+)
@@ -1573,33 +1386,26 @@ function createSatisfactionSheet(ss) {
     .setBackground(COLORS.LIGHT_GRAY);
   sheet.getRange(3, dashStart, 1, 2).merge();
 
+  // Response summary labels (values populated by syncSatisfactionValues)
   var responseSummary = [
-    ['Total Responses', '=COUNTA(A2:A)'],
-    ['Response Period', '=IF(COUNTA(A2:A)>0,TEXT(MIN(A2:A),"MM/DD")&" - "&TEXT(MAX(A2:A),"MM/DD"),"No data")'],
+    ['Total Responses', ''],
+    ['Response Period', ''],
     ['', ''],
     ['📊 SECTION SCORES', ''],
     ['Section', 'Avg Score'],
-    ['Overall Satisfaction', '=IFERROR(ROUND(AVERAGE(BT2:BT),1),"")'],
-    ['Steward Rating', '=IFERROR(ROUND(AVERAGE(BU2:BU),1),"")'],
-    ['Steward Access', '=IFERROR(ROUND(AVERAGE(BV2:BV),1),"")'],
-    ['Chapter Effectiveness', '=IFERROR(ROUND(AVERAGE(BW2:BW),1),"")'],
-    ['Local Leadership', '=IFERROR(ROUND(AVERAGE(BX2:BX),1),"")'],
-    ['Contract Enforcement', '=IFERROR(ROUND(AVERAGE(BY2:BY),1),"")'],
-    ['Representation', '=IFERROR(ROUND(AVERAGE(BZ2:BZ),1),"")'],
-    ['Communication', '=IFERROR(ROUND(AVERAGE(CA2:CA),1),"")'],
-    ['Member Voice', '=IFERROR(ROUND(AVERAGE(CB2:CB),1),"")'],
-    ['Value & Action', '=IFERROR(ROUND(AVERAGE(CC2:CC),1),"")'],
-    ['Scheduling', '=IFERROR(ROUND(AVERAGE(CD2:CD),1),"")']
+    ['Overall Satisfaction', ''],
+    ['Steward Rating', ''],
+    ['Steward Access', ''],
+    ['Chapter Effectiveness', ''],
+    ['Local Leadership', ''],
+    ['Contract Enforcement', ''],
+    ['Representation', ''],
+    ['Communication', ''],
+    ['Member Voice', ''],
+    ['Value & Action', ''],
+    ['Scheduling', '']
   ];
-
-  for (var rs = 0; rs < responseSummary.length; rs++) {
-    sheet.getRange(4 + rs, dashStart).setValue(responseSummary[rs][0]);
-    if (responseSummary[rs][1].startsWith('=')) {
-      sheet.getRange(4 + rs, dashStart + 1).setFormula(responseSummary[rs][1]);
-    } else {
-      sheet.getRange(4 + rs, dashStart + 1).setValue(responseSummary[rs][1]);
-    }
-  }
+  sheet.getRange(4, dashStart, responseSummary.length, 2).setValues(responseSummary);
 
   // Format headers
   sheet.getRange(7, dashStart, 1, 2).setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
@@ -1620,37 +1426,30 @@ function createSatisfactionSheet(ss) {
     .setBackground(COLORS.LIGHT_GRAY);
   sheet.getRange(3, demoStart, 1, 2).merge();
 
+  // Demographics labels (values populated by syncSatisfactionValues)
   var demographics = [
     ['Shift Breakdown', ''],
-    ['Day', '=COUNTIF(D2:D,"Day")'],
-    ['Evening', '=COUNTIF(D2:D,"Evening")'],
-    ['Night', '=COUNTIF(D2:D,"Night")'],
-    ['Rotating', '=COUNTIF(D2:D,"Rotating")'],
+    ['Day', ''],
+    ['Evening', ''],
+    ['Night', ''],
+    ['Rotating', ''],
     ['', ''],
     ['Tenure', ''],
-    ['<1 year', '=COUNTIF(E2:E,"<1*")'],
-    ['1-3 years', '=COUNTIF(E2:E,"1-3*")'],
-    ['4-7 years', '=COUNTIF(E2:E,"4-7*")'],
-    ['8-15 years', '=COUNTIF(E2:E,"8-15*")'],
-    ['15+ years', '=COUNTIF(E2:E,"15+*")'],
+    ['<1 year', ''],
+    ['1-3 years', ''],
+    ['4-7 years', ''],
+    ['8-15 years', ''],
+    ['15+ years', ''],
     ['', ''],
     ['Steward Contact', ''],
-    ['Yes (12 mo)', '=COUNTIF(F2:F,"Yes")'],
-    ['No', '=COUNTIF(F2:F,"No")'],
+    ['Yes (12 mo)', ''],
+    ['No', ''],
     ['', ''],
     ['Filed Grievance', ''],
-    ['Yes (24 mo)', '=COUNTIF(AK2:AK,"Yes")'],
-    ['No', '=COUNTIF(AK2:AK,"No")']
+    ['Yes (24 mo)', ''],
+    ['No', '']
   ];
-
-  for (var d = 0; d < demographics.length; d++) {
-    sheet.getRange(4 + d, demoStart).setValue(demographics[d][0]);
-    if (demographics[d][1].startsWith('=')) {
-      sheet.getRange(4 + d, demoStart + 1).setFormula(demographics[d][1]);
-    } else {
-      sheet.getRange(4 + d, demoStart + 1).setValue(demographics[d][1]);
-    }
-  }
+  sheet.getRange(4, demoStart, demographics.length, 2).setValues(demographics);
 
   // Format demographic headers
   sheet.getRange(4, demoStart, 1, 2).setFontWeight('bold').setBackground('#E8F0FE');
@@ -1673,29 +1472,22 @@ function createSatisfactionSheet(ss) {
     .setFontColor(COLORS.WHITE);
   sheet.getRange(3, chartStart, 1, 2).merge();
 
+  // Chart data labels (values populated by syncSatisfactionValues)
   var chartData = [
     ['Section', 'Score'],
-    ['Overall Satisfaction', '=IFERROR(ROUND(AVERAGE(BT2:BT),2),0)'],
-    ['Steward Rating', '=IFERROR(ROUND(AVERAGE(BU2:BU),2),0)'],
-    ['Steward Access', '=IFERROR(ROUND(AVERAGE(BV2:BV),2),0)'],
-    ['Chapter', '=IFERROR(ROUND(AVERAGE(BW2:BW),2),0)'],
-    ['Leadership', '=IFERROR(ROUND(AVERAGE(BX2:BX),2),0)'],
-    ['Contract', '=IFERROR(ROUND(AVERAGE(BY2:BY),2),0)'],
-    ['Representation', '=IFERROR(ROUND(AVERAGE(BZ2:BZ),2),0)'],
-    ['Communication', '=IFERROR(ROUND(AVERAGE(CA2:CA),2),0)'],
-    ['Member Voice', '=IFERROR(ROUND(AVERAGE(CB2:CB),2),0)'],
-    ['Value & Action', '=IFERROR(ROUND(AVERAGE(CC2:CC),2),0)'],
-    ['Scheduling', '=IFERROR(ROUND(AVERAGE(CD2:CD),2),0)']
+    ['Overall Satisfaction', 0],
+    ['Steward Rating', 0],
+    ['Steward Access', 0],
+    ['Chapter', 0],
+    ['Leadership', 0],
+    ['Contract', 0],
+    ['Representation', 0],
+    ['Communication', 0],
+    ['Member Voice', 0],
+    ['Value & Action', 0],
+    ['Scheduling', 0]
   ];
-
-  for (var ch = 0; ch < chartData.length; ch++) {
-    sheet.getRange(4 + ch, chartStart).setValue(chartData[ch][0]);
-    if (chartData[ch][1].startsWith('=')) {
-      sheet.getRange(4 + ch, chartStart + 1).setFormula(chartData[ch][1]);
-    } else {
-      sheet.getRange(4 + ch, chartStart + 1).setValue(chartData[ch][1]);
-    }
-  }
+  sheet.getRange(4, chartStart, chartData.length, 2).setValues(chartData);
 
   sheet.getRange(4, chartStart, 1, 2).setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
   sheet.setColumnWidth(chartStart, 140);
@@ -1865,6 +1657,9 @@ function createSatisfactionSheet(ss) {
     sheet.deleteColumns(89, maxCols - 88);
   }
 
+  // Populate computed values (no formulas in visible sheet)
+  syncSatisfactionValues();
+
   Logger.log('Member Satisfaction sheet created with 68-question survey, dashboard, and chart data');
 }
 
@@ -2018,32 +1813,19 @@ function createFeedbackSheet(ss) {
     .setFontColor(COLORS.WHITE);
   sheet.getRange('M1:O1').merge();
 
-  var typeCol = getColumnLetter(FEEDBACK_COLS.TYPE);
-  var statusCol = getColumnLetter(FEEDBACK_COLS.STATUS);
-  var priorityCol = getColumnLetter(FEEDBACK_COLS.PRIORITY);
-  var idCol = getColumnLetter(FEEDBACK_COLS.TIMESTAMP);
-
+  // Feedback metrics labels (values populated by syncFeedbackValues)
   var feedbackMetrics = [
     ['Metric', 'Value', 'Description'],
-    ['Total Items', '=COUNTA(' + idCol + '2:' + idCol + ')', 'All feedback items'],
-    ['Bugs', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Bug")', 'Bug reports'],
-    ['Feature Requests', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Feature Request")', 'New feature asks'],
-    ['Improvements', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Improvement")', 'Enhancement suggestions'],
-    ['New/Open', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"New")+COUNTIF(' + statusCol + '2:' + statusCol + ',"In Progress")', 'Unresolved items'],
-    ['Resolved', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")', 'Completed items'],
-    ['Critical Priority', '=COUNTIF(' + priorityCol + '2:' + priorityCol + ',"Critical")', 'Urgent items'],
-    ['Resolution Rate', '=IFERROR(ROUND(COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")/COUNTA(' + idCol + '2:' + idCol + ')*100,1)&"%","0%")', 'Percentage resolved']
+    ['Total Items', 0, 'All feedback items'],
+    ['Bugs', 0, 'Bug reports'],
+    ['Feature Requests', 0, 'New feature asks'],
+    ['Improvements', 0, 'Enhancement suggestions'],
+    ['New/Open', 0, 'Unresolved items'],
+    ['Resolved', 0, 'Completed items'],
+    ['Critical Priority', 0, 'Urgent items'],
+    ['Resolution Rate', '0%', 'Percentage resolved']
   ];
-
-  for (var f = 0; f < feedbackMetrics.length; f++) {
-    sheet.getRange(2 + f, 13).setValue(feedbackMetrics[f][0]);
-    if (f === 0) {
-      sheet.getRange(2 + f, 14).setValue(feedbackMetrics[f][1]);
-    } else {
-      sheet.getRange(2 + f, 14).setFormula(feedbackMetrics[f][1]);
-    }
-    sheet.getRange(2 + f, 15).setValue(feedbackMetrics[f][2]);
-  }
+  sheet.getRange(2, 13, feedbackMetrics.length, 3).setValues(feedbackMetrics);
 
   // Format metrics header
   sheet.getRange('M2:O2').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
@@ -2059,6 +1841,9 @@ function createFeedbackSheet(ss) {
   if (maxCols > 15) {
     sheet.deleteColumns(16, maxCols - 15);
   }
+
+  // Populate computed values (no formulas in visible sheet)
+  syncFeedbackValues();
 
   Logger.log('Feedback & Development sheet created');
 }
@@ -4349,6 +4134,13 @@ function onSatisfactionFormSubmit(e) {
 
     // Append row to satisfaction sheet
     satSheet.appendRow(newRow);
+
+    // Compute section averages for the new row (no formulas in visible sheet)
+    var newRowNum = satSheet.getLastRow();
+    computeSatisfactionRowAverages(newRowNum);
+
+    // Update dashboard summary values
+    syncSatisfactionValues();
 
     Logger.log('Satisfaction survey response recorded at ' + new Date());
 
