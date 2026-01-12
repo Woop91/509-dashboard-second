@@ -349,7 +349,7 @@ If the Apps Script API is not enabled:
 - [Main README](README.md) - Complete dashboard documentation
 - [Grievance Workflow Guide](GRIEVANCE_WORKFLOW_GUIDE.md) - How to use grievance features
 - [Interactive Dashboard Guide](INTERACTIVE_DASHBOARD_GUIDE.md) - Customization options
-- [ADHD-Friendly Guide](ADHD_FRIENDLY_GUIDE.md) - Accessibility features
+- [Comfort View Guide](COMFORT_VIEW_GUIDE.md) - Accessibility features
 
 ---
 

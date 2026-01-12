@@ -110,7 +110,7 @@ Complete union member database and grievance tracking system for Local 509.
 ### Major Updates
 - **Three-Tier Menu System**: Reorganized menus by role (User, Manager, Administrator)
 - **Toggle-Based Data Generation**: Seed members and grievances in 5k/2.5k increments
-- **Enhanced Accessibility**: ADHD-friendly controls, dark mode, focus mode, custom themes
+- **Enhanced Accessibility**: Comfort View controls, dark mode, focus mode, custom themes
 - **Advanced Analytics**: Predictive analytics and root cause analysis tools
 - **Performance Optimization**: Caching layer, lazy loading, optimized batch operations
 - **Security Enhancements**: Improved input validation and error handling
@@ -197,7 +197,7 @@ Dashboard (Real-time metrics and visualizations)
 ✅ **Google Drive Integration** - Auto-create folders for grievances, file management
 ✅ **Gmail Integration** - Email templates, communications log, bulk notifications
 ✅ **Calendar Integration** - Sync deadlines, deadline reminders
-✅ **Accessibility Features** - ADHD-friendly controls, dark mode, focus mode, themes
+✅ **Accessibility Features** - Comfort View controls, dark mode, focus mode, themes
 ✅ **Batch Operations** - Bulk steward assignment, status updates, PDF exports
 ✅ **Smart Assignment** - Auto-assign stewards based on workload and expertise
 ✅ **Predictive Analytics** - Forecast trends, identify patterns
@@ -240,7 +240,7 @@ Project Files (9 source files → 1 consolidated deployment)
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
+├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -312,7 +312,7 @@ Features include:
 - **Google Drive**: Folder setup, file uploads, grievance file management
 - **Communications**: Email composition, templates, communications log
 - **Reports**: Custom report builder, CSV exports
-- **Accessibility**: ADHD control panel, theme manager, dark mode, focus mode
+- **Accessibility**: Comfort View panel, theme manager, dark mode, focus mode
 - **Help & Support**: Getting started guide, help resources, keyboard shortcuts
 
 ### 📊 Sheet Manager
@@ -787,7 +787,7 @@ Generate realistic test data for the dashboard:
 ### Recent Enhancements (v2.0)
 ✅ **Three-tier menu system** - Role-based organization for improved usability
 ✅ **Toggle-based seeding** - Incremental data generation to avoid timeouts
-✅ **Enhanced accessibility** - ADHD-friendly features, dark mode, focus mode
+✅ **Enhanced accessibility** - Comfort View features, dark mode, focus mode
 ✅ **Advanced analytics** - Predictive analytics and root cause analysis
 ✅ **Workflow automation** - State machine for grievance lifecycle management
 ✅ **Performance optimization** - Caching, lazy loading, batch operations
