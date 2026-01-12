@@ -860,6 +860,7 @@ function onOpen() {
       .addItem('➕ Start New Grievance', 'startNewGrievance')
       .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
       .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
+      .addItem('📊 Sort by Status Priority', 'sortGrievanceLogByStatus')
       .addSeparator()
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
       .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
