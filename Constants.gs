@@ -272,7 +272,10 @@ var CONFIG_COLS = {
   OFFICE_ADDRESSES: 40,       // AN
   MAIN_FAX: 41,               // AO
   MAIN_CONTACT_NAME: 42,      // AP
-  MAIN_CONTACT_EMAIL: 43      // AQ
+  MAIN_CONTACT_EMAIL: 43,     // AQ
+
+  // ── FORM LINKS ── (AR)
+  SATISFACTION_FORM_URL: 44   // AR - Member Satisfaction Survey form URL
 };
 
 // ============================================================================

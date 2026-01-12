@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 1.8.0 (Member Satisfaction Dashboard)
-**Last Updated:** 2026-01-06
+**Version:** 2.0.0 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Last Updated:** 2026-01-12
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -72,6 +72,42 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 
 ---
 
+## No Formulas in Visible Sheets Architecture
+
+**Design Principle:** All visible sheets (Dashboard, Member Satisfaction, Feedback) contain only VALUES, never formulas. This provides:
+
+1. **Self-Healing Data** - Values are recomputed by JavaScript on each data change
+2. **Reliability** - No broken formula references when rows are added/deleted
+3. **Performance** - No circular dependency calculations or formula chains
+4. **Consistency** - All data flows through controlled sync functions
+
+### How It Works
+
+| Visible Sheet | Sync Function | When Called |
+|---------------|---------------|-------------|
+| Dashboard | `syncDashboardValues()` | On Grievance Log or Member Directory edit |
+| Member Satisfaction | `syncSatisfactionValues()` | On form submission, sheet creation |
+| Feedback | `syncFeedbackValues()` | On Feedback sheet edit |
+
+### Data Flow
+
+```
+User Edit → onEditAutoSync() → syncDashboardValues() → writeDashboardValues_()
+                                                      └── computeDashboardMetrics_()
+Form Submit → onSatisfactionFormSubmit() → computeSatisfactionRowAverages()
+                                         → syncSatisfactionValues()
+```
+
+### Member Directory: Start Grievance Checkbox
+
+When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
+1. `onEditAutoSync()` detects the checkbox change
+2. Checkbox is immediately unchecked (so it can be reused)
+3. `openGrievanceFormForRow_()` opens a pre-filled grievance form with member data
+4. User completes form → `onGrievanceFormSubmit()` adds to Grievance Log
+
+---
+
 ## File Architecture
 
 ### Project Structure (9 Source Files)
@@ -133,9 +169,32 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `recalcAllGrievancesBatched()` - Refresh grievance formulas
 - `refreshMemberDirectoryFormulas()` - Refresh member directory
 - `searchMembers()` - Desktop search dialog
-- `startNewGrievance()` - Start grievance (stub)
+- `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
 - Sheet creation (7 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`
+- Grievance Form Workflow:
+  - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
+  - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory
+  - `getCurrentStewardInfo_()` - Get current user's steward info
+  - `buildGrievanceFormUrl_()` - Build pre-filled form URL with all parameters
+  - `onGrievanceFormSubmit(e)` - Form submission trigger handler (adds to Grievance Log + creates folder)
+  - `setupGrievanceFormTrigger()` - Menu-driven trigger setup for form submissions
+  - `createGrievanceFolderFromData_()` - Create folder with subfolders (Documents, Correspondence, Notes)
+  - `shareWithCoordinators_()` - Share folder with coordinators from Config
+  - `testGrievanceFormSubmission()` - Test function with sample data
+- Contact Info Form Workflow:
+  - `CONTACT_FORM_CONFIG` - Form URL and field entry ID configuration for member contact updates
+  - `sendContactInfoForm()` - Shows blank form link for members to fill out (with copy link option)
+  - `onContactFormSubmit(e)` - Form submission trigger handler (creates new member or updates existing)
+  - `setupContactFormTrigger()` - Menu-driven trigger setup for contact form submissions
+  - `getFormMultiValue_()` - Helper for multi-select checkbox responses
+- Satisfaction Survey Form Workflow:
+  - `SATISFACTION_FORM_CONFIG` - Survey form URL and known field entry IDs
+  - `getSatisfactionSurveyLink()` - Shows survey link for members to fill out (with copy link option)
+  - `onSatisfactionFormSubmit(e)` - Form submission trigger handler (writes to Member Satisfaction sheet)
+  - `setupSatisfactionFormTrigger()` - Menu-driven trigger setup for survey submissions
+- Form URL Configuration:
+  - `saveFormUrlsToConfig()` - Saves all form URLs (Grievance, Contact, Survey) to Config tab columns P, Q, AR
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -185,7 +244,7 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
 - `randomDate()` - Helper: generate random date
 - `addDays()` - Helper: add days to date
 
-**HiddenSheets.gs** (~1500 lines)
+**HiddenSheets.gs** (~2400 lines)
 - `setupAllHiddenSheets()` - Create all 6 hidden calculation sheets
 - Hidden Sheet Setup Functions (6 total):
   - `setupGrievanceCalcSheet()` - Grievance timeline formulas (auto-calc deadlines)
@@ -200,8 +259,22 @@ The following code sections are **USER APPROVED** and should **NOT be modified o
   - `syncMemberToGrievanceLog()` - Sync member data to grievances
   - `syncGrievanceFormulasToLog()` - Sync timeline formulas to Grievance Log
   - `sortGrievanceLogByStatus()` - Auto-sort by status priority and deadline urgency
+- **Value Sync Functions (No Formulas in Visible Sheets):**
+  - `syncDashboardValues()` - Compute and write all Dashboard metrics as VALUES (no formulas)
+  - `computeDashboardMetrics_()` - Calculate all 100+ Dashboard metrics from raw data
+  - `writeDashboardValues_()` - Write computed values to Dashboard cells
+  - `syncSatisfactionValues()` - Compute and write all Member Satisfaction metrics as VALUES
+  - `computeSectionAverages_()` - Calculate section averages for survey rows
+  - `computeAverage_()` - Helper for calculating averages
+  - `writeSatisfactionDashboard_()` - Write summary, demographics, chart data
+  - `computeSatisfactionRowAverages(row)` - Compute averages for a single new survey row
+  - `syncFeedbackValues()` - Compute and write Feedback sheet metrics as VALUES
+- Member Directory Actions:
+  - `openGrievanceFormForRow_(sheet, row)` - Opens pre-filled grievance form for member
+  - `getCurrentStewardInfo_(ss)` - Get current user's steward info
+  - `buildGrievanceFormUrl_(memberData, stewardData)` - Build pre-filled form URL
 - Trigger & Repair Functions:
-  - `onEditAutoSync()` - Auto-sync trigger handler
+  - `onEditAutoSync()` - Auto-sync trigger handler (now syncs Dashboard, Satisfaction, Feedback)
   - `installAutoSyncTrigger()` - Install the onEdit trigger
   - `removeAutoSyncTrigger()` - Remove the onEdit trigger
   - `repairAllHiddenSheets()` - Self-healing repair function
@@ -685,6 +758,11 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 ├── DIAGNOSE SETUP
 ├── Verify Hidden Sheets
 └── Setup & Triggers (submenu)
+    ├── Setup All Hidden Sheets
+    ├── Repair All Hidden Sheets
+    ├── Install Auto-Sync Trigger
+    ├── Remove Auto-Sync Trigger
+    └── Save Form URLs to Config
 ```
 
 ---
@@ -701,13 +779,17 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 | F | Supervisors | User populates |
 | G | Managers | User populates |
 | H | Stewards | User populates |
-| I | Grievance Status | Open, Pending Info, Settled, etc. (preset) |
-| J | Grievance Step | Informal, Step I, Step II, etc. (preset) |
-| K | Issue Category | Discipline, Workload, etc. (preset) |
-| L | Articles Violated | Art. 1 - Art. 26 (preset) |
-| M | Communication Methods | Email, Phone, Text, In Person (preset) |
+| I | Steward Committees | User populates |
+| J | Grievance Status | Open, Pending Info, Settled, etc. (preset) |
+| K | Grievance Step | Informal, Step I, Step II, etc. (preset) |
+| L | Issue Category | Discipline, Workload, etc. (preset) |
+| M | Articles Violated | Art. 1 - Art. 26 (preset) |
+| N | Communication Methods | Email, Phone, Text, In Person (preset) |
 | O | Grievance Coordinators | User populates |
+| **P** | **Grievance Form URL** | Auto-set via Save Form URLs to Config |
+| **Q** | **Contact Form URL** | Auto-set via Save Form URLs to Config |
 | AF | Home Towns | User populates |
+| **AR** | **Satisfaction Survey URL** | Auto-set via Save Form URLs to Config |
 
 ---
 
@@ -843,6 +925,181 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.9.0 (2026-01-11) - Visual Enhancements, Progress Tracking & Grievance Form Workflow
+
+**New Features: Data Validation, Heatmaps, Progress Bar & Automated Grievance Workflow**
+
+Added visual data quality indicators, deadline heatmaps, grievance progress tracking, and automated grievance form workflow with Drive folder creation.
+
+---
+
+#### Member Directory Enhancements
+
+**1. Empty Field Validation (Red Background)**
+- Email field (Column H): Red background (`#ffcdd2`) when empty but Member ID exists
+- Phone field (Column I): Red background (`#ffcdd2`) when empty but Member ID exists
+- Formula: `=AND($A2<>"",ISBLANK($H2))` ensures only rows with members are highlighted
+
+**2. Days to Deadline Heatmap (Column AD)**
+| Days Remaining | Background | Text Color | Style |
+|----------------|------------|------------|-------|
+| Overdue or ≤0  | `#ffebee` (red) | `#c62828` | Bold |
+| 1-3 days       | `#fff3e0` (orange) | `#e65100` | Bold |
+| 4-7 days       | `#fffde7` (yellow) | `#f57f17` | Normal |
+| 8+ days        | `#e8f5e9` (green) | `#2e7d32` | Normal |
+
+**3. Column Sorting via Filter**
+- Added filter row to Member Directory header
+- All columns now sortable via dropdown (A-Z, Z-A)
+
+---
+
+#### Grievance Log Enhancements
+
+**4. Days to Deadline Heatmap (Column U)**
+Same color scheme as Member Directory - automatically applied when sheet is created.
+
+**5. Grievance Progress Bar (Columns J-R)**
+Visual progress indicator showing grievance stage via colored backgrounds:
+
+| Current Step | Columns Highlighted | Color |
+|--------------|---------------------|-------|
+| Informal | None | Gray `#fafafa` |
+| Step I | J-K | Soft blue `#e3f2fd` |
+| Step II | J-O | Soft blue `#e3f2fd` |
+| Step III | J-Q | Soft blue `#e3f2fd` |
+| Closed/Won/Denied/Settled/Withdrawn | J-R | Soft green `#e8f5e9` |
+
+- Progress bar spans: Step I Due → Step I Rcvd → Step II Appeal Due → Step II Appeal Filed → Step II Due → Step II Rcvd → Step III Appeal Due → Step III Appeal Filed → Date Closed
+- Columns not yet reached remain light gray
+- Completed grievances show all columns in green
+
+**6. Auto-Sort Confirmation**
+Grievance Log entries automatically sort by status priority (active cases first) and deadline urgency when edited.
+
+---
+
+#### Grievance Form Workflow (New)
+
+**7. Pre-filled Google Form Integration**
+- `startNewGrievance()`: Opens pre-filled Google Form with member data
+- Form fields auto-populated from Member Directory (Member ID, name, job title, location, email, etc.)
+- Steward info auto-populated from current user's session (if they're a steward in Member Directory)
+- Default values: Date Filed = today, Step = I
+
+**8. Automatic Form Submission Processing**
+- `onGrievanceFormSubmit(e)`: Trigger handler for form submissions
+- Generates unique Grievance ID (format: GXXXX123 based on member name)
+- Adds grievance to Grievance Log with all form data
+- Calculates deadlines via hidden sheet formulas
+- Updates Member Directory grievance status
+
+**9. Automatic Drive Folder Creation**
+- Creates folder in "509 Dashboard - Grievance Files" root folder
+- Folder name format: `GXXXX123 - FirstName LastName (MemberID)`
+- Creates subfolders: 📄 Documents, 📧 Correspondence, 📝 Notes
+- Automatically shares with Grievance Coordinators from Config (column O)
+- Stores folder ID and URL in Grievance Log (columns AG, AH)
+
+**10. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 📋 Grievance Tools > 📋 Setup Grievance Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for form submissions
+
+---
+
+#### Personal Contact Info Form (New)
+
+**11. Blank Form for Member Self-Registration**
+- `sendContactInfoForm()`: Shows form link to share with members (open or copy)
+- Form is blank - members fill out their own contact information
+- Form fields: First/Last Name, Job Title, Unit, Work Location, Office Days, Communication Preferences, Best Time, Supervisor, Manager, Email, Phone, Interest levels
+
+**12. Automatic Member Directory Updates**
+- `onContactFormSubmit(e)`: Trigger handler for contact form submissions
+- Matches member by First Name + Last Name
+- **Existing members**: Updates all submitted fields in Member Directory
+- **New members**: Creates new row with auto-generated Member ID (MXXXX123 format)
+- Handles multi-select fields (Office Days, Preferred Communication, Best Time)
+
+**13. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 👤 Member Tools > 📋 Get Contact Info Form Link
+- New menu: 👤 Dashboard > 👤 Member Tools > ⚙️ Setup Contact Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for contact form submissions
+
+---
+
+#### Member Satisfaction Survey Form (New)
+
+**14. Survey Link Distribution**
+- `getSatisfactionSurveyLink()`: Shows survey link to share with members (open or copy)
+- Survey is blank - members fill out 68 questions about union satisfaction
+
+**15. Automatic Response Recording**
+- `onSatisfactionFormSubmit(e)`: Trigger handler for survey submissions
+- Writes all 68 question responses to 📊 Member Satisfaction sheet
+- Maps questions to SATISFACTION_COLS (A-BQ columns)
+- Sections: Work Context, Overall Satisfaction, Steward Ratings, Steward Access, Chapter Effectiveness, Local Leadership, Contract Enforcement, Representation Process, Communication Quality, Member Voice & Culture, Value & Collective Action, Scheduling, Priorities
+
+**16. Easy Trigger Setup**
+- New menu: 👤 Dashboard > 📊 Survey Tools > 📊 Get Satisfaction Survey Link
+- New menu: 👤 Dashboard > 📊 Survey Tools > ⚙️ Setup Survey Form Trigger
+- Prompts for Google Form edit URL
+- Creates installable trigger for survey submissions
+
+---
+
+**Code Changes:**
+
+*Member Directory (`createMemberDirectory()` lines 497-576):*
+- Lines 497-515: Empty Email/Phone validation rules
+- Lines 517-554: Days to Deadline heatmap rules
+- Lines 560-576: Filter for column sorting
+
+*Grievance Log (`createGrievanceLog()` lines 645-739):*
+- Lines 645-682: Days to Deadline heatmap rules
+- Lines 684-731: Progress bar conditional formatting rules
+- Lines 733-739: Apply all rules
+
+*Grievance Form Workflow (Code.gs lines 3254-3813):*
+- Lines 3258-3283: `GRIEVANCE_FORM_CONFIG` with form URL and 18 field entry IDs
+- Lines 3290-3383: `startNewGrievance()` - opens pre-filled form
+- Lines 3389-3412: `getCurrentStewardInfo_()` - get steward from session
+- Lines 3419-3449: `buildGrievanceFormUrl_()` - build pre-filled URL
+- Lines 3465-3561: `onGrievanceFormSubmit(e)` - form submission handler
+- Lines 3568-3609: Helper functions (getFormValue_, parseFormDate_, getExistingGrievanceIds_)
+- Lines 3615-3653: `createGrievanceFolderFromData_()` - create folder with subfolders
+- Lines 3660-3683: `shareWithCoordinators_()` - share folder with coordinators
+- Lines 3690-3780: `setupGrievanceFormTrigger()` - menu-driven trigger setup
+- Lines 3787-3813: `testGrievanceFormSubmission()` - test function
+
+*Contact Info Form Workflow (Code.gs):*
+- `CONTACT_FORM_CONFIG` with form URL and 15 field entry IDs
+- `sendContactInfoForm()` - shows blank form link (open or copy)
+- `onContactFormSubmit(e)` - form submission handler (creates new or updates existing member)
+- `getFormMultiValue_()` - helper for checkbox responses
+- `setupContactFormTrigger()` - menu-driven trigger setup
+
+*Satisfaction Survey Form Workflow (Code.gs):*
+- `SATISFACTION_FORM_CONFIG` with survey form URL
+- `getSatisfactionSurveyLink()` - shows survey link (open or copy)
+- `onSatisfactionFormSubmit(e)` - form submission handler (writes to Member Satisfaction sheet)
+- `setupSatisfactionFormTrigger()` - menu-driven trigger setup
+
+*Menu Update (Code.gs):*
+- Added "📋 Setup Grievance Form Trigger" to Grievance Tools submenu
+- Added new "👤 Member Tools" submenu with:
+  - "📋 Get Contact Info Form Link"
+  - "⚙️ Setup Contact Form Trigger"
+- Added new "📊 Survey Tools" submenu with:
+  - "📊 Get Satisfaction Survey Link"
+  - "⚙️ Setup Survey Form Trigger"
+
+**Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
+
+---
 
 ### Version 1.8.0 (2026-01-06) - Member Satisfaction Dashboard
 

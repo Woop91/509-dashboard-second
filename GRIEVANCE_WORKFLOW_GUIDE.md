@@ -8,12 +8,13 @@ The Grievance Workflow feature allows stewards to start grievances directly from
 
 ## ✨ Features
 
-- **Member Selection Dialog**: Browse and select members from a searchable list
-- **Pre-filled Google Form**: Member and steward details automatically populated
-- **Automatic Logging**: Form submissions automatically added to Grievance Log
-- **PDF Generation**: Professional grievance forms generated as PDFs
-- **Distribution Options**: Email to multiple addresses or download directly
-- **Steward Access Only**: Only stewards can access the grievance workflow
+- **Quick Start from Member Directory**: Select a member row and run "Start New Grievance" to open a pre-filled form
+- **Pre-filled Google Form**: Member and steward details automatically populated from Member Directory
+- **Automatic Logging**: Form submissions automatically added to Grievance Log with unique ID
+- **Drive Folder Creation**: Automatic folder structure created for each grievance (Documents, Correspondence, Notes)
+- **Folder Sharing**: Folders automatically shared with Grievance Coordinators from Config
+- **Deadline Calculation**: All step deadlines calculated automatically based on filing date
+- **Member Directory Sync**: Member's grievance status updated automatically
 
 ---
 
@@ -69,8 +70,8 @@ To enable the full workflow with automatic form submissions:
 
 5. **Update the Configuration in Code:**
    - Open the Google Sheets Apps Script editor
-   - Find the file **GrievanceWorkflow.gs**
-   - Update the `GRIEVANCE_FORM_CONFIG` object at the top:
+   - Find the file **Code.gs** (or **ConsolidatedDashboard.gs** if deployed)
+   - Update the `GRIEVANCE_FORM_CONFIG` object:
 
 ```javascript
 const GRIEVANCE_FORM_CONFIG = {
@@ -96,15 +97,28 @@ const GRIEVANCE_FORM_CONFIG = {
 
 ### Step 3: Set Up Form Submission Trigger (For Automatic Processing)
 
+**Option A: Use the Menu (Recommended)**
+
+1. Go to **👤 Dashboard > 📋 Grievance Tools > 📋 Setup Form Trigger**
+2. Enter the Google Form edit URL (the one ending in /edit) when prompted
+3. Click OK - the trigger will be created automatically
+
+**Option B: Manual Setup**
+
 1. In the Apps Script editor, click the **Triggers** icon (⏰ clock icon)
 2. Click **+ Add Trigger**
 3. Configure:
    - **Function**: `onGrievanceFormSubmit`
-   - **Event source**: From spreadsheet
+   - **Event source**: From form
    - **Event type**: On form submit
 4. Click **Save**
 
-This will automatically process form submissions and add them to the Grievance Log.
+When forms are submitted:
+- A new grievance row is added to the Grievance Log
+- A Drive folder is automatically created with subfolders (Documents, Correspondence, Notes)
+- Folder is shared with Grievance Coordinators from Config
+- Deadlines are calculated automatically
+- Member Directory is updated
 
 ---
 
@@ -153,10 +167,15 @@ After submitting a grievance, you can:
 When a grievance is submitted through the form:
 
 1. **Automatic Entry**: Added to the Grievance Log sheet
-2. **Unique ID**: Generated automatically (format: GRV-###-L)
-3. **Status**: Set to "Draft" initially
-4. **Calculations**: All deadline fields calculated automatically
-5. **Member Update**: Member Directory updated with grievance snapshot
+2. **Unique ID**: Generated automatically (format: GXXXX123 based on member name)
+3. **Status**: Set to "Open" initially
+4. **Drive Folder**: Created automatically with subfolders:
+   - 📄 Documents
+   - 📧 Correspondence
+   - 📝 Notes
+5. **Folder Sharing**: Shared with Grievance Coordinators from Config (column O)
+6. **Calculations**: All deadline fields calculated automatically
+7. **Member Update**: Member Directory updated with grievance status
 
 ---
 
@@ -166,7 +185,7 @@ When a grievance is submitted through the form:
 
 **Problem**: Form fields are empty when opened
 **Solution**:
-- Check that field entry IDs are correct in `GrievanceWorkflow.gs`
+- Check that field entry IDs are correct in `Code.gs`
 - Verify steward contact info is entered in Config tab
 - Ensure member has complete information in Member Directory
 

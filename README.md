@@ -421,6 +421,13 @@ Features include:
 - Grievance snapshot fields (columns 26-28) automatically populate from Grievance Log
 - Data validation prevents invalid entries
 - All engagement metrics in one place for easy analysis
+- **Sortable columns** - Filter dropdown on header row enables sorting A-Z/Z-A on all columns
+- **Validation highlighting** - Red background for empty Email/Phone fields (data quality check)
+- **Days to Deadline heatmap** - Color-coded urgency for grievance deadlines:
+  - 🔴 Red: Overdue or 0 days remaining
+  - 🟠 Orange: 1-3 days remaining
+  - 🟡 Yellow: 4-7 days remaining
+  - 🟢 Green: 8+ days remaining (on track)
 
 ### 3. Grievance Log - Complete Grievance Tracking
 
@@ -470,7 +477,16 @@ Features include:
 - All deadlines auto-calculate based on contract rules
 - "Next Action Due" intelligently selects the relevant deadline based on current step
 - "Days to Deadline" shows urgency (negative numbers = overdue)
-- Conditional formatting highlights approaching/overdue deadlines
+- **Auto-sort** - Entries automatically sort by status priority (active cases first) and deadline urgency
+- **Days to Deadline heatmap** - Color-coded urgency:
+  - 🔴 Red: Overdue or 0 days remaining
+  - 🟠 Orange: 1-3 days remaining
+  - 🟡 Yellow: 4-7 days remaining
+  - 🟢 Green: 8+ days remaining
+- **Progress bar** - Visual indicator across step columns (J-R) showing grievance stage:
+  - Soft blue highlights columns for current/completed steps
+  - Soft green highlights all columns when grievance is resolved
+  - Gray background for steps not yet reached
 
 ### 4. Dashboard - Real-Time Analytics
 
@@ -1066,27 +1082,29 @@ The grievance workflow now includes:
 2. **Set Up Grievance Email Address**
    - Current State: Placeholder email `grievances@seiu509.org`
    - Action Needed: Configure actual union grievance inbox email
-   - Location: `GrievanceWorkflow.gs` line 543
+   - Location: `Code.gs` in the grievance workflow functions
 
 3. **Enable Folder Sharing**
-   - Current State: Commented out in `shareGrievanceWithRecipients()` function
-   - Action Needed: Uncomment `folder.addEditor(email)` line 769
+   - Current State: Folder sharing may need to be enabled
+   - Action Needed: Ensure `folder.addEditor(email)` is active in `Code.gs`
    - Prerequisites: Valid email addresses configured for all coordinators
 
 4. **Enable Email Notifications**
-   - Current State: Email sending commented out (lines 792-796)
-   - Action Needed: Uncomment `GmailApp.sendEmail()` calls
+   - Current State: Email sending may be commented out
+   - Action Needed: Enable `GmailApp.sendEmail()` calls in `Code.gs`
    - Prerequisites: Valid email addresses and Gmail API permissions
 
 ### 🔧 Technical Tasks:
-5. Add grievance folder URL column to Grievance Log sheet for tracking
-6. Update `addGrievanceToLog()` to store folder URL in new column
+5. ✅ Add grievance folder URL column to Grievance Log sheet for tracking
+   - GRIEVANCE_COLS.DRIVE_FOLDER_ID (column AG) and DRIVE_FOLDER_URL (column AH) implemented
+6. ✅ Update `onGrievanceFormSubmit()` to store folder URL in new column
+   - Folder ID and URL stored automatically when grievance form is submitted
 7. Test complete workflow from member selection through folder sharing
 8. Verify email delivery and folder permissions work correctly
 
 ### ✅ Implementation Status:
-- **Committed**: Branch `claude/add-grievance-coordinator-fields-01KQXAdQS7vbxqQm6hD8RkMo`
-- **Status**: Ready for pull request creation
+- **Folder URL Storage**: Complete - DRIVE_FOLDER_ID (AG) and DRIVE_FOLDER_URL (AH) columns implemented
+- **Form Submission**: Complete - folder created and URL stored automatically on grievance form submit
 - **Foundation**: Complete - folder creation, UI, and sharing infrastructure in place
 
 ## 🔮 Future Features

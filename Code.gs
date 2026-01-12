@@ -39,7 +39,14 @@ function onOpen() {
       .addSeparator()
       .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
       .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+      .addItem('📋 Setup Grievance Form Trigger', 'setupGrievanceFormTrigger')
       .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
+    .addSubMenu(ui.createMenu('👤 Member Tools')
+      .addItem('📋 Get Contact Info Form Link', 'sendContactInfoForm')
+      .addItem('⚙️ Setup Contact Form Trigger', 'setupContactFormTrigger'))
+    .addSubMenu(ui.createMenu('📊 Survey Tools')
+      .addItem('📊 Get Satisfaction Survey Link', 'getSatisfactionSurveyLink')
+      .addItem('⚙️ Setup Survey Form Trigger', 'setupSatisfactionFormTrigger'))
     .addToUi();
 
   // Member Search Menu (standalone for quick access)
@@ -151,7 +158,9 @@ function onOpen() {
       .addItem('🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets')
       .addItem('🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets')
       .addItem('⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger')
-      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'))
+      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger')
+      .addSeparator()
+      .addItem('📋 Save Form URLs to Config', 'saveFormUrlsToConfig'))
     .addSeparator()
     .addSubMenu(ui.createMenu('🔄 Manual Sync')
       .addItem('🔄 Sync All Data Now', 'syncAllData')
@@ -240,6 +249,10 @@ function CREATE_509_DASHBOARD() {
     // Create Menu Checklist (function reference guide with 13 phases)
     createMenuChecklistSheet_();
     ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
+
+    // Save form URLs to Config sheet
+    saveFormUrlsToConfig_silent(ss);
+    ss.toast('Saved form URLs to Config', '🏗️ Progress', 2);
 
     // Setup data validations
     ss.toast('Setting up validations...', '🏗️ Progress', 3);
@@ -494,9 +507,86 @@ function createMemberDirectory(ss) {
     .setRanges([hasOpenGrievanceRange])
     .build();
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VALIDATION HIGHLIGHTING: Red background for empty Email and Phone fields
+  // ═══════════════════════════════════════════════════════════════════════════
+  var emailRange = sheet.getRange(2, MEMBER_COLS.EMAIL, 4999, 1);
+  var phoneRange = sheet.getRange(2, MEMBER_COLS.PHONE, 4999, 1);
+
+  // Rule: Red background for empty Email
+  var emptyEmailRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",ISBLANK($H2))')
+    .setBackground('#ffcdd2')  // Red background for missing email
+    .setRanges([emailRange])
+    .build();
+
+  // Rule: Red background for empty Phone
+  var emptyPhoneRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",ISBLANK($I2))')
+    .setBackground('#ffcdd2')  // Red background for missing phone
+    .setRanges([phoneRange])
+    .build();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DEADLINE HEATMAP: Color-coded Days to Deadline (Column AD)
+  // ═══════════════════════════════════════════════════════════════════════════
+  var daysDeadlineRange = sheet.getRange(2, MEMBER_COLS.NEXT_DEADLINE, 4999, 1);
+
+  // Rule: Red - Overdue (shows "Overdue" or negative/0 days)
+  var deadlineOverdueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($AD2="Overdue",AND(ISNUMBER($AD2),$AD2<=0))')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Orange - Due in 1-3 days
+  var deadline1to3Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>=1,$AD2<=3)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Yellow - Due in 4-7 days
+  var deadline4to7Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>=4,$AD2<=7)')
+    .setBackground('#fffde7')
+    .setFontColor('#f57f17')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Green - On Track (more than 7 days remaining)
+  var deadlineOnTrackRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($AD2),$AD2>7)')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setRanges([daysDeadlineRange])
+    .build();
+
   var rules = sheet.getConditionalFormatRules();
-  rules.push(redRule);
+  rules.push(redRule, emptyEmailRule, emptyPhoneRule, deadlineOverdueRule, deadline1to3Rule, deadline4to7Rule, deadlineOnTrackRule);
   sheet.setConditionalFormatRules(rules);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FILTER: Enable sorting on all columns via filter dropdown
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Remove existing filter if any
+  var existingFilter = sheet.getFilter();
+  if (existingFilter) {
+    existingFilter.remove();
+  }
+
+  // Create filter on entire data range (all columns)
+  // This enables sorting via dropdown on: Last Name, Job Title, Work Location, Unit,
+  // Office Days, Preferred Communication, Best Time to Contact, Supervisor, Manager,
+  // Committees, Assigned Steward, Last Virtual Mtg, Last In-Person Mtg, Open Rate %,
+  // Volunteer Hours, Interest: Local/Chapter/Allied, Home Town, Recent Contact Date,
+  // Contact Steward, Contact Notes, Has Open Grievance?, Grievance Status, Days to Deadline
+  var filterRange = sheet.getRange(1, 1, 5000, headers.length);
+  filterRange.createFilter();
 }
 
 /**
@@ -564,6 +654,102 @@ function createGrievanceLog(ss) {
   } catch (e) {
     Logger.log('Column group setup skipped: ' + e.toString());
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // DAYS TO DEADLINE HEATMAP (Column U)
+  // ═══════════════════════════════════════════════════════════════════════════
+  var daysDeadlineRange = sheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, 4999, 1);
+
+  // Rule: Red - Overdue (shows "Overdue" or negative/0 days)
+  var deadlineOverdueRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($U2="Overdue",AND(ISNUMBER($U2),$U2<=0))')
+    .setBackground('#ffebee')
+    .setFontColor('#c62828')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Orange - Due in 1-3 days
+  var deadline1to3Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=1,$U2<=3)')
+    .setBackground('#fff3e0')
+    .setFontColor('#e65100')
+    .setBold(true)
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Yellow - Due in 4-7 days
+  var deadline4to7Rule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>=4,$U2<=7)')
+    .setBackground('#fffde7')
+    .setFontColor('#f57f17')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // Rule: Green - On Track (more than 7 days remaining)
+  var deadlineOnTrackRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND(ISNUMBER($U2),$U2>7)')
+    .setBackground('#e8f5e9')
+    .setFontColor('#2e7d32')
+    .setRanges([daysDeadlineRange])
+    .build();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PROGRESS BAR: Colored backgrounds showing grievance stage (Columns J-R)
+  // Based on Current Step (Column F), highlights completed stages
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Progress bar spans: Step I (J-K), Step II (L-O), Step III (P-Q), Date Closed (R)
+  var step1Range = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 2);         // J-K
+  var step2Range = sheet.getRange(2, GRIEVANCE_COLS.STEP2_APPEAL_DUE, 4999, 4);  // L-O
+  var step3Range = sheet.getRange(2, GRIEVANCE_COLS.STEP3_APPEAL_DUE, 4999, 2);  // P-Q
+  var closedRange = sheet.getRange(2, GRIEVANCE_COLS.DATE_CLOSED, 4999, 1);      // R
+  var allStepsRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 9);      // J-R (all 9 columns)
+
+  // Completed cases: All columns green (Closed, Won, Denied, Settled, Withdrawn)
+  var completedRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=OR($E2="Closed",$E2="Won",$E2="Denied",$E2="Settled",$E2="Withdrawn")')
+    .setBackground('#e8f5e9')  // Soft green
+    .setRanges([allStepsRange])
+    .build();
+
+  // Step III in progress: J-Q highlighted (all except Date Closed)
+  var step3ProgressRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 8);  // J-Q
+  var step3ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step III"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step3ProgressRange])
+    .build();
+
+  // Step II in progress: J-O highlighted
+  var step2ProgressRange = sheet.getRange(2, GRIEVANCE_COLS.STEP1_DUE, 4999, 6);  // J-O
+  var step2ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step II"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step2ProgressRange])
+    .build();
+
+  // Step I in progress: J-K highlighted
+  var step1ProgressRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=$F2="Step I"')
+    .setBackground('#e3f2fd')  // Soft blue
+    .setRanges([step1Range])
+    .build();
+
+  // Gray out columns not yet reached (applies to all step columns by default)
+  var notReachedRule = SpreadsheetApp.newConditionalFormatRule()
+    .whenFormulaSatisfied('=AND($A2<>"",$F2<>"")')
+    .setBackground('#fafafa')  // Very light gray (default for uncolored)
+    .setRanges([allStepsRange])
+    .build();
+
+  // Apply all rules (order matters - more specific rules first)
+  var rules = sheet.getConditionalFormatRules();
+  rules.push(
+    deadlineOverdueRule, deadline1to3Rule, deadline4to7Rule, deadlineOnTrackRule,
+    completedRule, step3ProgressRule, step2ProgressRule, step1ProgressRule, notReachedRule
+  );
+  sheet.setConditionalFormatRules(rules);
 }
 
 
@@ -608,18 +794,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Quick stats formulas - reference hidden calculation sheet
-  var quickStatsFormulas = [
-    [
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B2,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B3,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B5+\'' + SHEETS.DASHBOARD_CALC + '\'!B6,0)',
-      '=IFERROR(TEXT(\'' + SHEETS.DASHBOARD_CALC + '\'!B11/100,"0%"),"-")',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B13,0)',
-      '=IFERROR(\'' + SHEETS.DASHBOARD_CALC + '\'!B14,0)'
-    ]
-  ];
-  sheet.getRange('A6:F6').setFormulas(quickStatsFormulas)
+  // Quick stats values (populated by syncDashboardValues)
+  sheet.getRange('A6:F6')
     .setFontSize(20)
     .setHorizontalAlignment('center')
     .setFontWeight('bold');
@@ -639,20 +815,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var mIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
-  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
-  var mOpenRateCol = getColumnLetter(MEMBER_COLS.OPEN_RATE);
-  var mVolHoursCol = getColumnLetter(MEMBER_COLS.VOLUNTEER_HOURS);
-
-  var memberMetricFormulas = [
-    [
-      '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1',
-      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")',
-      '=IFERROR(ROUND(AVERAGE(\'' + SHEETS.MEMBER_DIR + '\'!' + mOpenRateCol + ':' + mOpenRateCol + '),1)&"%","-")',
-      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + mVolHoursCol + ':' + mVolHoursCol + ')'
-    ]
-  ];
-  sheet.getRange('A10:D10').setFormulas(memberMetricFormulas)
+  // Member metric values (populated by syncDashboardValues)
+  sheet.getRange('A10:D10')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -671,20 +835,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gStatusCol = getColumnLetter(GRIEVANCE_COLS.STATUS);
-  var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
-
-  var grievanceFormulas = [
-    [
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Denied")',
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Withdrawn")'
-    ]
-  ];
-  sheet.getRange('A14:F14').setFormulas(grievanceFormulas)
+  // Grievance metric values (populated by syncDashboardValues)
+  sheet.getRange('A14:F14')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -703,19 +855,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gDaysOpenCol = getColumnLetter(GRIEVANCE_COLS.DAYS_OPEN);
-  var gDateFiledCol = getColumnLetter(GRIEVANCE_COLS.DATE_FILED);
-  var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);
-
-  var timelineFormulas = [
-    [
-      '=IFERROR(ROUND(AVERAGE(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
-      '=IFERROR(ROUND(AVERAGEIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<>",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + '),1),0)'
-    ]
-  ];
-  sheet.getRange('A18:D18').setFormulas(timelineFormulas)
+  // Timeline metric values (populated by syncDashboardValues)
+  sheet.getRange('A18:D18')
     .setFontSize(18)
     .setHorizontalAlignment('center');
 
@@ -734,25 +875,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var gIssueCatCol = getColumnLetter(GRIEVANCE_COLS.ISSUE_CATEGORY);
-  var gIdCol = getColumnLetter(GRIEVANCE_COLS.GRIEVANCE_ID);
-
-  // Top 5 issue categories with metrics - using QUERY formulas
-  var categoryFormulas = [];
-  var defaultCategories = ['Contract Violation', 'Discipline', 'Workload', 'Safety', 'Discrimination'];
-  for (var c = 0; c < 5; c++) {
-    var cat = defaultCategories[c];
-    categoryFormulas.push([
-      '="' + cat + '"',  // Wrap text as formula for setFormulas()
-      '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"<>Open")-COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")',
-      '=IFERROR(TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),"0%"),"-")',
-      '=IFERROR(ROUND(AVERAGEIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDaysOpenCol + ':' + gDaysOpenCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIssueCatCol + ':' + gIssueCatCol + ',"' + cat + '"),1),"-")'
-    ]);
-  }
-  sheet.getRange('A22:F26').setFormulas(categoryFormulas)
-    .setHorizontalAlignment('center');
+  // Type analysis values (populated by syncDashboardValues)
+  sheet.getRange('A22:F26').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 6: LOCATION BREAKDOWN
@@ -769,26 +893,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var mLocationCol = getColumnLetter(MEMBER_COLS.WORK_LOCATION);
-  var gLocationCol = getColumnLetter(GRIEVANCE_COLS.LOCATION);  // GRIEVANCE_COLS uses LOCATION not WORK_LOCATION
-  var configLocCol = getColumnLetter(CONFIG_COLS.OFFICE_LOCATIONS);
-
-  // Location formulas - pulls top 5 locations from Config and calculates metrics
-  var locationFormulas = [];
-  for (var loc = 0; loc < 5; loc++) {
-    var configRow = 3 + loc;  // Config data starts at row 3
-    var locRef = '\'' + SHEETS.CONFIG + '\'!' + configLocCol + configRow;
-    locationFormulas.push([
-      '=IFERROR(' + locRef + ',"")',
-      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mLocationCol + ':' + mLocationCol + ',' + locRef + '),"")',
-      '=IF(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"")',
-      '=IF(' + locRef + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")',
-      '=IF(AND(' + locRef + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ')>0),TEXT(COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gLocationCol + ':' + gLocationCol + ',' + locRef + '),"0%"),"-")',
-      '="-"'  // Satisfaction requires separate tracking
-    ]);
-  }
-  sheet.getRange('A30:F34').setFormulas(locationFormulas)
-    .setHorizontalAlignment('center');
+  // Location values (populated by syncDashboardValues)
+  sheet.getRange('A30:F34').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 7: MONTH-OVER-MONTH TRENDS (moved up from rows 40-44)
@@ -805,35 +911,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Trend rows: Filed, Closed, Won
-  var trendData = [
-    [
-      '="Grievances Filed"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateFiledCol + ':' + gDateFiledCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
-      '=B38-C38',
-      '=IFERROR(TEXT((B38-C38)/C38,"0%"),"-")',
-      '=IF(B38>C38,"📈",IF(B38<C38,"📉","➡️"))'
-    ],
-    [
-      '="Grievances Closed"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<="&TODAY())',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1))',
-      '=B39-C39',
-      '=IFERROR(TEXT((B39-C39)/C39,"0%"),"-")',
-      '=IF(B39>C39,"📈",IF(B39<C39,"📉","➡️"))'
-    ],
-    [
-      '="Cases Won"',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY())-1,1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gDateClosedCol + ':' + gDateClosedCol + ',"<"&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")',
-      '=B40-C40',
-      '=IFERROR(TEXT((B40-C40)/C40,"0%"),"-")',
-      '=IF(B40>C40,"📈",IF(B40<C40,"📉","➡️"))'
-    ]
-  ];
-  sheet.getRange('A38:F40').setFormulas(trendData)
-    .setHorizontalAlignment('center');
+  // Trend values (populated by syncDashboardValues)
+  sheet.getRange('A38:F40').setHorizontalAlignment('center');
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 8: STATUS LEGEND (compact - fits in A-F only)
@@ -854,10 +933,6 @@ function createDashboard(ss) {
   // ═══════════════════════════════════════════════════════════════════════════
   // SECTION 9: STEWARD PERFORMANCE SUMMARY (moved to near bottom)
   // ═══════════════════════════════════════════════════════════════════════════
-  var mStewardCol = getColumnLetter(MEMBER_COLS.IS_STEWARD);
-  var gAssignedStewardCol = getColumnLetter(GRIEVANCE_COLS.STEWARD);
-  var mContactDateCol = getColumnLetter(MEMBER_COLS.RECENT_CONTACT_DATE);
-
   sheet.getRange('A45').setValue('👨‍⚖️ STEWARD PERFORMANCE SUMMARY')
     .setFontWeight('bold')
     .setBackground('#7C3AED')  // Purple
@@ -870,17 +945,8 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  var stewardFormulas = [
-    [
-      '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")',
-      '=IFERROR(ROWS(UNIQUE(FILTER(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + '<>"",\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '="Open"))),0)',
-      '=IFERROR(ROUND((COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)/COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes"),1),"-")',
-      '=SUM(\'' + SHEETS.MEMBER_DIR + '\'!' + mVolHoursCol + ':' + mVolHoursCol + ')',
-      '=COUNTIFS(\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',">="&DATE(YEAR(TODAY()),MONTH(TODAY()),1),\'' + SHEETS.MEMBER_DIR + '\'!' + mContactDateCol + ':' + mContactDateCol + ',"<="&TODAY())',
-      '=""'
-    ]
-  ];
-  sheet.getRange('A47:F47').setFormulas(stewardFormulas)
+  // Steward summary values (populated by syncDashboardValues)
+  sheet.getRange('A47:F47')
     .setFontSize(16)
     .setHorizontalAlignment('center');
 
@@ -899,32 +965,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Use QUERY to get top 30 stewards sorted by active case count (Open + Pending Info)
-  // This properly sorts by workload, not alphabetically
-  var queryFormula = '=IFERROR(QUERY({' +
-    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',' +
-    '\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + '},' +
-    '"SELECT Col1, COUNT(Col1) WHERE Col1 <> \'\' AND Col1 <> \'Assigned Steward\' AND (Col2 = \'Open\' OR Col2 = \'Pending Info\') ' +
-    'GROUP BY Col1 ORDER BY COUNT(Col1) DESC LIMIT 30 LABEL COUNT(Col1) \'\'",' +
-    '0),{"",""})';
-
-  // Place QUERY result starting at B51 - this returns steward names and their active counts
-  sheet.getRange('B51').setFormula(queryFormula);
-
-  // Generate rank numbers and additional metrics for rows 51-80
-  for (var rank = 1; rank <= 30; rank++) {
-    var row = 50 + rank;
-    // Rank number
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-    // Open cases (just Open status)
-    sheet.getRange('D' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open"),"")');
-    // Pending Info cases
-    sheet.getRange('E' + row).setFormula('=IF(B' + row + '<>"",COUNTIFS(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + ',\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info"),"")');
-    // Total Ever (all cases for this steward)
-    sheet.getRange('F' + row).setFormula('=IF(B' + row + '<>"",COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gAssignedStewardCol + ':' + gAssignedStewardCol + ',B' + row + '),"")');
-  }
-
-  // Set horizontal alignment for all data rows
+  // Busiest stewards values (populated by syncDashboardValues)
   sheet.getRange('A51:F80').setHorizontalAlignment('center');
 
   // Alternate row coloring for busiest stewards list
@@ -949,18 +990,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Query hidden sheet for top 10 by Performance Score (descending)
-  var topPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
-    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J DESC LIMIT 10",' +
-    '0),{"","","","",""})';
-  sheet.getRange('B84').setFormula(topPerfQuery);
-
-  // Add rank numbers for top performers
-  for (var rank = 1; rank <= 10; rank++) {
-    var row = 83 + rank;
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-  }
-
+  // Top performers values (populated by syncDashboardValues)
   // Alternate row coloring for top performers
   for (var r = 84; r <= 93; r++) {
     if (r % 2 === 0) {
@@ -984,18 +1014,7 @@ function createDashboard(ss) {
     .setBackground(COLORS.LIGHT_GRAY)
     .setHorizontalAlignment('center');
 
-  // Query hidden sheet for bottom 10 by Performance Score (ascending)
-  var lowPerfQuery = '=IFERROR(QUERY(\'' + SHEETS.STEWARD_PERFORMANCE_CALC + '\'!A:J,' +
-    '"SELECT A, J, F, G, H WHERE A <> \'\' AND A <> \'Steward\' ORDER BY J ASC LIMIT 10",' +
-    '0),{"","","","",""})';
-  sheet.getRange('B97').setFormula(lowPerfQuery);
-
-  // Add rank numbers for bottom performers (1 = lowest score)
-  for (var rank = 1; rank <= 10; rank++) {
-    var row = 96 + rank;
-    sheet.getRange('A' + row).setFormula('=IF(B' + row + '<>"",' + rank + ',"")');
-  }
-
+  // Stewards needing support values (populated by syncDashboardValues)
   // Alternate row coloring for bottom performers
   for (var r = 97; r <= 106; r++) {
     if (r % 2 === 1) {
@@ -1058,6 +1077,9 @@ function createDashboard(ss) {
   // Stewards Needing Support (rows 97-106)
   sheet.getRange('C97:D106').setNumberFormat(decimalFormat);  // Score, Win Rate
   sheet.getRange('E97:F106').setNumberFormat(numberFormat);   // Avg Days, Overdue
+
+  // Populate all values using JavaScript-computed metrics (no formulas in visible sheet)
+  syncDashboardValues();
 }
 
 /**
@@ -1340,31 +1362,8 @@ function createSatisfactionSheet(ss) {
     sheet.setColumnWidth(sc, 65);
   }
 
-  // Add section average formulas for rows 2-500
-  for (var row = 2; row <= 500; row++) {
-    // Overall Satisfaction (Q6-9: G-J, cols 7-10)
-    sheet.getRange(row, 72).setFormula('=IFERROR(AVERAGE(G' + row + ':J' + row + '),"")');
-    // Steward Rating (Q10-16: K-Q, cols 11-17)
-    sheet.getRange(row, 73).setFormula('=IFERROR(AVERAGE(K' + row + ':Q' + row + '),"")');
-    // Steward Access (Q18-20: S-U, cols 19-21)
-    sheet.getRange(row, 74).setFormula('=IFERROR(AVERAGE(S' + row + ':U' + row + '),"")');
-    // Chapter (Q21-25: V-Z, cols 22-26)
-    sheet.getRange(row, 75).setFormula('=IFERROR(AVERAGE(V' + row + ':Z' + row + '),"")');
-    // Leadership (Q26-31: AA-AF, cols 27-32)
-    sheet.getRange(row, 76).setFormula('=IFERROR(AVERAGE(AA' + row + ':AF' + row + '),"")');
-    // Contract (Q32-35: AG-AJ, cols 33-36)
-    sheet.getRange(row, 77).setFormula('=IFERROR(AVERAGE(AG' + row + ':AJ' + row + '),"")');
-    // Representation (Q37-40: AL-AO, cols 38-41)
-    sheet.getRange(row, 78).setFormula('=IFERROR(AVERAGE(AL' + row + ':AO' + row + '),"")');
-    // Communication (Q41-45: AP-AT, cols 42-46)
-    sheet.getRange(row, 79).setFormula('=IFERROR(AVERAGE(AP' + row + ':AT' + row + '),"")');
-    // Member Voice (Q46-50: AU-AY, cols 47-51)
-    sheet.getRange(row, 80).setFormula('=IFERROR(AVERAGE(AU' + row + ':AY' + row + '),"")');
-    // Value/Action (Q51-55: AZ-BD, cols 52-56)
-    sheet.getRange(row, 81).setFormula('=IFERROR(AVERAGE(AZ' + row + ':BD' + row + '),"")');
-    // Scheduling (Q56-62: BE-BK, cols 57-63)
-    sheet.getRange(row, 82).setFormula('=IFERROR(AVERAGE(BE' + row + ':BK' + row + '),"")');
-  }
+  // Section averages (columns BT-CD) are computed by syncSatisfactionValues()
+  // No formulas in visible sheet - values are written by JavaScript
 
   // ═══════════════════════════════════════════════════════════════════════════
   // DASHBOARD / CHART DATA AREA (Columns CF onwards - col 84+)
@@ -1387,33 +1386,26 @@ function createSatisfactionSheet(ss) {
     .setBackground(COLORS.LIGHT_GRAY);
   sheet.getRange(3, dashStart, 1, 2).merge();
 
+  // Response summary labels (values populated by syncSatisfactionValues)
   var responseSummary = [
-    ['Total Responses', '=COUNTA(A2:A)'],
-    ['Response Period', '=IF(COUNTA(A2:A)>0,TEXT(MIN(A2:A),"MM/DD")&" - "&TEXT(MAX(A2:A),"MM/DD"),"No data")'],
+    ['Total Responses', ''],
+    ['Response Period', ''],
     ['', ''],
     ['📊 SECTION SCORES', ''],
     ['Section', 'Avg Score'],
-    ['Overall Satisfaction', '=IFERROR(ROUND(AVERAGE(BT2:BT),1),"")'],
-    ['Steward Rating', '=IFERROR(ROUND(AVERAGE(BU2:BU),1),"")'],
-    ['Steward Access', '=IFERROR(ROUND(AVERAGE(BV2:BV),1),"")'],
-    ['Chapter Effectiveness', '=IFERROR(ROUND(AVERAGE(BW2:BW),1),"")'],
-    ['Local Leadership', '=IFERROR(ROUND(AVERAGE(BX2:BX),1),"")'],
-    ['Contract Enforcement', '=IFERROR(ROUND(AVERAGE(BY2:BY),1),"")'],
-    ['Representation', '=IFERROR(ROUND(AVERAGE(BZ2:BZ),1),"")'],
-    ['Communication', '=IFERROR(ROUND(AVERAGE(CA2:CA),1),"")'],
-    ['Member Voice', '=IFERROR(ROUND(AVERAGE(CB2:CB),1),"")'],
-    ['Value & Action', '=IFERROR(ROUND(AVERAGE(CC2:CC),1),"")'],
-    ['Scheduling', '=IFERROR(ROUND(AVERAGE(CD2:CD),1),"")']
+    ['Overall Satisfaction', ''],
+    ['Steward Rating', ''],
+    ['Steward Access', ''],
+    ['Chapter Effectiveness', ''],
+    ['Local Leadership', ''],
+    ['Contract Enforcement', ''],
+    ['Representation', ''],
+    ['Communication', ''],
+    ['Member Voice', ''],
+    ['Value & Action', ''],
+    ['Scheduling', '']
   ];
-
-  for (var rs = 0; rs < responseSummary.length; rs++) {
-    sheet.getRange(4 + rs, dashStart).setValue(responseSummary[rs][0]);
-    if (responseSummary[rs][1].startsWith('=')) {
-      sheet.getRange(4 + rs, dashStart + 1).setFormula(responseSummary[rs][1]);
-    } else {
-      sheet.getRange(4 + rs, dashStart + 1).setValue(responseSummary[rs][1]);
-    }
-  }
+  sheet.getRange(4, dashStart, responseSummary.length, 2).setValues(responseSummary);
 
   // Format headers
   sheet.getRange(7, dashStart, 1, 2).setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
@@ -1434,37 +1426,30 @@ function createSatisfactionSheet(ss) {
     .setBackground(COLORS.LIGHT_GRAY);
   sheet.getRange(3, demoStart, 1, 2).merge();
 
+  // Demographics labels (values populated by syncSatisfactionValues)
   var demographics = [
     ['Shift Breakdown', ''],
-    ['Day', '=COUNTIF(D2:D,"Day")'],
-    ['Evening', '=COUNTIF(D2:D,"Evening")'],
-    ['Night', '=COUNTIF(D2:D,"Night")'],
-    ['Rotating', '=COUNTIF(D2:D,"Rotating")'],
+    ['Day', ''],
+    ['Evening', ''],
+    ['Night', ''],
+    ['Rotating', ''],
     ['', ''],
     ['Tenure', ''],
-    ['<1 year', '=COUNTIF(E2:E,"<1*")'],
-    ['1-3 years', '=COUNTIF(E2:E,"1-3*")'],
-    ['4-7 years', '=COUNTIF(E2:E,"4-7*")'],
-    ['8-15 years', '=COUNTIF(E2:E,"8-15*")'],
-    ['15+ years', '=COUNTIF(E2:E,"15+*")'],
+    ['<1 year', ''],
+    ['1-3 years', ''],
+    ['4-7 years', ''],
+    ['8-15 years', ''],
+    ['15+ years', ''],
     ['', ''],
     ['Steward Contact', ''],
-    ['Yes (12 mo)', '=COUNTIF(F2:F,"Yes")'],
-    ['No', '=COUNTIF(F2:F,"No")'],
+    ['Yes (12 mo)', ''],
+    ['No', ''],
     ['', ''],
     ['Filed Grievance', ''],
-    ['Yes (24 mo)', '=COUNTIF(AK2:AK,"Yes")'],
-    ['No', '=COUNTIF(AK2:AK,"No")']
+    ['Yes (24 mo)', ''],
+    ['No', '']
   ];
-
-  for (var d = 0; d < demographics.length; d++) {
-    sheet.getRange(4 + d, demoStart).setValue(demographics[d][0]);
-    if (demographics[d][1].startsWith('=')) {
-      sheet.getRange(4 + d, demoStart + 1).setFormula(demographics[d][1]);
-    } else {
-      sheet.getRange(4 + d, demoStart + 1).setValue(demographics[d][1]);
-    }
-  }
+  sheet.getRange(4, demoStart, demographics.length, 2).setValues(demographics);
 
   // Format demographic headers
   sheet.getRange(4, demoStart, 1, 2).setFontWeight('bold').setBackground('#E8F0FE');
@@ -1487,29 +1472,22 @@ function createSatisfactionSheet(ss) {
     .setFontColor(COLORS.WHITE);
   sheet.getRange(3, chartStart, 1, 2).merge();
 
+  // Chart data labels (values populated by syncSatisfactionValues)
   var chartData = [
     ['Section', 'Score'],
-    ['Overall Satisfaction', '=IFERROR(ROUND(AVERAGE(BT2:BT),2),0)'],
-    ['Steward Rating', '=IFERROR(ROUND(AVERAGE(BU2:BU),2),0)'],
-    ['Steward Access', '=IFERROR(ROUND(AVERAGE(BV2:BV),2),0)'],
-    ['Chapter', '=IFERROR(ROUND(AVERAGE(BW2:BW),2),0)'],
-    ['Leadership', '=IFERROR(ROUND(AVERAGE(BX2:BX),2),0)'],
-    ['Contract', '=IFERROR(ROUND(AVERAGE(BY2:BY),2),0)'],
-    ['Representation', '=IFERROR(ROUND(AVERAGE(BZ2:BZ),2),0)'],
-    ['Communication', '=IFERROR(ROUND(AVERAGE(CA2:CA),2),0)'],
-    ['Member Voice', '=IFERROR(ROUND(AVERAGE(CB2:CB),2),0)'],
-    ['Value & Action', '=IFERROR(ROUND(AVERAGE(CC2:CC),2),0)'],
-    ['Scheduling', '=IFERROR(ROUND(AVERAGE(CD2:CD),2),0)']
+    ['Overall Satisfaction', 0],
+    ['Steward Rating', 0],
+    ['Steward Access', 0],
+    ['Chapter', 0],
+    ['Leadership', 0],
+    ['Contract', 0],
+    ['Representation', 0],
+    ['Communication', 0],
+    ['Member Voice', 0],
+    ['Value & Action', 0],
+    ['Scheduling', 0]
   ];
-
-  for (var ch = 0; ch < chartData.length; ch++) {
-    sheet.getRange(4 + ch, chartStart).setValue(chartData[ch][0]);
-    if (chartData[ch][1].startsWith('=')) {
-      sheet.getRange(4 + ch, chartStart + 1).setFormula(chartData[ch][1]);
-    } else {
-      sheet.getRange(4 + ch, chartStart + 1).setValue(chartData[ch][1]);
-    }
-  }
+  sheet.getRange(4, chartStart, chartData.length, 2).setValues(chartData);
 
   sheet.getRange(4, chartStart, 1, 2).setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
   sheet.setColumnWidth(chartStart, 140);
@@ -1679,6 +1657,9 @@ function createSatisfactionSheet(ss) {
     sheet.deleteColumns(89, maxCols - 88);
   }
 
+  // Populate computed values (no formulas in visible sheet)
+  syncSatisfactionValues();
+
   Logger.log('Member Satisfaction sheet created with 68-question survey, dashboard, and chart data');
 }
 
@@ -1832,32 +1813,19 @@ function createFeedbackSheet(ss) {
     .setFontColor(COLORS.WHITE);
   sheet.getRange('M1:O1').merge();
 
-  var typeCol = getColumnLetter(FEEDBACK_COLS.TYPE);
-  var statusCol = getColumnLetter(FEEDBACK_COLS.STATUS);
-  var priorityCol = getColumnLetter(FEEDBACK_COLS.PRIORITY);
-  var idCol = getColumnLetter(FEEDBACK_COLS.TIMESTAMP);
-
+  // Feedback metrics labels (values populated by syncFeedbackValues)
   var feedbackMetrics = [
     ['Metric', 'Value', 'Description'],
-    ['Total Items', '=COUNTA(' + idCol + '2:' + idCol + ')', 'All feedback items'],
-    ['Bugs', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Bug")', 'Bug reports'],
-    ['Feature Requests', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Feature Request")', 'New feature asks'],
-    ['Improvements', '=COUNTIF(' + typeCol + '2:' + typeCol + ',"Improvement")', 'Enhancement suggestions'],
-    ['New/Open', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"New")+COUNTIF(' + statusCol + '2:' + statusCol + ',"In Progress")', 'Unresolved items'],
-    ['Resolved', '=COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")', 'Completed items'],
-    ['Critical Priority', '=COUNTIF(' + priorityCol + '2:' + priorityCol + ',"Critical")', 'Urgent items'],
-    ['Resolution Rate', '=IFERROR(ROUND(COUNTIF(' + statusCol + '2:' + statusCol + ',"Resolved")/COUNTA(' + idCol + '2:' + idCol + ')*100,1)&"%","0%")', 'Percentage resolved']
+    ['Total Items', 0, 'All feedback items'],
+    ['Bugs', 0, 'Bug reports'],
+    ['Feature Requests', 0, 'New feature asks'],
+    ['Improvements', 0, 'Enhancement suggestions'],
+    ['New/Open', 0, 'Unresolved items'],
+    ['Resolved', 0, 'Completed items'],
+    ['Critical Priority', 0, 'Urgent items'],
+    ['Resolution Rate', '0%', 'Percentage resolved']
   ];
-
-  for (var f = 0; f < feedbackMetrics.length; f++) {
-    sheet.getRange(2 + f, 13).setValue(feedbackMetrics[f][0]);
-    if (f === 0) {
-      sheet.getRange(2 + f, 14).setValue(feedbackMetrics[f][1]);
-    } else {
-      sheet.getRange(2 + f, 14).setFormula(feedbackMetrics[f][1]);
-    }
-    sheet.getRange(2 + f, 15).setValue(feedbackMetrics[f][2]);
-  }
+  sheet.getRange(2, 13, feedbackMetrics.length, 3).setValues(feedbackMetrics);
 
   // Format metrics header
   sheet.getRange('M2:O2').setFontWeight('bold').setBackground(COLORS.LIGHT_GRAY);
@@ -1873,6 +1841,9 @@ function createFeedbackSheet(ss) {
   if (maxCols > 15) {
     sheet.deleteColumns(16, maxCols - 15);
   }
+
+  // Populate computed values (no formulas in visible sheet)
+  syncFeedbackValues();
 
   Logger.log('Feedback & Development sheet created');
 }
@@ -3078,8 +3049,1184 @@ function viewActiveGrievances() {
   }
 }
 
+/**
+ * Grievance Form Configuration
+ * Maps form entry IDs to Member Directory fields for pre-filling
+ */
+var GRIEVANCE_FORM_CONFIG = {
+  // Google Form URL (viewform version for pre-filling)
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform',
+
+  // Form field entry IDs mapped to their purpose
+  FIELD_IDS: {
+    MEMBER_ID: 'entry.272049116',
+    MEMBER_FIRST_NAME: 'entry.736822578',
+    MEMBER_LAST_NAME: 'entry.694440931',
+    JOB_TITLE: 'entry.286226203',
+    AGENCY_DEPARTMENT: 'entry.2025752361',
+    REGION: 'entry.352196859',
+    WORK_LOCATION: 'entry.413952220',
+    MANAGERS: 'entry.417314483',
+    MEMBER_EMAIL: 'entry.710401757',
+    STEWARD_FIRST_NAME: 'entry.84740378',
+    STEWARD_LAST_NAME: 'entry.1254106933',
+    STEWARD_EMAIL: 'entry.732806953',
+    DATE_OF_INCIDENT: 'entry.1797903534',
+    ARTICLES_VIOLATED: 'entry.1969613230',
+    REMEDY_SOUGHT: 'entry.1234608137',
+    DATE_FILED: 'entry.361538394',
+    STEP: 'entry.2060308142',
+    CONFIDENTIAL_WAIVER: 'entry.473442818'
+  }
+};
+
+/**
+ * Personal Contact Info Form Configuration
+ * Maps form entry IDs to Member Directory fields for updating member contact info
+ */
+var CONTACT_FORM_CONFIG = {
+  // Google Form URL - members fill out blank form, data written to Member Directory on submit
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform',
+
+  // Form field entry IDs mapped to Member Directory columns
+  FIELD_IDS: {
+    FIRST_NAME: 'entry.1970622040',
+    LAST_NAME: 'entry.1536025015',
+    JOB_TITLE: 'entry.1856093463',
+    UNIT: 'entry.290280210',
+    WORK_LOCATION: 'entry.776695410',
+    OFFICE_DAYS: 'entry.1779089574',           // Multi-select
+    PREFERRED_COMM: 'entry.1201030790',        // Multi-select
+    BEST_TIME: 'entry.1790968369',             // Multi-select
+    SUPERVISOR: 'entry.781564445',
+    MANAGER: 'entry.236404577',
+    EMAIL: 'entry.736229769',
+    PHONE: 'entry.1824028805',
+    INTEREST_ALLIED: 'entry.919302622',        // Willing to support other chapters
+    INTEREST_CHAPTER: 'entry.513494211',       // Willing to be active in sub-chapter
+    INTEREST_LOCAL: 'entry.1902862430'         // Willing to join direct actions
+  }
+};
+
+/**
+ * Start a new grievance for a member
+ * Opens pre-filled Google Form with member info from Member Directory
+ * Can be triggered from Member Directory "Start Grievance" checkbox or menu
+ */
 function startNewGrievance() {
-  SpreadsheetApp.getUi().alert('Start New Grievance feature - Coming soon!\n\nFor now, add grievances directly to the Grievance Log sheet.');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+  var sheet = ss.getActiveSheet();
+  var activeCell = sheet.getActiveCell();
+
+  // Get member data based on context
+  var memberData = null;
+
+  // If on Member Directory, get selected member's data
+  if (sheet.getName() === SHEETS.MEMBER_DIR) {
+    var row = activeCell.getRow();
+    if (row < 2) {
+      ui.alert('📋 Start Grievance', 'Please select a member row (not the header).', ui.ButtonSet.OK);
+      return;
+    }
+
+    var rowData = sheet.getRange(row, 1, 1, MEMBER_COLS.START_GRIEVANCE).getValues()[0];
+    memberData = {
+      memberId: rowData[MEMBER_COLS.MEMBER_ID - 1] || '',
+      firstName: rowData[MEMBER_COLS.FIRST_NAME - 1] || '',
+      lastName: rowData[MEMBER_COLS.LAST_NAME - 1] || '',
+      jobTitle: rowData[MEMBER_COLS.JOB_TITLE - 1] || '',
+      workLocation: rowData[MEMBER_COLS.WORK_LOCATION - 1] || '',
+      unit: rowData[MEMBER_COLS.UNIT - 1] || '',
+      email: rowData[MEMBER_COLS.EMAIL - 1] || '',
+      manager: rowData[MEMBER_COLS.MANAGER - 1] || ''
+    };
+
+    if (!memberData.memberId) {
+      ui.alert('📋 Start Grievance', 'This row does not have a Member ID.', ui.ButtonSet.OK);
+      return;
+    }
+  } else {
+    // Show member selection dialog
+    var response = ui.prompt('📋 Start Grievance',
+      'Enter the Member ID to start a grievance for:',
+      ui.ButtonSet.OK_CANCEL);
+
+    if (response.getSelectedButton() !== ui.Button.OK) {
+      return;
+    }
+
+    var memberId = response.getResponseText().trim();
+    if (!memberId) {
+      ui.alert('No Member ID entered.');
+      return;
+    }
+
+    // Look up member in Member Directory
+    var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (!memberSheet) {
+      ui.alert('Member Directory not found.');
+      return;
+    }
+
+    var memberDataRange = memberSheet.getDataRange().getValues();
+    for (var i = 1; i < memberDataRange.length; i++) {
+      if (memberDataRange[i][MEMBER_COLS.MEMBER_ID - 1] === memberId) {
+        memberData = {
+          memberId: memberDataRange[i][MEMBER_COLS.MEMBER_ID - 1] || '',
+          firstName: memberDataRange[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+          lastName: memberDataRange[i][MEMBER_COLS.LAST_NAME - 1] || '',
+          jobTitle: memberDataRange[i][MEMBER_COLS.JOB_TITLE - 1] || '',
+          workLocation: memberDataRange[i][MEMBER_COLS.WORK_LOCATION - 1] || '',
+          unit: memberDataRange[i][MEMBER_COLS.UNIT - 1] || '',
+          email: memberDataRange[i][MEMBER_COLS.EMAIL - 1] || '',
+          manager: memberDataRange[i][MEMBER_COLS.MANAGER - 1] || ''
+        };
+        break;
+      }
+    }
+
+    if (!memberData) {
+      ui.alert('Member ID "' + memberId + '" not found in Member Directory.');
+      return;
+    }
+  }
+
+  // Get current user as steward (if they're a steward)
+  var stewardData = getCurrentStewardInfo_(ss);
+
+  // Build pre-filled form URL
+  var formUrl = buildGrievanceFormUrl_(memberData, stewardData);
+
+  // Open form in new window
+  var html = HtmlService.createHtmlOutput(
+    '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+  ).setWidth(200).setHeight(50);
+
+  ui.showModalDialog(html, 'Opening Grievance Form...');
+
+  ss.toast('Grievance form opened for ' + memberData.firstName + ' ' + memberData.lastName, '📋 Form Opened', 3);
+}
+
+/**
+ * Get current user's steward info from Member Directory
+ * @private
+ */
+function getCurrentStewardInfo_(ss) {
+  var currentUserEmail = Session.getActiveUser().getEmail();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet || !currentUserEmail) {
+    return { firstName: '', lastName: '', email: currentUserEmail || '' };
+  }
+
+  var data = memberSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var email = data[i][MEMBER_COLS.EMAIL - 1];
+    var isSteward = data[i][MEMBER_COLS.IS_STEWARD - 1];
+
+    if (email && email.toLowerCase() === currentUserEmail.toLowerCase() && isSteward === 'Yes') {
+      return {
+        firstName: data[i][MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: data[i][MEMBER_COLS.LAST_NAME - 1] || '',
+        email: email
+      };
+    }
+  }
+
+  // Return email only if not found as steward
+  return { firstName: '', lastName: '', email: currentUserEmail };
+}
+
+/**
+ * Build pre-filled grievance form URL
+ * @private
+ */
+function buildGrievanceFormUrl_(memberData, stewardData) {
+  var baseUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+  var fields = GRIEVANCE_FORM_CONFIG.FIELD_IDS;
+
+  var params = [];
+
+  // Member info
+  if (memberData.memberId) params.push(fields.MEMBER_ID + '=' + encodeURIComponent(memberData.memberId));
+  if (memberData.firstName) params.push(fields.MEMBER_FIRST_NAME + '=' + encodeURIComponent(memberData.firstName));
+  if (memberData.lastName) params.push(fields.MEMBER_LAST_NAME + '=' + encodeURIComponent(memberData.lastName));
+  if (memberData.jobTitle) params.push(fields.JOB_TITLE + '=' + encodeURIComponent(memberData.jobTitle));
+  if (memberData.unit) params.push(fields.AGENCY_DEPARTMENT + '=' + encodeURIComponent(memberData.unit));
+  if (memberData.workLocation) {
+    params.push(fields.REGION + '=' + encodeURIComponent(memberData.workLocation));
+    params.push(fields.WORK_LOCATION + '=' + encodeURIComponent(memberData.workLocation));
+  }
+  if (memberData.manager) params.push(fields.MANAGERS + '=' + encodeURIComponent(memberData.manager));
+  if (memberData.email) params.push(fields.MEMBER_EMAIL + '=' + encodeURIComponent(memberData.email));
+
+  // Steward info
+  if (stewardData.firstName) params.push(fields.STEWARD_FIRST_NAME + '=' + encodeURIComponent(stewardData.firstName));
+  if (stewardData.lastName) params.push(fields.STEWARD_LAST_NAME + '=' + encodeURIComponent(stewardData.lastName));
+  if (stewardData.email) params.push(fields.STEWARD_EMAIL + '=' + encodeURIComponent(stewardData.email));
+
+  // Default values
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  params.push(fields.DATE_FILED + '=' + encodeURIComponent(today));
+  params.push(fields.STEP + '=' + encodeURIComponent('I'));
+
+  return baseUrl + '?usp=pp_url&' + params.join('&');
+}
+
+// ============================================================================
+// GRIEVANCE FORM SUBMISSION HANDLER
+// ============================================================================
+
+/**
+ * Handle grievance form submission
+ * This function is triggered when a grievance form is submitted.
+ * It adds the grievance to the Grievance Log and creates a Drive folder.
+ *
+ * To set up: Run setupGrievanceFormTrigger() once, or manually add an
+ * installable trigger for this function on the form.
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onGrievanceFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!grievanceSheet) {
+    Logger.log('Grievance Log sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Map form fields to grievance data
+    var memberId = getFormValue_(responses, 'Member ID');
+    var firstName = getFormValue_(responses, 'Member First Name');
+    var lastName = getFormValue_(responses, 'Member Last Name');
+    var jobTitle = getFormValue_(responses, 'Job Title');
+    var unit = getFormValue_(responses, 'Agency/Department');
+    var workLocation = getFormValue_(responses, 'Work Location') || getFormValue_(responses, 'Region');
+    var manager = getFormValue_(responses, 'Manager(s)');
+    var memberEmail = getFormValue_(responses, 'Member Email');
+    var stewardFirstName = getFormValue_(responses, 'Steward First Name');
+    var stewardLastName = getFormValue_(responses, 'Steward Last Name');
+    var stewardEmail = getFormValue_(responses, 'Steward Email');
+    var incidentDate = getFormValue_(responses, 'Date of Incident');
+    var articlesViolated = getFormValue_(responses, 'Articles Violated');
+    var remedySought = getFormValue_(responses, 'Remedy Sought');
+    var dateFiled = getFormValue_(responses, 'Date Filed');
+    var step = getFormValue_(responses, 'Step (I/II/III)') || 'Step I';
+    var confidentialWaiver = getFormValue_(responses, 'Confidential Waiver Attached?');
+
+    // Generate Grievance ID
+    var existingIds = getExistingGrievanceIds_(grievanceSheet);
+    var grievanceId = generateNameBasedId('G', firstName, lastName, existingIds);
+
+    // Combine steward name for Assigned Steward column
+    var stewardName = ((stewardFirstName || '') + ' ' + (stewardLastName || '')).trim();
+
+    // Create Drive folder for this grievance
+    var folderInfo = createGrievanceFolderFromData_(grievanceId, memberId, firstName, lastName);
+
+    // Build row data array matching GRIEVANCE_COLS order
+    var newRow = [];
+    newRow[GRIEVANCE_COLS.GRIEVANCE_ID - 1] = grievanceId;
+    newRow[GRIEVANCE_COLS.MEMBER_ID - 1] = memberId;
+    newRow[GRIEVANCE_COLS.FIRST_NAME - 1] = firstName;
+    newRow[GRIEVANCE_COLS.LAST_NAME - 1] = lastName;
+    newRow[GRIEVANCE_COLS.STATUS - 1] = 'Open';
+    newRow[GRIEVANCE_COLS.CURRENT_STEP - 1] = step;
+    newRow[GRIEVANCE_COLS.INCIDENT_DATE - 1] = parseFormDate_(incidentDate);
+    newRow[GRIEVANCE_COLS.FILING_DEADLINE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.DATE_FILED - 1] = parseFormDate_(dateFiled) || new Date();
+    newRow[GRIEVANCE_COLS.STEP1_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP1_RCVD - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP2_APPEAL_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP2_APPEAL_FILED - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP2_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP2_RCVD - 1] = '';
+    newRow[GRIEVANCE_COLS.STEP3_APPEAL_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.STEP3_APPEAL_FILED - 1] = '';
+    newRow[GRIEVANCE_COLS.DATE_CLOSED - 1] = '';
+    newRow[GRIEVANCE_COLS.DAYS_OPEN - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1] = ''; // Auto-calculated
+    newRow[GRIEVANCE_COLS.ARTICLES - 1] = articlesViolated;
+    newRow[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] = '';
+    newRow[GRIEVANCE_COLS.MEMBER_EMAIL - 1] = memberEmail;
+    newRow[GRIEVANCE_COLS.UNIT - 1] = unit;
+    newRow[GRIEVANCE_COLS.LOCATION - 1] = workLocation;
+    newRow[GRIEVANCE_COLS.STEWARD - 1] = stewardName;
+    newRow[GRIEVANCE_COLS.RESOLUTION - 1] = '';
+    newRow[GRIEVANCE_COLS.MESSAGE_ALERT - 1] = false;
+    newRow[GRIEVANCE_COLS.COORDINATOR_MESSAGE - 1] = '';
+    newRow[GRIEVANCE_COLS.ACKNOWLEDGED_BY - 1] = '';
+    newRow[GRIEVANCE_COLS.ACKNOWLEDGED_DATE - 1] = '';
+    newRow[GRIEVANCE_COLS.DRIVE_FOLDER_ID - 1] = folderInfo.id;
+    newRow[GRIEVANCE_COLS.DRIVE_FOLDER_URL - 1] = folderInfo.url;
+
+    // Append row to Grievance Log
+    grievanceSheet.appendRow(newRow);
+
+    // Refresh formulas to calculate deadlines
+    syncGrievanceFormulasToLog();
+
+    // Sort by status
+    sortGrievanceLogByStatus();
+
+    // Update Member Directory grievance status
+    syncGrievanceToMemberDirectory();
+
+    Logger.log('Grievance ' + grievanceId + ' created successfully with folder: ' + folderInfo.url);
+
+  } catch (error) {
+    Logger.log('Error processing grievance form submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get a value from form named responses
+ * @private
+ */
+function getFormValue_(responses, fieldName) {
+  if (responses[fieldName] && responses[fieldName].length > 0) {
+    return responses[fieldName][0];
+  }
+  return '';
+}
+
+/**
+ * Parse a date string from form submission
+ * @private
+ */
+function parseFormDate_(dateStr) {
+  if (!dateStr) return '';
+
+  try {
+    var date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return dateStr; // Return as-is if can't parse
+    }
+    return date;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+/**
+ * Get existing grievance IDs for collision detection
+ * @private
+ */
+function getExistingGrievanceIds_(sheet) {
+  var ids = {};
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var id = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    if (id) {
+      ids[id] = true;
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Create a Drive folder for a grievance from form data
+ * @private
+ */
+function createGrievanceFolderFromData_(grievanceId, memberId, firstName, lastName) {
+  try {
+    // Get or create root folder
+    var rootFolder = getOrCreateDashboardFolder_();
+
+    // Create folder name: GXXX123 - FirstName LastName (MemberID)
+    var memberName = ((firstName || '') + ' ' + (lastName || '')).trim() || 'Unknown';
+    var folderName = grievanceId + ' - ' + memberName;
+    if (memberId) {
+      folderName += ' (' + memberId + ')';
+    }
+
+    // Check if folder already exists
+    var folders = rootFolder.getFoldersByName(folderName);
+    var folder;
+
+    if (folders.hasNext()) {
+      folder = folders.next();
+    } else {
+      folder = rootFolder.createFolder(folderName);
+
+      // Create subfolders for organization
+      folder.createFolder('📄 Documents');
+      folder.createFolder('📧 Correspondence');
+      folder.createFolder('📝 Notes');
+    }
+
+    // Share with grievance coordinators from Config
+    shareWithCoordinators_(folder);
+
+    return {
+      id: folder.getId(),
+      url: folder.getUrl()
+    };
+
+  } catch (e) {
+    Logger.log('Error creating grievance folder: ' + e.message);
+    return { id: '', url: '' };
+  }
+}
+
+/**
+ * Share folder with grievance coordinators from Config sheet
+ * @private
+ */
+function shareWithCoordinators_(folder) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+    if (!configSheet) return;
+
+    // Get coordinator emails from Config (column O = GRIEVANCE_COORDINATORS)
+    var coordData = configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_COORDINATORS,
+                                          configSheet.getLastRow() - 1, 1).getValues();
+
+    for (var i = 0; i < coordData.length; i++) {
+      var email = coordData[i][0];
+      if (email && email.toString().trim() !== '') {
+        try {
+          folder.addEditor(email.toString().trim());
+        } catch (shareError) {
+          Logger.log('Could not share with ' + email + ': ' + shareError.message);
+        }
+      }
+    }
+  } catch (e) {
+    Logger.log('Error sharing with coordinators: ' + e.message);
+  }
+}
+
+/**
+ * Set up the grievance form submission trigger
+ * Run this once to enable automatic processing of form submissions
+ */
+function setupGrievanceFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasGrievanceTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onGrievanceFormSubmit') {
+      hasGrievanceTrigger = true;
+      break;
+    }
+  }
+
+  if (hasGrievanceTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A grievance form trigger already exists.\n\n' +
+      'Form submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📋 Setup Grievance Form Trigger',
+    'This will set up automatic processing of grievance form submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):\n' +
+    '(Leave blank to use the configured form)',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  try {
+    var formId;
+
+    if (formUrl) {
+      // Extract form ID from URL
+      var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+        return;
+      }
+      formId = match[1];
+    } else {
+      // Use configured form
+      var configFormUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+      var match = configFormUrl.match(/\/d\/e\/([a-zA-Z0-9-_]+)/);
+      if (!match) {
+        ui.alert('❌ No Form Configured',
+          'No form URL provided and could not extract ID from config.\n\n' +
+          'Please provide the form edit URL.',
+          ui.ButtonSet.OK);
+        return;
+      }
+      // Note: The /e/ URL is the published version, we need the actual form ID
+      ui.alert('ℹ️ Form URL Needed',
+        'Please provide the form edit URL (the one ending in /edit).\n\n' +
+        'You can find this by opening the form in edit mode.',
+        ui.ButtonSet.OK);
+      return;
+    }
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onGrievanceFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Grievance form trigger has been set up!\n\n' +
+      'When a grievance form is submitted:\n' +
+      '• A new row will be added to Grievance Log\n' +
+      '• A Drive folder will be created automatically\n' +
+      '• Deadlines will be calculated\n' +
+      '• Member Directory will be updated',
+      ui.ButtonSet.OK);
+
+    ss.toast('Form trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Manually process a grievance from form data (for testing or re-processing)
+ * Call this with test data to verify the form submission handler works
+ */
+function testGrievanceFormSubmission() {
+  var testEvent = {
+    namedValues: {
+      'Member ID': ['TEST001'],
+      'Member First Name': ['Test'],
+      'Member Last Name': ['Member'],
+      'Job Title': ['Test Position'],
+      'Agency/Department': ['Test Unit'],
+      'Region': ['Test Location'],
+      'Work Location': ['Test Location'],
+      'Manager(s)': ['Test Manager'],
+      'Member Email': ['test@example.com'],
+      'Steward First Name': ['Test'],
+      'Steward Last Name': ['Steward'],
+      'Steward Email': ['steward@example.com'],
+      'Date of Incident': [new Date().toISOString()],
+      'Articles Violated': ['Art. 6 - Hours of Work'],
+      'Remedy Sought': ['Test remedy'],
+      'Date Filed': [new Date().toISOString()],
+      'Step (I/II/III)': ['Step I'],
+      'Confidential Waiver Attached?': ['Yes']
+    }
+  };
+
+  onGrievanceFormSubmit(testEvent);
+  SpreadsheetApp.getActiveSpreadsheet().toast('Test grievance created!', '✅ Test Complete', 3);
+}
+
+// ============================================================================
+// PERSONAL CONTACT INFO FORM HANDLER
+// ============================================================================
+
+/**
+ * Show the Personal Contact Info form link
+ * Members fill out the blank form and data is written to Member Directory on submit
+ */
+function sendContactInfoForm() {
+  var ui = SpreadsheetApp.getUi();
+  var formUrl = CONTACT_FORM_CONFIG.FORM_URL;
+
+  // Show dialog with form link options
+  var response = ui.alert('📋 Personal Contact Info Form',
+    'Share this form with members to collect their contact information.\n\n' +
+    'When submitted, the data will be written to the Member Directory:\n' +
+    '• Existing members (matched by name) will be updated\n' +
+    '• New members will be added automatically\n\n' +
+    '• Click YES to open the form\n' +
+    '• Click NO to copy the link',
+    ui.ButtonSet.YES_NO_CANCEL);
+
+  if (response === ui.Button.YES) {
+    // Open form in new window
+    var html = HtmlService.createHtmlOutput(
+      '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+    ).setWidth(1).setHeight(1);
+    ui.showModalDialog(html, 'Opening form...');
+  } else if (response === ui.Button.NO) {
+    // Show link to copy
+    var copyHtml = HtmlService.createHtmlOutput(
+      '<div style="font-family: Arial, sans-serif; padding: 10px;">' +
+      '<p>Copy this link and share with members:</p>' +
+      '<textarea id="link" style="width: 100%; height: 80px; font-size: 12px;">' + formUrl + '</textarea>' +
+      '<br><br>' +
+      '<button onclick="copyLink()" style="padding: 8px 16px; cursor: pointer;">📋 Copy to Clipboard</button>' +
+      '<span id="copied" style="color: green; margin-left: 10px; display: none;">Copied!</span>' +
+      '<script>' +
+      'function copyLink() {' +
+      '  var ta = document.getElementById("link");' +
+      '  ta.select();' +
+      '  document.execCommand("copy");' +
+      '  document.getElementById("copied").style.display = "inline";' +
+      '}' +
+      '</script>' +
+      '</div>'
+    ).setWidth(450).setHeight(180);
+    ui.showModalDialog(copyHtml, '📋 Contact Form Link');
+  }
+}
+
+/**
+ * Handle contact form submission
+ * Writes member data to Member Directory (updates existing or creates new)
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onContactFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet) {
+    Logger.log('Member Directory sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Extract form data
+    var firstName = getFormValue_(responses, 'First Name');
+    var lastName = getFormValue_(responses, 'Last Name');
+    var jobTitle = getFormValue_(responses, 'Job Title / Position');
+    var unit = getFormValue_(responses, 'Department / Unit');
+    var workLocation = getFormValue_(responses, 'Worksite / Office Location');
+    var officeDays = getFormMultiValue_(responses, 'Work Schedule / Office Days');
+    var preferredComm = getFormMultiValue_(responses, 'Please select your preferred communication methods (check all that apply):');
+    var bestTime = getFormMultiValue_(responses, 'What time(s) are best for us to reach you? (check all that apply)');
+    var supervisor = getFormValue_(responses, 'Immediate Supervisor');
+    var manager = getFormValue_(responses, 'Manager / Program Director');
+    var email = getFormValue_(responses, 'Personal Email');
+    var phone = getFormValue_(responses, 'Personal Phone Number');
+    var interestAllied = getFormValue_(responses, 'Willing to support other chapters (DDS, DCF, Public Sector, etc.)?');
+    var interestChapter = getFormValue_(responses, 'Willing to be active in sub-chapter (at other worksites within your agency of employment)?');
+    var interestLocal = getFormValue_(responses, 'Willing to join direct actions (e.g., at your place of employment)?');
+
+    // Require at least first and last name
+    if (!firstName || !lastName) {
+      Logger.log('Contact form submission missing name: ' + firstName + ' ' + lastName);
+      return;
+    }
+
+    // Find the member by first name + last name
+    var data = memberSheet.getDataRange().getValues();
+    var memberRow = -1;
+
+    for (var i = 1; i < data.length; i++) {
+      var rowFirstName = (data[i][MEMBER_COLS.FIRST_NAME - 1] || '').toString().trim().toLowerCase();
+      var rowLastName = (data[i][MEMBER_COLS.LAST_NAME - 1] || '').toString().trim().toLowerCase();
+
+      if (rowFirstName === firstName.toLowerCase().trim() &&
+          rowLastName === lastName.toLowerCase().trim()) {
+        memberRow = i + 1; // Convert to 1-indexed row number
+        break;
+      }
+    }
+
+    if (memberRow === -1) {
+      // Member not found - create new member
+      Logger.log('Creating new member: ' + firstName + ' ' + lastName);
+
+      // Generate Member ID
+      var existingIds = {};
+      for (var k = 1; k < data.length; k++) {
+        var id = data[k][MEMBER_COLS.MEMBER_ID - 1];
+        if (id) existingIds[id] = true;
+      }
+      var memberId = generateNameBasedId('M', firstName, lastName, existingIds);
+
+      // Build new row array
+      var newRow = [];
+      newRow[MEMBER_COLS.MEMBER_ID - 1] = memberId;
+      newRow[MEMBER_COLS.FIRST_NAME - 1] = firstName;
+      newRow[MEMBER_COLS.LAST_NAME - 1] = lastName;
+      newRow[MEMBER_COLS.JOB_TITLE - 1] = jobTitle || '';
+      newRow[MEMBER_COLS.WORK_LOCATION - 1] = workLocation || '';
+      newRow[MEMBER_COLS.UNIT - 1] = unit || '';
+      newRow[MEMBER_COLS.OFFICE_DAYS - 1] = officeDays || '';
+      newRow[MEMBER_COLS.EMAIL - 1] = email || '';
+      newRow[MEMBER_COLS.PHONE - 1] = phone || '';
+      newRow[MEMBER_COLS.PREFERRED_COMM - 1] = preferredComm || '';
+      newRow[MEMBER_COLS.BEST_TIME - 1] = bestTime || '';
+      newRow[MEMBER_COLS.SUPERVISOR - 1] = supervisor || '';
+      newRow[MEMBER_COLS.MANAGER - 1] = manager || '';
+      newRow[MEMBER_COLS.IS_STEWARD - 1] = 'No';
+      newRow[MEMBER_COLS.INTEREST_LOCAL - 1] = interestLocal || '';
+      newRow[MEMBER_COLS.INTEREST_CHAPTER - 1] = interestChapter || '';
+      newRow[MEMBER_COLS.INTEREST_ALLIED - 1] = interestAllied || '';
+
+      // Append new member row
+      memberSheet.appendRow(newRow);
+      Logger.log('Created new member ' + memberId + ': ' + firstName + ' ' + lastName);
+
+    } else {
+      // Update existing member record with form data
+      var updates = [];
+
+      // Update all fields from form (even if they change existing values)
+      if (jobTitle) updates.push({ col: MEMBER_COLS.JOB_TITLE, value: jobTitle });
+      if (unit) updates.push({ col: MEMBER_COLS.UNIT, value: unit });
+      if (workLocation) updates.push({ col: MEMBER_COLS.WORK_LOCATION, value: workLocation });
+      if (officeDays) updates.push({ col: MEMBER_COLS.OFFICE_DAYS, value: officeDays });
+      if (preferredComm) updates.push({ col: MEMBER_COLS.PREFERRED_COMM, value: preferredComm });
+      if (bestTime) updates.push({ col: MEMBER_COLS.BEST_TIME, value: bestTime });
+      if (supervisor) updates.push({ col: MEMBER_COLS.SUPERVISOR, value: supervisor });
+      if (manager) updates.push({ col: MEMBER_COLS.MANAGER, value: manager });
+      if (email) updates.push({ col: MEMBER_COLS.EMAIL, value: email });
+      if (phone) updates.push({ col: MEMBER_COLS.PHONE, value: phone });
+      if (interestLocal) updates.push({ col: MEMBER_COLS.INTEREST_LOCAL, value: interestLocal });
+      if (interestChapter) updates.push({ col: MEMBER_COLS.INTEREST_CHAPTER, value: interestChapter });
+      if (interestAllied) updates.push({ col: MEMBER_COLS.INTEREST_ALLIED, value: interestAllied });
+
+      // Apply updates
+      for (var j = 0; j < updates.length; j++) {
+        memberSheet.getRange(memberRow, updates[j].col).setValue(updates[j].value);
+      }
+
+      Logger.log('Updated contact info for ' + firstName + ' ' + lastName + ' (row ' + memberRow + ')');
+    }
+
+  } catch (error) {
+    Logger.log('Error processing contact form submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get multiple values from form response (for checkbox questions)
+ * Returns comma-separated string
+ * @private
+ */
+function getFormMultiValue_(responses, fieldName) {
+  if (responses[fieldName] && responses[fieldName].length > 0) {
+    // Filter out empty values and join with comma
+    var values = responses[fieldName].filter(function(v) { return v && v.trim() !== ''; });
+    return values.join(', ');
+  }
+  return '';
+}
+
+/**
+ * Set up the contact form submission trigger
+ * Run this once to enable automatic processing of form submissions
+ */
+function setupContactFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasContactTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onContactFormSubmit') {
+      hasContactTrigger = true;
+      break;
+    }
+  }
+
+  if (hasContactTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A contact form trigger already exists.\n\n' +
+      'Form submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📋 Setup Contact Form Trigger',
+    'This will set up automatic processing of contact info form submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  if (!formUrl) {
+    ui.alert('❌ No URL', 'Please provide the form edit URL.', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    // Extract form ID from URL
+    var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+      return;
+    }
+    var formId = match[1];
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onContactFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Contact form trigger has been set up!\n\n' +
+      'When a contact form is submitted:\n' +
+      '• The member\'s record will be updated in Member Directory\n' +
+      '• Contact info, preferences, and interests will be saved',
+      ui.ButtonSet.OK);
+
+    ss.toast('Form trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
+}
+
+// ============================================================================
+// MEMBER SATISFACTION SURVEY FORM HANDLER
+// ============================================================================
+
+/**
+ * Member Satisfaction Survey Form Configuration
+ */
+var SATISFACTION_FORM_CONFIG = {
+  // Google Form URLs
+  FORM_URL: 'https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform',
+  EDIT_URL: 'https://docs.google.com/forms/d/10irg3mZ4kPShcJ5gFHuMoTxvTeZmo_cBs6HGvfasbL0/edit',
+
+  // Form field entry IDs (from pre-filled URL)
+  FIELD_IDS: {
+    WORKSITE: 'entry.829990399',
+    TOP_PRIORITIES: 'entry.1290096581',      // Multi-select checkboxes
+    ONE_CHANGE: 'entry.1926319061',
+    KEEP_DOING: 'entry.1554906279',
+    ADDITIONAL_COMMENTS: 'entry.650574503'
+  }
+};
+
+/**
+ * Show the Member Satisfaction Survey form link
+ * Survey responses are written to the Member Satisfaction sheet
+ */
+function getSatisfactionSurveyLink() {
+  var ui = SpreadsheetApp.getUi();
+  var formUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+
+  // Show dialog with form link options
+  var response = ui.alert('📊 Member Satisfaction Survey',
+    'Share this survey with members to collect feedback.\n\n' +
+    'When submitted, responses will be written to the\n' +
+    '📊 Member Satisfaction sheet.\n\n' +
+    '• Click YES to open the survey\n' +
+    '• Click NO to copy the link',
+    ui.ButtonSet.YES_NO_CANCEL);
+
+  if (response === ui.Button.YES) {
+    // Open form in new window
+    var html = HtmlService.createHtmlOutput(
+      '<script>window.open("' + formUrl + '", "_blank");google.script.host.close();</script>'
+    ).setWidth(1).setHeight(1);
+    ui.showModalDialog(html, 'Opening survey...');
+  } else if (response === ui.Button.NO) {
+    // Show link to copy
+    var copyHtml = HtmlService.createHtmlOutput(
+      '<div style="font-family: Arial, sans-serif; padding: 10px;">' +
+      '<p>Copy this link and share with members:</p>' +
+      '<textarea id="link" style="width: 100%; height: 80px; font-size: 12px;">' + formUrl + '</textarea>' +
+      '<br><br>' +
+      '<button onclick="copyLink()" style="padding: 8px 16px; cursor: pointer;">📋 Copy to Clipboard</button>' +
+      '<span id="copied" style="color: green; margin-left: 10px; display: none;">Copied!</span>' +
+      '<script>' +
+      'function copyLink() {' +
+      '  var ta = document.getElementById("link");' +
+      '  ta.select();' +
+      '  document.execCommand("copy");' +
+      '  document.getElementById("copied").style.display = "inline";' +
+      '}' +
+      '</script>' +
+      '</div>'
+    ).setWidth(450).setHeight(180);
+    ui.showModalDialog(copyHtml, '📊 Survey Link');
+  }
+}
+
+/**
+ * Save form URLs to the Config tab for easy reference and updating
+ * Writes Grievance Form, Contact Form, and Satisfaction Survey URLs to Config columns P, Q, AR
+ */
+function saveFormUrlsToConfig() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  saveFormUrlsToConfig_silent(ss);
+  ss.toast('Form URLs saved to Config tab (columns P, Q, AR)', '✅ Saved', 3);
+}
+
+/**
+ * Silent version - used during CREATE_509_DASHBOARD setup
+ * @param {Spreadsheet} ss - The spreadsheet object
+ * @private
+ */
+function saveFormUrlsToConfig_silent(ss) {
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!configSheet) {
+    Logger.log('Config sheet not found - cannot save form URLs');
+    return;
+  }
+
+  // Set headers in row 1
+  configSheet.getRange(1, CONFIG_COLS.GRIEVANCE_FORM_URL).setValue('Grievance Form URL');
+  configSheet.getRange(1, CONFIG_COLS.CONTACT_FORM_URL).setValue('Contact Form URL');
+  configSheet.getRange(1, CONFIG_COLS.SATISFACTION_FORM_URL).setValue('Satisfaction Survey URL');
+
+  // Set form URLs in row 2
+  configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_FORM_URL).setValue(GRIEVANCE_FORM_CONFIG.FORM_URL);
+  configSheet.getRange(2, CONFIG_COLS.CONTACT_FORM_URL).setValue(CONTACT_FORM_CONFIG.FORM_URL);
+  configSheet.getRange(2, CONFIG_COLS.SATISFACTION_FORM_URL).setValue(SATISFACTION_FORM_CONFIG.FORM_URL);
+
+  // Format as links
+  configSheet.getRange(2, CONFIG_COLS.GRIEVANCE_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+  configSheet.getRange(2, CONFIG_COLS.CONTACT_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+  configSheet.getRange(2, CONFIG_COLS.SATISFACTION_FORM_URL).setFontColor('#1155cc').setFontLine('underline');
+}
+
+/**
+ * Handle satisfaction survey form submission
+ * Writes survey responses to the Member Satisfaction sheet
+ *
+ * @param {Object} e - Form submission event object
+ */
+function onSatisfactionFormSubmit(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet) {
+    Logger.log('Member Satisfaction sheet not found');
+    return;
+  }
+
+  try {
+    // Get form responses from event
+    var responses = e.namedValues || {};
+
+    // Build row data array matching SATISFACTION_COLS order
+    var newRow = [];
+
+    // Timestamp
+    newRow[SATISFACTION_COLS.TIMESTAMP - 1] = new Date();
+
+    // Work Context (Q1-5) - Note: Q3_SHIFT not in form, column left empty
+    newRow[SATISFACTION_COLS.Q1_WORKSITE - 1] = getFormValue_(responses, 'Worksite / Program / Region');
+    newRow[SATISFACTION_COLS.Q2_ROLE - 1] = getFormValue_(responses, 'Role / Job Group');
+    // Q3_SHIFT skipped - form does not have this question
+    newRow[SATISFACTION_COLS.Q4_TIME_IN_ROLE - 1] = getFormValue_(responses, 'Time in current role');
+    newRow[SATISFACTION_COLS.Q5_STEWARD_CONTACT - 1] = getFormValue_(responses, 'Contact with steward in past 12 months?');
+
+    // Overall Satisfaction (Q6-9)
+    newRow[SATISFACTION_COLS.Q6_SATISFIED_REP - 1] = getFormValue_(responses, 'Satisfied with union representation');
+    newRow[SATISFACTION_COLS.Q7_TRUST_UNION - 1] = getFormValue_(responses, 'Trust union to act in best interests');
+    newRow[SATISFACTION_COLS.Q8_FEEL_PROTECTED - 1] = getFormValue_(responses, 'Feel more protected at work');
+    newRow[SATISFACTION_COLS.Q9_RECOMMEND - 1] = getFormValue_(responses, 'Voted during the last election');
+
+    // Steward Ratings 3A (Q10-17)
+    newRow[SATISFACTION_COLS.Q10_TIMELY_RESPONSE - 1] = getFormValue_(responses, 'Responded in timely manner');
+    newRow[SATISFACTION_COLS.Q11_TREATED_RESPECT - 1] = getFormValue_(responses, 'Treated me with respect');
+    newRow[SATISFACTION_COLS.Q12_EXPLAINED_OPTIONS - 1] = getFormValue_(responses, 'Explained options clearly');
+    newRow[SATISFACTION_COLS.Q13_FOLLOWED_THROUGH - 1] = getFormValue_(responses, 'Followed through on commitments');
+    newRow[SATISFACTION_COLS.Q14_ADVOCATED - 1] = getFormValue_(responses, 'Advocated effectively');
+    newRow[SATISFACTION_COLS.Q15_SAFE_CONCERNS - 1] = getFormValue_(responses, 'Felt safe raising concerns');
+    newRow[SATISFACTION_COLS.Q16_CONFIDENTIALITY - 1] = getFormValue_(responses, 'Handled confidentiality appropriately');
+    newRow[SATISFACTION_COLS.Q17_STEWARD_IMPROVE - 1] = getFormValue_(responses, 'What should stewards improve?');
+
+    // Steward Access 3B (Q18-20)
+    newRow[SATISFACTION_COLS.Q18_KNOW_CONTACT - 1] = getFormValue_(responses, 'Know how to contact steward/rep');
+    newRow[SATISFACTION_COLS.Q19_CONFIDENT_HELP - 1] = getFormValue_(responses, 'Confident I would get help');
+    newRow[SATISFACTION_COLS.Q20_EASY_FIND - 1] = getFormValue_(responses, 'Easy to figure out who to contact');
+
+    // Chapter Effectiveness (Q21-25)
+    newRow[SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES - 1] = getFormValue_(responses, 'Reps understand my workplace issues');
+    newRow[SATISFACTION_COLS.Q22_CHAPTER_COMM - 1] = getFormValue_(responses, 'Chapter communication is regular and clear');
+    newRow[SATISFACTION_COLS.Q23_ORGANIZES - 1] = getFormValue_(responses, 'Chapter organizes members effectively');
+    newRow[SATISFACTION_COLS.Q24_REACH_CHAPTER - 1] = getFormValue_(responses, 'Know how to reach chapter contact');
+    newRow[SATISFACTION_COLS.Q25_FAIR_REP - 1] = getFormValue_(responses, 'Representation is fair across roles/shifts');
+
+    // Local Leadership (Q26-31)
+    newRow[SATISFACTION_COLS.Q26_DECISIONS_CLEAR - 1] = getFormValue_(responses, 'Leadership communicates decisions clearly');
+    newRow[SATISFACTION_COLS.Q27_UNDERSTAND_PROCESS - 1] = getFormValue_(responses, 'Understand how decisions are made');
+    newRow[SATISFACTION_COLS.Q28_TRANSPARENT_FINANCE - 1] = getFormValue_(responses, 'Union is transparent about finances');
+    newRow[SATISFACTION_COLS.Q29_ACCOUNTABLE - 1] = getFormValue_(responses, 'Leadership is accountable to feedback');
+    newRow[SATISFACTION_COLS.Q30_FAIR_PROCESSES - 1] = getFormValue_(responses, 'Internal processes feel fair');
+    newRow[SATISFACTION_COLS.Q31_WELCOMES_OPINIONS - 1] = getFormValue_(responses, 'Union welcomes differing opinions');
+
+    // Contract Enforcement (Q32-36)
+    newRow[SATISFACTION_COLS.Q32_ENFORCES_CONTRACT - 1] = getFormValue_(responses, 'Union enforces contract effectively');
+    newRow[SATISFACTION_COLS.Q33_REALISTIC_TIMELINES - 1] = getFormValue_(responses, 'Communicates realistic timelines');
+    newRow[SATISFACTION_COLS.Q34_CLEAR_UPDATES - 1] = getFormValue_(responses, 'Provides clear updates on issues');
+    newRow[SATISFACTION_COLS.Q35_FRONTLINE_PRIORITY - 1] = getFormValue_(responses, 'Prioritizes frontline conditions');
+    newRow[SATISFACTION_COLS.Q36_FILED_GRIEVANCE - 1] = getFormValue_(responses, 'Filed grievance in past 24 months?');
+
+    // Representation Process 6A (Q37-40)
+    newRow[SATISFACTION_COLS.Q37_UNDERSTOOD_STEPS - 1] = getFormValue_(responses, 'Understood steps and timeline');
+    newRow[SATISFACTION_COLS.Q38_FELT_SUPPORTED - 1] = getFormValue_(responses, 'Felt supported throughout');
+    newRow[SATISFACTION_COLS.Q39_UPDATES_OFTEN - 1] = getFormValue_(responses, 'Received updates often enough');
+    newRow[SATISFACTION_COLS.Q40_OUTCOME_JUSTIFIED - 1] = getFormValue_(responses, 'Outcome feels justified');
+
+    // Communication Quality (Q41-45)
+    newRow[SATISFACTION_COLS.Q41_CLEAR_ACTIONABLE - 1] = getFormValue_(responses, 'Communications are clear and actionable');
+    newRow[SATISFACTION_COLS.Q42_ENOUGH_INFO - 1] = getFormValue_(responses, 'Receive enough information');
+    newRow[SATISFACTION_COLS.Q43_FIND_EASILY - 1] = getFormValue_(responses, 'Can find information easily');
+    newRow[SATISFACTION_COLS.Q44_ALL_SHIFTS - 1] = getFormValue_(responses, 'Communications reach all locations');
+    newRow[SATISFACTION_COLS.Q45_MEETINGS_WORTH - 1] = getFormValue_(responses, 'Meetings are worth attending');
+
+    // Member Voice & Culture (Q46-50)
+    newRow[SATISFACTION_COLS.Q46_VOICE_MATTERS - 1] = getFormValue_(responses, 'My voice matters in the union');
+    newRow[SATISFACTION_COLS.Q47_SEEKS_INPUT - 1] = getFormValue_(responses, 'Union actively seeks input');
+    newRow[SATISFACTION_COLS.Q48_DIGNITY - 1] = getFormValue_(responses, 'Members treated with dignity');
+    newRow[SATISFACTION_COLS.Q49_NEWER_SUPPORTED - 1] = getFormValue_(responses, 'Newer members are supported');
+    newRow[SATISFACTION_COLS.Q50_CONFLICT_RESPECT - 1] = getFormValue_(responses, 'Internal conflict handled respectfully');
+
+    // Value & Collective Action (Q51-55)
+    newRow[SATISFACTION_COLS.Q51_GOOD_VALUE - 1] = getFormValue_(responses, 'Union provides good value for dues');
+    newRow[SATISFACTION_COLS.Q52_PRIORITIES_NEEDS - 1] = getFormValue_(responses, 'Priorities reflect member needs');
+    newRow[SATISFACTION_COLS.Q53_PREPARED_MOBILIZE - 1] = getFormValue_(responses, 'Union prepared to mobilize');
+    newRow[SATISFACTION_COLS.Q54_HOW_INVOLVED - 1] = getFormValue_(responses, 'Understand how to get involved');
+    newRow[SATISFACTION_COLS.Q55_WIN_TOGETHER - 1] = getFormValue_(responses, 'Acting together, we can win improvements');
+
+    // Scheduling/Office Days (Q56-63)
+    newRow[SATISFACTION_COLS.Q56_UNDERSTAND_CHANGES - 1] = getFormValue_(responses, 'Understand proposed changes');
+    newRow[SATISFACTION_COLS.Q57_ADEQUATELY_INFORMED - 1] = getFormValue_(responses, 'Feel adequately informed');
+    newRow[SATISFACTION_COLS.Q58_CLEAR_CRITERIA - 1] = getFormValue_(responses, 'Decisions use clear criteria');
+    newRow[SATISFACTION_COLS.Q59_WORK_EXPECTATIONS - 1] = getFormValue_(responses, 'Work can be done under expectations');
+    newRow[SATISFACTION_COLS.Q60_EFFECTIVE_OUTCOMES - 1] = getFormValue_(responses, 'Approach supports effective outcomes');
+    newRow[SATISFACTION_COLS.Q61_SUPPORTS_WELLBEING - 1] = getFormValue_(responses, 'Approach supports my wellbeing');
+    newRow[SATISFACTION_COLS.Q62_CONCERNS_SERIOUS - 1] = getFormValue_(responses, 'My concerns would be taken seriously');
+    newRow[SATISFACTION_COLS.Q63_SCHEDULING_CHALLENGE - 1] = getFormValue_(responses, 'Biggest scheduling challenge?');
+
+    // Priorities & Close (Q64-67)
+    newRow[SATISFACTION_COLS.Q64_TOP_PRIORITIES - 1] = getFormMultiValue_(responses, 'Top 3 priorities (6-12 mo)');
+    newRow[SATISFACTION_COLS.Q65_ONE_CHANGE - 1] = getFormValue_(responses, '#1 change union should make');
+    newRow[SATISFACTION_COLS.Q66_KEEP_DOING - 1] = getFormValue_(responses, 'One thing union should keep doing');
+    newRow[SATISFACTION_COLS.Q67_ADDITIONAL - 1] = getFormValue_(responses, 'Additional comments (no names)');
+
+    // Append row to satisfaction sheet
+    satSheet.appendRow(newRow);
+
+    // Compute section averages for the new row (no formulas in visible sheet)
+    var newRowNum = satSheet.getLastRow();
+    computeSatisfactionRowAverages(newRowNum);
+
+    // Update dashboard summary values
+    syncSatisfactionValues();
+
+    Logger.log('Satisfaction survey response recorded at ' + new Date());
+
+  } catch (error) {
+    Logger.log('Error processing satisfaction survey submission: ' + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Set up the satisfaction survey form submission trigger
+ * Run this once to enable automatic processing of survey submissions
+ */
+function setupSatisfactionFormTrigger() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ui = SpreadsheetApp.getUi();
+
+  // Check for existing triggers
+  var triggers = ScriptApp.getProjectTriggers();
+  var hasSatisfactionTrigger = false;
+
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'onSatisfactionFormSubmit') {
+      hasSatisfactionTrigger = true;
+      break;
+    }
+  }
+
+  if (hasSatisfactionTrigger) {
+    ui.alert('ℹ️ Trigger Exists',
+      'A satisfaction survey trigger already exists.\n\n' +
+      'Survey submissions will be automatically processed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
+  // Prompt for form URL
+  var response = ui.prompt('📊 Setup Satisfaction Survey Trigger',
+    'This will set up automatic processing of survey submissions.\n\n' +
+    'Enter the Google Form edit URL (the one ending in /edit):',
+    ui.ButtonSet.OK_CANCEL);
+
+  if (response.getSelectedButton() !== ui.Button.OK) {
+    return;
+  }
+
+  var formUrl = response.getResponseText().trim();
+
+  if (!formUrl) {
+    ui.alert('❌ No URL', 'Please provide the form edit URL.', ui.ButtonSet.OK);
+    return;
+  }
+
+  try {
+    // Extract form ID from URL
+    var match = formUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      ui.alert('❌ Invalid URL', 'Could not extract form ID from URL.', ui.ButtonSet.OK);
+      return;
+    }
+    var formId = match[1];
+
+    // Open the form and create trigger
+    var form = FormApp.openById(formId);
+
+    ScriptApp.newTrigger('onSatisfactionFormSubmit')
+      .forForm(form)
+      .onFormSubmit()
+      .create();
+
+    ui.alert('✅ Trigger Created',
+      'Satisfaction survey trigger has been set up!\n\n' +
+      'When a survey is submitted:\n' +
+      '• Response will be added to 📊 Member Satisfaction sheet\n' +
+      '• All 68 questions will be recorded\n' +
+      '• Dashboard will reflect new data',
+      ui.ButtonSet.OK);
+
+    ss.toast('Survey trigger created successfully!', '✅ Success', 3);
+
+  } catch (e) {
+    ui.alert('❌ Error',
+      'Failed to create trigger: ' + e.message + '\n\n' +
+      'Make sure you have edit access to the form.',
+      ui.ButtonSet.OK);
+  }
 }
 
 /**
