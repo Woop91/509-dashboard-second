@@ -611,7 +611,7 @@ var FEEDBACK_COLS = {
 | 9 | 📚 Getting Started | Help | Step-by-step setup instructions, member/grievance guides, menu reference |
 | 10 | ❓ FAQ | Help | Frequently asked questions organized by category (20+ Q&As) |
 
-**Note:** The Config tab also includes a User Guide section starting at row 30 with:
+**Note:** The Config tab also includes a User Guide section starting at row 50 with:
 - How to add/edit dropdown options
 - Column quick reference
 - Pro tips and warnings

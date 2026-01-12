@@ -679,7 +679,7 @@ Master lists for all dropdowns:
 - Issue Categories
 - Articles Violated
 
-**User Guide (Row 30+)**: Built-in documentation with:
+**User Guide (Row 50+)**: Built-in documentation with:
 - How to add/edit dropdown options
 - Column quick reference table
 - Pro tips and warnings
