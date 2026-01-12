@@ -65,8 +65,8 @@ var SHEETS = {
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
   // Test Results
   TEST_RESULTS: 'Test Results',
-  // Menu Checklist
-  MENU_CHECKLIST: 'Menu Checklist',
+  // Function Checklist
+  FUNCTION_CHECKLIST: 'Function Checklist',
   // Audit Log (hidden)
   AUDIT_LOG: '_Audit_Log',
   // Satisfaction & Feedback sheets
@@ -1061,9 +1061,9 @@ function CREATE_509_DASHBOARD() {
     createFeedbackSheet(ss);
     ss.toast('Created Feedback & Development', '🏗️ Progress', 2);
 
-    // Create Menu Checklist (function reference guide with 13 phases)
-    createMenuChecklistSheet_();
-    ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
+    // Create Function Checklist (function reference guide with 13 phases)
+    createFunctionChecklistSheet_();
+    ss.toast('Created Function Checklist', '🏗️ Progress', 2);
 
     // Save form URLs to Config sheet
     saveFormUrlsToConfig_silent(ss);
@@ -3217,13 +3217,19 @@ function REPAIR_DASHBOARD() {
 }
 
 /**
- * Creates the Menu Checklist sheet with all menu items
+ * Creates the Function Checklist sheet with all menu items
  * Called automatically during dashboard repair/creation
  * @private
  */
-function createMenuChecklistSheet_() {
+function createFunctionChecklistSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetName = SHEETS.MENU_CHECKLIST || 'Menu Checklist';
+  var sheetName = SHEETS.FUNCTION_CHECKLIST || 'Function Checklist';
+
+  // Also delete any old "Menu Checklist" tab if it exists
+  var oldSheet = ss.getSheetByName('Menu Checklist');
+  if (oldSheet) {
+    ss.deleteSheet(oldSheet);
+  }
 
   var sheet = ss.getSheetByName(sheetName);
   if (sheet) {
@@ -3232,103 +3238,103 @@ function createMenuChecklistSheet_() {
     sheet = ss.insertSheet(sheetName);
   }
 
-  // Menu items organized by optimal testing order: [Phase, Menu, Item, Function, Description]
+  // Menu items: [Phase, Menu, Item, Function, Description, Expected Result]
   var menuItems = [
-    // ═══ PHASE 1: Foundation & Setup (Test these first!) ═══
-    ['1️⃣ Foundation', '🏗️ Setup', '🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD', 'Repairs all hidden sheets, reapplies formulas, fixes broken references'],
-    ['1️⃣ Foundation', '⚙️ Administrator', '🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP', 'Checks sheet structure, triggers, and configuration for issues'],
-    ['1️⃣ Foundation', '⚙️ Administrator', '🔍 Verify Hidden Sheets', 'verifyHiddenSheets', 'Validates all 6 hidden calculation sheets exist and have correct formulas'],
-    ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets', 'Creates/recreates all hidden sheets with self-healing formulas'],
-    ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets', 'Fixes broken formulas in hidden sheets without recreating them'],
-    ['1️⃣ Foundation', '🏗️ Setup', '⚙️ Setup Data Validations', 'setupDataValidations', 'Applies dropdown validations to Member Directory and Grievance Log'],
-    ['1️⃣ Foundation', '🏗️ Setup', '🎨 Setup ADHD Defaults', 'setupADHDDefaults', 'Configures default ADHD-friendly visual settings'],
+    // ═══ PHASE 1: Foundation & Setup ═══
+    ['1️⃣ Foundation', '⚙️ Settings', '🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD', 'Repairs all hidden sheets, reapplies formulas, fixes broken references', 'Toast messages showing progress, then success dialog listing repaired items'],
+    ['1️⃣ Foundation', '🔧 Admin', '🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP', 'Checks sheet structure, triggers, and configuration for issues', 'Dialog showing checklist of items with ✓ or ✗ status'],
+    ['1️⃣ Foundation', '🔧 Admin', '🔍 Verify Hidden Sheets', 'verifyHiddenSheets', 'Validates all 6 hidden calculation sheets exist and have correct formulas', 'Dialog listing each hidden sheet with OK/Missing status'],
+    ['1️⃣ Foundation', '🔧 Admin > Hidden Sheets', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets', 'Creates/recreates all hidden sheets with self-healing formulas', 'Toast messages as each sheet is created, then completion dialog'],
+    ['1️⃣ Foundation', '🔧 Admin > Hidden Sheets', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets', 'Fixes broken formulas in hidden sheets without recreating them', 'Toast showing number of formulas repaired'],
+    ['1️⃣ Foundation', '⚙️ Settings', '⚙️ Setup Data Validations', 'setupDataValidations', 'Applies dropdown validations to Member Directory and Grievance Log', 'Dropdowns appear in Status, Type, Location columns'],
+    ['1️⃣ Foundation', '⚙️ Settings > Comfort View', '🎨 Setup Comfort View', 'setupADHDDefaults', 'Configures default Comfort View visual settings', 'Dialog with options, then visual changes applied to sheets'],
 
     // ═══ PHASE 2: Triggers & Data Sync ═══
-    ['2️⃣ Sync', '⚙️ Admin > Setup', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger', 'Creates edit trigger to auto-sync data between sheets'],
-    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync All Data Now', 'syncAllData', 'Manually syncs all data between Member Directory and Grievance Log'],
-    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory', 'Updates Member Directory with grievance counts and status'],
-    ['2️⃣ Sync', '⚙️ Admin > Sync', '🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog', 'Updates Grievance Log with member names and contact info'],
-    ['2️⃣ Sync', '⚙️ Admin > Setup', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger', 'Removes the automatic sync trigger (manual sync still works)'],
+    ['2️⃣ Sync', '⚙️ Settings > Triggers', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger', 'Creates edit trigger to auto-sync data between sheets', 'Toast confirming trigger installed'],
+    ['2️⃣ Sync', '🔧 Admin > Data Sync', '🔄 Sync All Data Now', 'syncAllData', 'Manually syncs all data between Member Directory and Grievance Log', 'Toast showing sync complete with row counts'],
+    ['2️⃣ Sync', '🔧 Admin > Data Sync', '🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory', 'Updates Member Directory with grievance counts and status', 'Member Directory columns update with grievance data'],
+    ['2️⃣ Sync', '🔧 Admin > Data Sync', '🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog', 'Updates Grievance Log with member names and contact info', 'Grievance Log shows member names from Member Directory'],
+    ['2️⃣ Sync', '⚙️ Settings > Triggers', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger', 'Removes the automatic sync trigger', 'Toast confirming trigger removed'],
 
     // ═══ PHASE 3: Core Dashboards ═══
-    ['3️⃣ Dashboards', '👤 Dashboard', '📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard', 'Shows dashboard optimized for current device (desktop/mobile)'],
-    ['3️⃣ Dashboards', '👤 Dashboard', '🎯 Custom View', 'showInteractiveDashboardTab', 'Opens the Custom View sheet with configurable metrics'],
-    ['3️⃣ Dashboards', '👤 Dashboard', '📋 View Active Grievances', 'viewActiveGrievances', 'Shows filtered list of all open/pending grievances'],
-    ['3️⃣ Dashboards', '👤 Dashboard', '📱 Mobile Dashboard', 'showMobileDashboard', 'Touch-friendly dashboard for phones and tablets'],
-    ['3️⃣ Dashboards', '👤 Dashboard', '📱 Get Mobile App URL', 'showWebAppUrl', 'Displays the web app URL for mobile bookmarking'],
-    ['3️⃣ Dashboards', '👤 Dashboard', '⚡ Quick Actions', 'showQuickActionsMenu', 'Popup menu for common actions (add member, new grievance, etc.)'],
-    ['3️⃣ Dashboards', '📊 Sheet Manager', '📊 Rebuild Dashboard', 'rebuildDashboard', 'Recreates the Dashboard sheet with fresh formulas'],
-    ['3️⃣ Dashboards', '📊 Sheet Manager', '📈 Refresh Interactive Charts', 'refreshInteractiveCharts', 'Updates all charts in Custom View with current data'],
-    ['3️⃣ Dashboards', '📊 Sheet Manager', '🔄 Refresh All Formulas', 'refreshAllFormulas', 'Recalculates all formulas across all sheets'],
+    ['3️⃣ Dashboards', '📊 509 Dashboard', '📊 Smart Dashboard', 'showSmartDashboard', 'Shows dashboard optimized for current device', 'Sidebar or dialog with key metrics and charts'],
+    ['3️⃣ Dashboards', '📊 509 Dashboard', '🎯 Custom View', 'showInteractiveDashboardTab', 'Opens the Custom View sheet', 'Navigates to Custom View tab'],
+    ['3️⃣ Dashboards', '📋 Grievances', '📋 View Active Grievances', 'viewActiveGrievances', 'Shows filtered list of all open/pending grievances', 'Dialog or sidebar listing active grievances only'],
+    ['3️⃣ Dashboards', '📊 509 Dashboard', '📱 Mobile Dashboard', 'showMobileDashboard', 'Touch-friendly dashboard for phones/tablets', 'Simplified dashboard dialog optimized for mobile'],
+    ['3️⃣ Dashboards', '📊 509 Dashboard', '📱 Get Mobile App URL', 'showWebAppUrl', 'Displays the web app URL for mobile bookmarking', 'Dialog with URL that can be copied'],
+    ['3️⃣ Dashboards', '📊 509 Dashboard', '⚡ Quick Actions', 'showQuickActionsMenu', 'Popup menu for common actions', 'Menu with Start Grievance, Search, etc.'],
+    ['3️⃣ Dashboards', '⚙️ Settings', '📊 Rebuild Dashboard', 'rebuildDashboard', 'Recreates the Dashboard sheet with fresh formulas', 'Dashboard sheet regenerated with updated data'],
+    ['3️⃣ Dashboards', '⚙️ Settings', '🔄 Refresh All Formulas', 'refreshAllFormulas', 'Recalculates all formulas across all sheets', 'Brief pause, then all calculated fields update'],
 
     // ═══ PHASE 4: Search ═══
-    ['4️⃣ Search', '🔍 Search', '🔍 Search Members', 'searchMembers', 'Opens search dialog to find members by name, ID, email, or location'],
+    ['4️⃣ Search', '📊 509 Dashboard', '🔍 Search Members', 'searchMembers', 'Opens search dialog to find members', 'Dialog with search box, results appear as you type'],
 
     // ═══ PHASE 5: Grievance Management ═══
-    ['5️⃣ Grievances', '👤 Grievance Tools', '➕ Start New Grievance', 'startNewGrievance', 'Opens form to create new grievance with auto-generated ID'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched', 'Recalculates deadline and status formulas for all grievances'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas', 'Updates calculated columns in Member Directory'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas', 'Creates formulas linking grievances to member data'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown', 'Adds member ID dropdown to Grievance Log for easy selection'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers', 'Converts text dates to proper date format for calculations'],
+    ['5️⃣ Grievances', '📋 Grievances', '➕ Start New Grievance', 'startNewGrievance', 'Opens form to create new grievance', 'Dialog with form fields, auto-generates Grievance ID'],
+    ['5️⃣ Grievances', '📋 Grievances', '📊 Sort by Status Priority', 'sortGrievanceLogByStatus', 'Sorts grievances by status priority', 'Grievance Log reorders: Message Alerts first, then Open→Closed'],
+    ['5️⃣ Grievances', '📋 Grievances', '🔄 Refresh Grievance Data', 'recalcAllGrievancesBatched', 'Recalculates deadline and status formulas', 'Days to Deadline, Overdue Status columns update'],
+    ['5️⃣ Grievances', '📋 Grievances', '🔄 Refresh Member Data', 'refreshMemberDirectoryFormulas', 'Updates calculated columns in Member Directory', 'Grievance Count, Active Cases columns update'],
+    ['5️⃣ Grievances', '⚙️ Settings', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas', 'Creates formulas linking grievances to member data', 'Name columns auto-populate from Member ID'],
+    ['5️⃣ Grievances', '⚙️ Settings', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown', 'Adds member ID dropdown to Grievance Log', 'Member ID column shows dropdown with all members'],
 
     // ═══ PHASE 6: Google Drive ═══
-    ['6️⃣ Drive', '📊 Google Drive', '📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance', 'Creates organized folder structure for grievance documents'],
-    ['6️⃣ Drive', '📊 Google Drive', '📁 View Grievance Files', 'showGrievanceFiles', 'Shows all files associated with selected grievance'],
-    ['6️⃣ Drive', '📊 Google Drive', '📁 Batch Create Folders', 'batchCreateGrievanceFolders', 'Creates folders for multiple grievances at once'],
+    ['6️⃣ Drive', '📋 Grievances > Drive', '📁 Setup Folder', 'setupDriveFolderForGrievance', 'Creates folder structure for selected grievance', 'Folder created in Drive with subfolders, URL added to row'],
+    ['6️⃣ Drive', '📋 Grievances > Drive', '📁 View Files', 'showGrievanceFiles', 'Shows files for selected grievance', 'Dialog listing files in grievance folder with links'],
+    ['6️⃣ Drive', '📋 Grievances > Drive', '📁 Batch Create Folders', 'batchCreateGrievanceFolders', 'Creates folders for all grievances without one', 'Multiple folders created, URLs added to each row'],
 
     // ═══ PHASE 7: Calendar ═══
-    ['7️⃣ Calendar', '📊 Calendar', '📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar', 'Adds grievance deadlines to Google Calendar with reminders'],
-    ['7️⃣ Calendar', '📊 Calendar', '📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar', 'Shows next 30 days of deadlines from calendar'],
-    ['7️⃣ Calendar', '📊 Calendar', '🗑️ Clear Calendar Events', 'clearAllCalendarEvents', 'Removes all grievance events from calendar (use with caution)'],
+    ['7️⃣ Calendar', '📋 Grievances > Calendar', '📅 Sync to Calendar', 'syncDeadlinesToCalendar', 'Adds grievance deadlines to Google Calendar', 'Calendar events created for each deadline'],
+    ['7️⃣ Calendar', '📋 Grievances > Calendar', '📅 View Deadlines', 'showUpcomingDeadlinesFromCalendar', 'Shows next 30 days of deadlines', 'Dialog listing upcoming deadlines by date'],
+    ['7️⃣ Calendar', '📋 Grievances > Calendar', '🗑️ Clear Events', 'clearAllCalendarEvents', 'Removes all grievance events from calendar', 'Confirmation dialog, then events deleted'],
 
     // ═══ PHASE 8: Notifications ═══
-    ['8️⃣ Notify', '📊 Notifications', '⚙️ Notification Settings', 'showNotificationSettings', 'Configure email notification preferences and timing'],
-    ['8️⃣ Notify', '📊 Notifications', '🧪 Test Notifications', 'testDeadlineNotifications', 'Sends test email to verify notification setup'],
+    ['8️⃣ Notify', '📋 Grievances > Notifications', '⚙️ Settings', 'showNotificationSettings', 'Configure email notification preferences', 'Dialog with notification options'],
+    ['8️⃣ Notify', '📋 Grievances > Notifications', '📧 Send Alerts Now', 'sendStewardAlertsNow', 'Sends deadline alerts to stewards', 'Emails sent, confirmation shows count'],
+    ['8️⃣ Notify', '📋 Grievances > Notifications', '🧪 Test', 'testDeadlineNotifications', 'Sends test email to verify setup', 'Test email arrives in your inbox'],
 
-    // ═══ PHASE 9: Accessibility & Theming ═══
-    ['9️⃣ Access', '🔧 ADHD', '♿ ADHD Control Panel', 'showADHDControlPanel', 'Central hub for all ADHD-friendly features and settings'],
-    ['9️⃣ Access', '🔧 ADHD', '🎯 Focus Mode', 'activateFocusMode', 'Highlights current row, dims distractions, reduces visual noise'],
-    ['9️⃣ Access', '🔧 ADHD', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes', 'Alternating row colors for easier row tracking'],
-    ['9️⃣ Access', '🔧 ADHD', '📝 Quick Capture', 'showQuickCaptureNotepad', 'Fast notepad for capturing thoughts without losing focus'],
-    ['9️⃣ Access', '🔧 ADHD', '🍅 Pomodoro Timer', 'startPomodoroTimer', '25-minute focus timer with break reminders'],
-    ['9️⃣ Access', '🔧 Theming', '🎨 Theme Manager', 'showThemeManager', 'Choose from preset themes or customize colors'],
-    ['9️⃣ Access', '🔧 Theming', '🌙 Toggle Dark Mode', 'quickToggleDarkMode', 'Switch between light and dark color schemes'],
-    ['9️⃣ Access', '🔧 Theming', '🔄 Reset Theme', 'resetToDefaultTheme', 'Restores default purple/green color scheme'],
+    // ═══ PHASE 9: Comfort View & Theming ═══
+    ['9️⃣ View', '👁️ View > Comfort View', '♿ Panel', 'showADHDControlPanel', 'Opens Comfort View control panel', 'Dialog with visual settings toggles'],
+    ['9️⃣ View', '👁️ View > Comfort View', '🎯 Focus Mode', 'activateFocusMode', 'Highlights current row, dims distractions', 'Current row highlighted, others dimmed'],
+    ['9️⃣ View', '👁️ View > Comfort View', '🔲 Zebra Stripes', 'toggleZebraStripes', 'Toggles alternating row colors', 'Rows alternate between white and light gray'],
+    ['9️⃣ View', '👁️ View > Comfort View', '📝 Quick Capture', 'showQuickCaptureNotepad', 'Opens quick notepad', 'Sidebar with text area for notes'],
+    ['9️⃣ View', '👁️ View > Comfort View', '🍅 Pomodoro', 'startPomodoroTimer', 'Starts 25-minute focus timer', 'Timer dialog counting down, alert at end'],
+    ['9️⃣ View', '👁️ View > Theming', '🎨 Theme Manager', 'showThemeManager', 'Opens theme selection dialog', 'Dialog with color theme options'],
+    ['9️⃣ View', '👁️ View > Theming', '🌙 Dark Mode', 'quickToggleDarkMode', 'Toggles dark color scheme', 'Sheet colors invert to dark theme'],
+    ['9️⃣ View', '👁️ View > Theming', '🔄 Reset Theme', 'resetToDefaultTheme', 'Restores default colors', 'Purple/green color scheme restored'],
 
-    // ═══ PHASE 10: Productivity Tools ═══
-    ['🔟 Tools', '🔧 Multi-Select', '📝 Open Editor', 'showMultiSelectDialog', 'Select multiple values for multi-select columns'],
-    ['🔟 Tools', '🔧 Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger', 'Auto-opens multi-select dialog when clicking multi-select cells'],
-    ['🔟 Tools', '🔧 Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger', 'Stops auto-opening multi-select dialog'],
+    // ═══ PHASE 10: Multi-Select ═══
+    ['🔟 Tools', '⚙️ Settings > Multi-Select', '📝 Open Editor', 'showMultiSelectDialog', 'Opens multi-select value picker', 'Dialog with checkboxes for multi-value fields'],
+    ['🔟 Tools', '⚙️ Settings > Multi-Select', '⚡ Enable Auto-Open', 'installMultiSelectTrigger', 'Auto-opens editor on multi-select cells', 'Editor opens when clicking multi-select columns'],
+    ['🔟 Tools', '⚙️ Settings > Multi-Select', '🚫 Disable Auto-Open', 'removeMultiSelectTrigger', 'Stops auto-opening editor', 'Editor no longer auto-opens'],
 
-    // ═══ PHASE 11: Performance & Cache ═══
-    ['1️⃣1️⃣ Perf', '🔧 Cache', '🗄️ Cache Status', 'showCacheStatusDashboard', 'Shows what data is cached and cache hit/miss rates'],
-    ['1️⃣1️⃣ Perf', '🔧 Cache', '🔥 Warm Up Caches', 'warmUpCaches', 'Pre-loads frequently used data into cache for faster access'],
-    ['1️⃣1️⃣ Perf', '🔧 Cache', '🗑️ Clear All Caches', 'invalidateAllCaches', 'Clears all cached data (forces fresh data on next load)'],
+    // ═══ PHASE 11: Performance ═══
+    ['1️⃣1️⃣ Perf', '🔧 Admin > Cache', '🗄️ Cache Status', 'showCacheStatusDashboard', 'Shows cache statistics', 'Dialog with cache hit/miss rates'],
+    ['1️⃣1️⃣ Perf', '🔧 Admin > Cache', '🔥 Warm Caches', 'warmUpCaches', 'Pre-loads data into cache', 'Toast confirming caches warmed'],
+    ['1️⃣1️⃣ Perf', '🔧 Admin > Cache', '🗑️ Clear Caches', 'invalidateAllCaches', 'Clears all cached data', 'Toast confirming caches cleared'],
 
     // ═══ PHASE 12: Validation ═══
-    ['1️⃣2️⃣ Valid', '🔧 Validation', '🔍 Run Bulk Validation', 'runBulkValidation', 'Checks all data for errors, duplicates, and missing values'],
-    ['1️⃣2️⃣ Valid', '🔧 Validation', '⚙️ Validation Settings', 'showValidationSettings', 'Configure which validations run and error thresholds'],
-    ['1️⃣2️⃣ Valid', '🔧 Validation', '🧹 Clear Indicators', 'clearValidationIndicators', 'Removes error highlighting from cells'],
-    ['1️⃣2️⃣ Valid', '🔧 Validation', '⚡ Install Validation Trigger', 'installValidationTrigger', 'Enables automatic validation on data entry'],
+    ['1️⃣2️⃣ Valid', '⚙️ Settings > Validation', '🔍 Run Validation', 'runBulkValidation', 'Checks all data for errors', 'Report showing errors, duplicates, missing values'],
+    ['1️⃣2️⃣ Valid', '⚙️ Settings > Validation', '⚙️ Settings', 'showValidationSettings', 'Configure validation rules', 'Dialog with validation options'],
+    ['1️⃣2️⃣ Valid', '⚙️ Settings > Validation', '🧹 Clear Indicators', 'clearValidationIndicators', 'Removes error highlighting', 'Red/yellow cell backgrounds removed'],
+    ['1️⃣2️⃣ Valid', '⚙️ Settings > Validation', '⚡ Install Trigger', 'installValidationTrigger', 'Enables auto-validation on entry', 'Validation runs automatically when editing'],
 
-    // ═══ PHASE 13: Testing (Run last to verify everything) ═══
-    ['1️⃣3️⃣ Test', '🧪 Testing', '🧪 Run All Tests', 'runAllTests', 'Executes full test suite for all functions (takes 2-3 minutes)'],
-    ['1️⃣3️⃣ Test', '🧪 Testing', '⚡ Run Quick Tests', 'runQuickTests', 'Runs essential tests only (30 seconds)'],
-    ['1️⃣3️⃣ Test', '🧪 Testing', '📊 View Test Results', 'viewTestResults', 'Shows results from last test run with pass/fail details']
+    // ═══ PHASE 13: Testing ═══
+    ['1️⃣3️⃣ Test', '🔧 Admin > Testing', '🧪 Run All Tests', 'runAllTests', 'Executes full test suite (2-3 min)', 'Test Results sheet created with pass/fail details'],
+    ['1️⃣3️⃣ Test', '🔧 Admin > Testing', '⚡ Quick Tests', 'runQuickTests', 'Runs essential tests (30 sec)', 'Quick summary of critical function status'],
+    ['1️⃣3️⃣ Test', '🔧 Admin > Testing', '📊 View Results', 'viewTestResults', 'Shows last test results', 'Navigates to Test Results sheet']
   ];
 
-  // Build rows with header
-  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description', 'Notes']];
+  // Build rows with header: [Checkbox, Phase, Menu, Item, Function, Description, Expected Result, Notes 1, Notes 2]
+  var rows = [['✓', 'Phase', 'Menu', 'Item', 'Function', 'Description', 'Expected Result', 'Notes 1', 'Notes 2']];
   for (var i = 0; i < menuItems.length; i++) {
-    rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], menuItems[i][4], '']);
+    rows.push([false, menuItems[i][0], menuItems[i][1], menuItems[i][2], menuItems[i][3], menuItems[i][4], menuItems[i][5], '', '']);
   }
 
   // Write all data
-  sheet.getRange(1, 1, rows.length, 7).setValues(rows);
+  sheet.getRange(1, 1, rows.length, 9).setValues(rows);
 
   // Format header
-  sheet.getRange(1, 1, 1, 7)
+  sheet.getRange(1, 1, 1, 9)
     .setFontWeight('bold')
     .setBackground(COLORS.PRIMARY_PURPLE || '#7C3AED')
     .setFontColor(COLORS.WHITE || '#FFFFFF')
@@ -3340,13 +3346,15 @@ function createMenuChecklistSheet_() {
   }
 
   // Set column widths
-  sheet.setColumnWidth(1, 40);
-  sheet.setColumnWidth(2, 150);
-  sheet.setColumnWidth(3, 150);
-  sheet.setColumnWidth(4, 250);
-  sheet.setColumnWidth(5, 250);
-  sheet.setColumnWidth(6, 350);
-  sheet.setColumnWidth(7, 250);
+  sheet.setColumnWidth(1, 40);   // Checkbox
+  sheet.setColumnWidth(2, 120);  // Phase
+  sheet.setColumnWidth(3, 180);  // Menu
+  sheet.setColumnWidth(4, 200);  // Item
+  sheet.setColumnWidth(5, 220);  // Function
+  sheet.setColumnWidth(6, 300);  // Description
+  sheet.setColumnWidth(7, 350);  // Expected Result
+  sheet.setColumnWidth(8, 200);  // Notes 1
+  sheet.setColumnWidth(9, 200);  // Notes 2
 
   // Freeze header
   sheet.setFrozenRows(1);
@@ -3354,7 +3362,7 @@ function createMenuChecklistSheet_() {
   // Alternating colors
   for (var r = 2; r <= rows.length; r++) {
     if (r % 2 === 0) {
-      sheet.getRange(r, 1, 1, 7).setBackground('#F9FAFB');
+      sheet.getRange(r, 1, 1, 9).setBackground('#F9FAFB');
     }
   }
 
@@ -3362,7 +3370,7 @@ function createMenuChecklistSheet_() {
   var rule = SpreadsheetApp.newConditionalFormatRule()
     .whenFormulaSatisfied('=$A2=TRUE')
     .setBackground('#E8F5E9')
-    .setRanges([sheet.getRange(2, 1, rows.length - 1, 7)])
+    .setRanges([sheet.getRange(2, 1, rows.length - 1, 9)])
     .build();
   sheet.setConditionalFormatRules([rule]);
 
@@ -13895,14 +13903,14 @@ function NUKE_SEEDED_DATA() {
       }
     }
 
-    // Delete Menu Checklist sheet entirely
-    var menuChecklistToDelete = ss.getSheetByName(SHEETS.MENU_CHECKLIST);
-    var menuChecklistDeleted = false;
-    if (menuChecklistToDelete) {
+    // Delete Function Checklist sheet entirely
+    var functionChecklistToDelete = ss.getSheetByName(SHEETS.FUNCTION_CHECKLIST);
+    var functionChecklistDeleted = false;
+    if (functionChecklistToDelete) {
       try {
-        ss.deleteSheet(menuChecklistToDelete);
-        menuChecklistDeleted = true;
-        Logger.log('Menu Checklist sheet deleted');
+        ss.deleteSheet(functionChecklistToDelete);
+        functionChecklistDeleted = true;
+        Logger.log('Function Checklist sheet deleted');
       } catch (e) {
         Logger.log('Could not delete Menu Checklist sheet: ' + e.message);
       }

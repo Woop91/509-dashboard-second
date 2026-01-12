@@ -35,8 +35,8 @@ var SHEETS = {
   VOLUNTEER_HOURS: '🤝 Volunteer Hours',
   // Test Results
   TEST_RESULTS: 'Test Results',
-  // Menu Checklist
-  MENU_CHECKLIST: 'Menu Checklist',
+  // Function Checklist
+  FUNCTION_CHECKLIST: 'Function Checklist',
   // Audit Log (hidden)
   AUDIT_LOG: '_Audit_Log',
   // Satisfaction & Feedback sheets

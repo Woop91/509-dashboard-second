@@ -1621,16 +1621,16 @@ function NUKE_SEEDED_DATA() {
       }
     }
 
-    // Delete Menu Checklist sheet entirely
-    var menuChecklistToDelete = ss.getSheetByName(SHEETS.MENU_CHECKLIST);
-    var menuChecklistDeleted = false;
-    if (menuChecklistToDelete) {
+    // Delete Function Checklist sheet entirely
+    var functionChecklistToDelete = ss.getSheetByName(SHEETS.FUNCTION_CHECKLIST);
+    var functionChecklistDeleted = false;
+    if (functionChecklistToDelete) {
       try {
-        ss.deleteSheet(menuChecklistToDelete);
-        menuChecklistDeleted = true;
-        Logger.log('Menu Checklist sheet deleted');
+        ss.deleteSheet(functionChecklistToDelete);
+        functionChecklistDeleted = true;
+        Logger.log('Function Checklist sheet deleted');
       } catch (e) {
-        Logger.log('Could not delete Menu Checklist sheet: ' + e.message);
+        Logger.log('Could not delete Function Checklist sheet: ' + e.message);
       }
     }
 

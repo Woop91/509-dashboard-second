@@ -237,9 +237,9 @@ function CREATE_509_DASHBOARD() {
     createFeedbackSheet(ss);
     ss.toast('Created Feedback & Development', '🏗️ Progress', 2);
 
-    // Create Menu Checklist (function reference guide with 13 phases)
-    createMenuChecklistSheet_();
-    ss.toast('Created Menu Checklist', '🏗️ Progress', 2);
+    // Create Function Checklist (function reference guide with 13 phases)
+    createFunctionChecklistSheet_();
+    ss.toast('Created Function Checklist', '🏗️ Progress', 2);
 
     // Save form URLs to Config sheet
     saveFormUrlsToConfig_silent(ss);
@@ -2397,9 +2397,9 @@ function REPAIR_DASHBOARD() {
  * Called automatically during dashboard repair/creation
  * @private
  */
-function createMenuChecklistSheet_() {
+function createFunctionChecklistSheet_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetName = SHEETS.MENU_CHECKLIST || 'Menu Checklist';
+  var sheetName = SHEETS.FUNCTION_CHECKLIST || 'Menu Checklist';
 
   var sheet = ss.getSheetByName(sheetName);
   if (sheet) {
