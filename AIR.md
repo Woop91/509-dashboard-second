@@ -171,8 +171,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- Sheet creation (10 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`, `createFunctionChecklistSheet_()`, `createGettingStartedSheet()`, `createFAQSheet()`
-- Config user guide: `addConfigUserGuide_()` - Adds user guide section to Config tab at row 50
+- Sheet creation (11 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`, `createFunctionChecklistSheet_()`, `createGettingStartedSheet()`, `createFAQSheet()`, `createConfigGuideSheet()`
 - Grievance Form Workflow:
   - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
   - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory
@@ -610,11 +609,7 @@ var FEEDBACK_COLS = {
 |---|------------|------|---------|
 | 9 | 📚 Getting Started | Help | Step-by-step setup instructions, member/grievance guides, menu reference |
 | 10 | ❓ FAQ | Help | Frequently asked questions organized by category (20+ Q&As) |
-
-**Note:** The Config tab also includes a User Guide section starting at row 50 with:
-- How to add/edit dropdown options
-- Column quick reference
-- Pro tips and warnings
+| 11 | 📖 Config Guide | Help | How to use Config tab: add/edit dropdowns, column reference, tips & warnings |
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 

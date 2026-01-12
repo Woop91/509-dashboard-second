@@ -249,8 +249,8 @@ Project Files (9 source files → 1 consolidated deployment)
 
 Key Functions:
 ├── CREATE_509_DASHBOARD() - Main setup function
-├── Sheet Creation (10 sheets)
-│   ├── createConfigSheet() + addConfigUserGuide_()
+├── Sheet Creation (11 sheets)
+│   ├── createConfigSheet()
 │   ├── createMemberDirectory()
 │   ├── createGrievanceLog()
 │   ├── createDashboard()
@@ -259,7 +259,8 @@ Key Functions:
 │   ├── createFeedbackSheet()
 │   ├── createFunctionChecklistSheet_()
 │   ├── createGettingStartedSheet()
-│   └── createFAQSheet()
+│   ├── createFAQSheet()
+│   └── createConfigGuideSheet()
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
@@ -667,6 +668,18 @@ Features include:
 - Troubleshooting (5 Q&As)
 - Advanced (3 Q&As)
 
+### 12. Config Guide (📖 Config Guide)
+
+**Purpose**: User guide for the Config tab - how to customize dropdowns
+
+**Sections**:
+- Introduction - What the Config tab is for
+- How to Add/Edit Options - Step-by-step instructions
+- Column Quick Reference - All 43 columns explained
+- Pro Tips - Best practices for customization
+- Warnings - Common mistakes to avoid
+- Need Help - Links to other resources
+
 ## Sheet Structure
 
 ### Config Tab
@@ -679,10 +692,7 @@ Master lists for all dropdowns:
 - Issue Categories
 - Articles Violated
 
-**User Guide (Row 50+)**: Built-in documentation with:
-- How to add/edit dropdown options
-- Column quick reference table
-- Pro tips and warnings
+See **📖 Config Guide** tab for detailed usage instructions.
 
 ### Member Directory
 31 columns tracking:

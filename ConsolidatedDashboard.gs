@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-12T03:03:14.591Z
+ * - Build Date: 2026-01-12T03:15:52.693Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -74,7 +74,8 @@ var SHEETS = {
   FEEDBACK: '💡 Feedback & Development',
   // Help & Documentation sheets
   GETTING_STARTED: '📚 Getting Started',
-  FAQ: '❓ FAQ'
+  FAQ: '❓ FAQ',
+  CONFIG_GUIDE: '📖 Config Guide'
 };
 
 // ============================================================================
@@ -1015,7 +1016,7 @@ function CREATE_509_DASHBOARD() {
   var response = ui.alert(
     '🏗️ Create 509 Dashboard',
     'This will create the 509 Dashboard with:\n\n' +
-    '• Config (dropdown sources + user guide)\n' +
+    '• Config (dropdown sources)\n' +
     '• Member Directory\n' +
     '• Grievance Log\n' +
     '• 💼 Dashboard (Executive metrics)\n' +
@@ -1024,7 +1025,8 @@ function CREATE_509_DASHBOARD() {
     '• 💡 Feedback & Development (Bug/feature tracking)\n' +
     '• ✅ Function Checklist (function reference)\n' +
     '• 📚 Getting Started (setup instructions)\n' +
-    '• ❓ FAQ (common questions)\n\n' +
+    '• ❓ FAQ (common questions)\n' +
+    '• 📖 Config Guide (how to use Config tab)\n\n' +
     'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
@@ -1078,6 +1080,10 @@ function CREATE_509_DASHBOARD() {
     createFAQSheet(ss);
     ss.toast('Created FAQ', '🏗️ Progress', 2);
 
+    // Create Config Guide sheet
+    createConfigGuideSheet(ss);
+    ss.toast('Created Config Guide', '🏗️ Progress', 2);
+
     // Save form URLs to Config sheet
     saveFormUrlsToConfig_silent(ss);
     ss.toast('Saved form URLs to Config', '🏗️ Progress', 2);
@@ -1095,12 +1101,12 @@ function CREATE_509_DASHBOARD() {
 
     ss.toast('Dashboard creation complete!', '✅ Success', 5);
     ui.alert('✅ Success', '509 Dashboard has been created successfully!\n\n' +
-      '10 sheets created:\n' +
+      '11 sheets created:\n' +
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Custom View (views)\n' +
       '• 📊 Member Satisfaction, 💡 Feedback (tracking)\n' +
       '• ✅ Function Checklist (function reference)\n' +
-      '• 📚 Getting Started, ❓ FAQ (help)\n\n' +
+      '• 📚 Getting Started, ❓ FAQ, 📖 Config Guide (help)\n\n' +
       'Plus 6 hidden calculation sheets with self-healing formulas.\n\n' +
       '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
       'update automatically when you edit the sheets.\n\n' +
@@ -1256,22 +1262,21 @@ function createConfigSheet(ss) {
       sheet.setColumnWidth(i, 100);
     }
   }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // USER GUIDE SECTION (Starting at Row 50)
-  // ═══════════════════════════════════════════════════════════════════════════
-  addConfigUserGuide_(sheet);
 }
 
 /**
- * Adds a user guide section to the Config sheet starting at row 50
- * @private
+ * Creates the Config Guide sheet - a dedicated tab explaining how to use the Config tab
  */
-function addConfigUserGuide_(sheet) {
-  var startRow = 50;
+function createConfigGuideSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = SHEETS.CONFIG_GUIDE || '📖 Config Guide';
 
-  // Clear the area first (rows 50-80, columns A-H)
-  sheet.getRange(startRow, 1, 35, 8).clear();
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(sheetName);
+  }
 
   // Define guide colors
   var headerBg = '#4A90D9';      // Blue header
@@ -1281,143 +1286,175 @@ function addConfigUserGuide_(sheet) {
   var successBg = '#DCFCE7';     // Light green for success
   var textColor = '#1F2937';     // Dark text
 
+  var row = 1;
+
   // ═══ HEADER ═══
-  sheet.getRange(startRow, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('📖 CONFIG TAB USER GUIDE')
     .setBackground(headerBg)
     .setFontColor('#FFFFFF')
     .setFontWeight('bold')
-    .setFontSize(16)
+    .setFontSize(18)
     .setHorizontalAlignment('center')
     .setVerticalAlignment('middle');
-  sheet.setRowHeight(startRow, 40);
+  sheet.setRowHeight(row, 50);
 
   // ═══ INTRO SECTION ═══
-  var row = startRow + 2;
-  sheet.getRange(row, 1, 1, 8).merge()
-    .setValue('🎯 What is this tab for?')
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('🎯 What is the Config tab for?')
     .setBackground(sectionBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor(textColor);
+  sheet.setRowHeight(row, 35);
 
   row++;
-  sheet.getRange(row, 1, 1, 8).merge()
-    .setValue('The Config tab is the control center for your dashboard. All dropdown options throughout the system pull from these columns.')
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('The Config tab is the control center for your dashboard. All dropdown options throughout the system pull from these columns. When you add a value to Config, it becomes available as a dropdown option everywhere.')
     .setFontColor(textColor)
     .setWrap(true);
-  sheet.setRowHeight(row, 35);
+  sheet.setRowHeight(row, 50);
 
   // ═══ HOW TO USE ═══
   row += 2;
-  sheet.getRange(row, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('📝 How to Add/Edit Dropdown Options')
     .setBackground(sectionBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor(textColor);
+  sheet.setRowHeight(row, 35);
 
   var howToSteps = [
-    'Step 1: Find the column for the dropdown you want to modify (e.g., "Job Titles" in Column A)',
-    'Step 2: Add new values in empty cells below the existing values - no gaps allowed!',
-    'Step 3: The dropdown will automatically include your new values throughout the system',
-    'Step 4: To remove a value, delete the cell and shift cells up (don\'t leave blanks)'
+    ['Step 1:', 'Go to the Config tab and find the column you want to modify (e.g., "Job Titles" in Column A)'],
+    ['Step 2:', 'Add new values in empty cells below the existing values - NO GAPS allowed!'],
+    ['Step 3:', 'The dropdown will automatically include your new values throughout the system'],
+    ['Step 4:', 'To remove a value, delete the cell and shift cells up (don\'t leave blanks)']
   ];
 
   for (var i = 0; i < howToSteps.length; i++) {
     row++;
-    sheet.getRange(row, 1, 1, 8).merge().setValue(howToSteps[i]).setFontColor(textColor).setWrap(true);
+    sheet.getRange(row, 1).setValue(howToSteps[i][0]).setFontWeight('bold').setFontColor('#4A90D9');
+    sheet.getRange(row, 2, 1, 5).merge().setValue(howToSteps[i][1]).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 30);
   }
 
   // ═══ COLUMN GUIDE ═══
   row += 2;
-  sheet.getRange(row, 1, 1, 8).merge()
-    .setValue('📊 Column Quick Reference')
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('📊 Config Column Quick Reference')
     .setBackground(sectionBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor(textColor);
+  sheet.setRowHeight(row, 35);
 
   row++;
-  // Simple table header
-  sheet.getRange(row, 1).setValue('Col').setFontWeight('bold').setBackground('#E5E7EB');
+  // Table header
+  sheet.getRange(row, 1).setValue('Col').setFontWeight('bold').setBackground('#E5E7EB').setHorizontalAlignment('center');
   sheet.getRange(row, 2).setValue('Name').setFontWeight('bold').setBackground('#E5E7EB');
   sheet.getRange(row, 3, 1, 2).merge().setValue('Used In').setFontWeight('bold').setBackground('#E5E7EB');
-  sheet.getRange(row, 5, 1, 4).merge().setValue('Example Values').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 5, 1, 2).merge().setValue('Example Values').setFontWeight('bold').setBackground('#E5E7EB');
 
   var columnData = [
     ['A', 'Job Titles', 'Member Directory', 'Case Worker, Supervisor, Manager...'],
-    ['B', 'Locations', 'Member Dir & Grievance Log', 'Boston Office, Springfield...'],
+    ['B', 'Office Locations', 'Member Dir & Grievance Log', 'Boston Office, Springfield Office...'],
     ['C', 'Units', 'Member Dir & Grievance Log', 'Unit 1, Unit 2, Unit 3...'],
+    ['F', 'Supervisors', 'Member Directory', 'Names of supervisors'],
+    ['G', 'Managers', 'Member Directory', 'Names of managers'],
     ['H', 'Stewards', 'Member Dir & Grievance Log', 'Names of union stewards'],
-    ['J', 'Status', 'Grievance Log', 'Open, Pending Info, Settled...'],
-    ['K', 'Step', 'Grievance Log', 'Informal, Step I, Step II...'],
-    ['L', 'Category', 'Grievance Log', 'Discipline, Workload, Pay...']
+    ['J', 'Grievance Status', 'Grievance Log', 'Open, Pending Info, Settled, Won...'],
+    ['K', 'Grievance Step', 'Grievance Log', 'Informal, Step I, Step II, Step III...'],
+    ['L', 'Issue Category', 'Grievance Log', 'Discipline, Workload, Pay, Benefits...'],
+    ['M', 'Articles Violated', 'Grievance Log', 'Article 12, Article 23A...']
   ];
 
   for (var j = 0; j < columnData.length; j++) {
     row++;
-    sheet.getRange(row, 1).setValue(columnData[j][0]).setFontColor('#4A90D9').setFontWeight('bold');
+    sheet.getRange(row, 1).setValue(columnData[j][0]).setFontColor('#4A90D9').setFontWeight('bold').setHorizontalAlignment('center');
     sheet.getRange(row, 2).setValue(columnData[j][1]).setFontColor(textColor);
     sheet.getRange(row, 3, 1, 2).merge().setValue(columnData[j][2]).setFontColor('#6B7280');
-    sheet.getRange(row, 5, 1, 4).merge().setValue(columnData[j][3]).setFontColor('#6B7280').setFontStyle('italic');
+    sheet.getRange(row, 5, 1, 2).merge().setValue(columnData[j][3]).setFontColor('#6B7280').setFontStyle('italic');
   }
 
   // ═══ TIPS ═══
   row += 2;
-  sheet.getRange(row, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('💡 Pro Tips')
     .setBackground(tipBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor('#92400E');
+  sheet.setRowHeight(row, 35);
 
   var tips = [
     '✓ Keep dropdown lists in alphabetical order for easier selection',
     '✓ Use consistent naming conventions (e.g., "Boston Office" not "boston office")',
-    '✓ Add your organization\'s specific values before using the system',
-    '✓ The system pre-fills some values - modify them to match your organization'
+    '✓ Add your organization\'s specific values before entering member/grievance data',
+    '✓ The system pre-fills some default values - modify them to match your organization'
   ];
 
   for (var k = 0; k < tips.length; k++) {
     row++;
-    sheet.getRange(row, 1, 1, 8).merge().setValue(tips[k]).setBackground(tipBg).setFontColor('#92400E');
+    sheet.getRange(row, 1, 1, 6).merge().setValue(tips[k]).setBackground(tipBg).setFontColor('#92400E');
   }
 
   // ═══ WARNINGS ═══
   row += 2;
-  sheet.getRange(row, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('⚠️ Important Warnings')
     .setBackground(warningBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor('#DC2626');
+  sheet.setRowHeight(row, 35);
 
   var warnings = [
     '⚠ Do NOT delete values that are already in use in Member Directory or Grievance Log',
-    '⚠ Do NOT leave blank cells in the middle of a column - this breaks dropdowns',
-    '⚠ Do NOT modify Section Headers (Row 1) or Column Headers (Row 2)'
+    '⚠ Do NOT leave blank cells in the middle of a column - this breaks the dropdowns',
+    '⚠ Do NOT modify the Section Headers (Row 1) or Column Headers (Row 2) in Config'
   ];
 
   for (var m = 0; m < warnings.length; m++) {
     row++;
-    sheet.getRange(row, 1, 1, 8).merge().setValue(warnings[m]).setBackground(warningBg).setFontColor('#DC2626');
+    sheet.getRange(row, 1, 1, 6).merge().setValue(warnings[m]).setBackground(warningBg).setFontColor('#DC2626');
   }
 
   // ═══ NEED HELP ═══
   row += 2;
-  sheet.getRange(row, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('🆘 Need More Help?')
     .setBackground(successBg)
     .setFontWeight('bold')
-    .setFontSize(12)
+    .setFontSize(14)
     .setFontColor('#166534');
+  sheet.setRowHeight(row, 35);
 
   row++;
-  sheet.getRange(row, 1, 1, 8).merge()
+  sheet.getRange(row, 1, 1, 6).merge()
     .setValue('Check the "📚 Getting Started" tab for full setup instructions, or the "❓ FAQ" tab for common questions.')
     .setBackground(successBg)
     .setFontColor('#166534');
+
+  // Set column widths
+  sheet.setColumnWidth(1, 50);
+  sheet.setColumnWidth(2, 140);
+  sheet.setColumnWidth(3, 120);
+  sheet.setColumnWidth(4, 120);
+  sheet.setColumnWidth(5, 150);
+  sheet.setColumnWidth(6, 150);
+
+  // Delete excess columns
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 6) {
+    sheet.deleteColumns(7, maxCols - 6);
+  }
+
+  // Freeze header
+  sheet.setFrozenRows(1);
+
+  return sheet;
 }
 
 /**

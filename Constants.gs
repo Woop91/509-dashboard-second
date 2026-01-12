@@ -44,7 +44,8 @@ var SHEETS = {
   FEEDBACK: '💡 Feedback & Development',
   // Help & Documentation sheets
   GETTING_STARTED: '📚 Getting Started',
-  FAQ: '❓ FAQ'
+  FAQ: '❓ FAQ',
+  CONFIG_GUIDE: '📖 Config Guide'
 };
 
 // ============================================================================
