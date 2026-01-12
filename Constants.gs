@@ -41,7 +41,10 @@ var SHEETS = {
   AUDIT_LOG: '_Audit_Log',
   // Satisfaction & Feedback sheets
   SATISFACTION: '📊 Member Satisfaction',
-  FEEDBACK: '💡 Feedback & Development'
+  FEEDBACK: '💡 Feedback & Development',
+  // Help & Documentation sheets
+  GETTING_STARTED: '📚 Getting Started',
+  FAQ: '❓ FAQ'
 };
 
 // ============================================================================

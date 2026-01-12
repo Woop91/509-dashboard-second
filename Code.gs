@@ -188,14 +188,16 @@ function CREATE_509_DASHBOARD() {
   var response = ui.alert(
     '🏗️ Create 509 Dashboard',
     'This will create the 509 Dashboard with:\n\n' +
-    '• Config (dropdown sources)\n' +
+    '• Config (dropdown sources + user guide)\n' +
     '• Member Directory\n' +
     '• Grievance Log\n' +
     '• 💼 Dashboard (Executive metrics)\n' +
     '• 🎯 Custom View (Customizable metrics)\n' +
     '• 📊 Member Satisfaction (Survey tracking)\n' +
     '• 💡 Feedback & Development (Bug/feature tracking)\n' +
-    '• ✅ Menu Checklist (function reference guide)\n\n' +
+    '• ✅ Function Checklist (function reference)\n' +
+    '• 📚 Getting Started (setup instructions)\n' +
+    '• ❓ FAQ (common questions)\n\n' +
     'Plus 6 hidden calculation sheets for self-healing formulas.\n\n' +
     'Existing sheets with matching names will be recreated.\n\n' +
     'Continue?',
@@ -241,6 +243,14 @@ function CREATE_509_DASHBOARD() {
     createFunctionChecklistSheet_();
     ss.toast('Created Function Checklist', '🏗️ Progress', 2);
 
+    // Create Getting Started guide
+    createGettingStartedSheet(ss);
+    ss.toast('Created Getting Started', '🏗️ Progress', 2);
+
+    // Create FAQ sheet
+    createFAQSheet(ss);
+    ss.toast('Created FAQ', '🏗️ Progress', 2);
+
     // Save form URLs to Config sheet
     saveFormUrlsToConfig_silent(ss);
     ss.toast('Saved form URLs to Config', '🏗️ Progress', 2);
@@ -258,11 +268,12 @@ function CREATE_509_DASHBOARD() {
 
     ss.toast('Dashboard creation complete!', '✅ Success', 5);
     ui.alert('✅ Success', '509 Dashboard has been created successfully!\n\n' +
-      '8 sheets created:\n' +
+      '10 sheets created:\n' +
       '• Config, Member Directory, Grievance Log (data)\n' +
       '• 💼 Dashboard, 🎯 Custom View (views)\n' +
       '• 📊 Member Satisfaction, 💡 Feedback (tracking)\n' +
-      '• ✅ Menu Checklist (function reference)\n\n' +
+      '• ✅ Function Checklist (function reference)\n' +
+      '• 📚 Getting Started, ❓ FAQ (help)\n\n' +
       'Plus 6 hidden calculation sheets with self-healing formulas.\n\n' +
       '⚡ Auto-sync trigger installed - dates and deadlines will\n' +
       'update automatically when you edit the sheets.\n\n' +
@@ -418,6 +429,176 @@ function createConfigSheet(ss) {
       sheet.setColumnWidth(i, 100);
     }
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // USER GUIDE SECTION (Starting at Row 30)
+  // ═══════════════════════════════════════════════════════════════════════════
+  addConfigUserGuide_(sheet);
+}
+
+/**
+ * Adds a user guide section to the Config sheet starting at row 30
+ * @private
+ */
+function addConfigUserGuide_(sheet) {
+  var startRow = 30;
+
+  // Define guide colors
+  var headerBg = '#4A90D9';      // Blue header
+  var sectionBg = '#E8F4FD';     // Light blue section
+  var tipBg = '#FFF9E6';         // Light yellow for tips
+  var warningBg = '#FEE2E2';     // Light red for warnings
+  var successBg = '#DCFCE7';     // Light green for success
+  var textColor = '#1F2937';     // Dark text
+
+  // ═══ HEADER ═══
+  sheet.getRange(startRow, 1, 1, 8).merge()
+    .setValue('📖 CONFIG TAB USER GUIDE')
+    .setBackground(headerBg)
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold')
+    .setFontSize(16)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(startRow, 40);
+
+  // ═══ INTRO SECTION ═══
+  var row = startRow + 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('🎯 What is this tab for?')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor(textColor);
+
+  row++;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('The Config tab is the control center for your dashboard. All dropdown options throughout the system pull from these columns.')
+    .setFontColor(textColor)
+    .setWrap(true);
+  sheet.setRowHeight(row, 35);
+
+  // ═══ HOW TO USE ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('📝 How to Add/Edit Dropdown Options')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor(textColor);
+
+  row++;
+  var howToSteps = [
+    ['Step 1:', 'Find the column for the dropdown you want to modify (e.g., "Job Titles" in Column A)'],
+    ['Step 2:', 'Add new values in empty cells below the existing values - no gaps allowed!'],
+    ['Step 3:', 'The dropdown will automatically include your new values throughout the system'],
+    ['Step 4:', 'To remove a value, delete the cell and shift cells up (don\'t leave blanks)']
+  ];
+
+  for (var i = 0; i < howToSteps.length; i++) {
+    row++;
+    sheet.getRange(row, 1).setValue(howToSteps[i][0]).setFontWeight('bold').setFontColor('#4A90D9');
+    sheet.getRange(row, 2, 1, 7).merge().setValue(howToSteps[i][1]).setFontColor(textColor).setWrap(true);
+  }
+
+  // ═══ COLUMN GUIDE ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('📊 Column Quick Reference')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor(textColor);
+
+  row++;
+  var columnGuide = [
+    ['Column', 'Name', 'Used In', 'Example Values'],
+    ['A', 'Job Titles', 'Member Directory', 'Case Worker, Supervisor, Manager...'],
+    ['B', 'Office Locations', 'Member Dir & Grievance Log', 'Boston Office, Springfield...'],
+    ['C', 'Units', 'Member Dir & Grievance Log', 'Unit 1, Unit 2, Unit 3...'],
+    ['H', 'Stewards', 'Member Dir & Grievance Log', 'Names of union stewards'],
+    ['J', 'Grievance Status', 'Grievance Log', 'Open, Pending Info, Settled...'],
+    ['K', 'Grievance Step', 'Grievance Log', 'Informal, Step I, Step II...'],
+    ['L', 'Issue Category', 'Grievance Log', 'Discipline, Workload, Pay...']
+  ];
+
+  for (var j = 0; j < columnGuide.length; j++) {
+    row++;
+    if (j === 0) {
+      // Header row
+      sheet.getRange(row, 1).setValue(columnGuide[j][0]).setFontWeight('bold').setBackground('#E5E7EB');
+      sheet.getRange(row, 2, 1, 2).merge().setValue(columnGuide[j][1]).setFontWeight('bold').setBackground('#E5E7EB');
+      sheet.getRange(row, 4, 1, 2).merge().setValue(columnGuide[j][2]).setFontWeight('bold').setBackground('#E5E7EB');
+      sheet.getRange(row, 6, 1, 3).merge().setValue(columnGuide[j][3]).setFontWeight('bold').setBackground('#E5E7EB');
+    } else {
+      sheet.getRange(row, 1).setValue(columnGuide[j][0]).setFontColor('#4A90D9').setFontWeight('bold');
+      sheet.getRange(row, 2, 1, 2).merge().setValue(columnGuide[j][1]).setFontColor(textColor);
+      sheet.getRange(row, 4, 1, 2).merge().setValue(columnGuide[j][2]).setFontColor('#6B7280');
+      sheet.getRange(row, 6, 1, 3).merge().setValue(columnGuide[j][3]).setFontColor('#6B7280').setFontStyle('italic');
+    }
+  }
+
+  // ═══ TIPS ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('💡 Pro Tips')
+    .setBackground(tipBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor('#92400E');
+
+  row++;
+  var tips = [
+    '✓ Keep dropdown lists in alphabetical order for easier selection',
+    '✓ Use consistent naming conventions (e.g., "Boston Office" not "boston office")',
+    '✓ Add your organization\'s specific values before using the system',
+    '✓ The system pre-fills some values - modify them to match your organization'
+  ];
+
+  for (var k = 0; k < tips.length; k++) {
+    row++;
+    sheet.getRange(row, 1, 1, 8).merge().setValue(tips[k]).setBackground(tipBg).setFontColor('#92400E');
+  }
+
+  // ═══ WARNINGS ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('⚠️ Important Warnings')
+    .setBackground(warningBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor('#DC2626');
+
+  row++;
+  var warnings = [
+    '⚠ Do NOT delete values that are already in use in Member Directory or Grievance Log',
+    '⚠ Do NOT leave blank cells in the middle of a column - this breaks dropdowns',
+    '⚠ Do NOT modify Section Headers (Row 1) or Column Headers (Row 2)'
+  ];
+
+  for (var m = 0; m < warnings.length; m++) {
+    row++;
+    sheet.getRange(row, 1, 1, 8).merge().setValue(warnings[m]).setBackground(warningBg).setFontColor('#DC2626');
+  }
+
+  // ═══ NEED HELP ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('🆘 Need More Help?')
+    .setBackground(successBg)
+    .setFontWeight('bold')
+    .setFontSize(12)
+    .setFontColor('#166534');
+
+  row++;
+  sheet.getRange(row, 1, 1, 8).merge()
+    .setValue('Check the "📚 Getting Started" tab for full setup instructions, or the "❓ FAQ" tab for common questions.')
+    .setBackground(successBg)
+    .setFontColor('#166534');
+
+  // Set borders around the entire guide
+  var guideRange = sheet.getRange(startRow, 1, row - startRow + 1, 8);
+  guideRange.setBorder(true, true, true, true, false, false, '#D1D5DB', SpreadsheetApp.BorderStyle.SOLID);
 }
 
 /**
@@ -2547,6 +2728,468 @@ function createFunctionChecklistSheet_() {
   if (maxCols > 7) {
     sheet.deleteColumns(8, maxCols - 7);
   }
+
+  return sheet;
+}
+
+/**
+ * Creates the Getting Started sheet with setup instructions
+ */
+function createGettingStartedSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = SHEETS.GETTING_STARTED || '📚 Getting Started';
+
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  // Define colors
+  var headerBg = '#7C3AED';       // Purple header
+  var sectionBg = '#F3E8FF';      // Light purple section
+  var stepBg = '#ECFDF5';         // Light green for steps
+  var tipBg = '#FEF3C7';          // Light yellow for tips
+  var textColor = '#1F2937';
+  var white = '#FFFFFF';
+
+  var row = 1;
+
+  // ═══ MAIN HEADER ═══
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('📚 GETTING STARTED WITH 509 DASHBOARD')
+    .setBackground(headerBg)
+    .setFontColor(white)
+    .setFontWeight('bold')
+    .setFontSize(20)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(row, 50);
+
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('Welcome! This guide will help you set up and use the 509 Dashboard effectively.')
+    .setFontSize(12)
+    .setFontColor('#6B7280')
+    .setHorizontalAlignment('center');
+
+  // ═══ SECTION 1: FIRST-TIME SETUP ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('🚀 STEP 1: First-Time Setup (5 minutes)')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#7C3AED');
+  sheet.setRowHeight(row, 35);
+
+  var setupSteps = [
+    ['1.1', 'Open the Config tab and customize dropdown values for your organization'],
+    ['1.2', 'Add your Job Titles in Column A (e.g., Case Worker, Supervisor, Manager)'],
+    ['1.3', 'Add your Office Locations in Column B'],
+    ['1.4', 'Add your Steward names in Column H'],
+    ['1.5', 'Run the diagnostic: Admin menu → DIAGNOSE SETUP to verify everything is working']
+  ];
+
+  for (var i = 0; i < setupSteps.length; i++) {
+    row++;
+    sheet.getRange(row, 1).setValue(setupSteps[i][0]).setFontWeight('bold').setFontColor('#7C3AED').setHorizontalAlignment('center');
+    sheet.getRange(row, 2, 1, 5).merge().setValue(setupSteps[i][1]).setFontColor(textColor).setWrap(true);
+    sheet.getRange(row, 1, 1, 6).setBackground(stepBg);
+  }
+
+  // ═══ SECTION 2: ADDING MEMBERS ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('👥 STEP 2: Adding Members')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#7C3AED');
+  sheet.setRowHeight(row, 35);
+
+  var memberSteps = [
+    ['2.1', 'Go to the Member Directory tab'],
+    ['2.2', 'Click on the first empty row (row 2 if empty)'],
+    ['2.3', 'Enter a Member ID (format: MJOHN123 - M + first 2 letters of first/last name + 3 digits)'],
+    ['2.4', 'Fill in First Name, Last Name, and Email (required fields)'],
+    ['2.5', 'Use the dropdowns for Job Title, Location, and other fields'],
+    ['2.6', 'TIP: Columns AB-AD auto-populate from Grievance Log - don\'t edit them manually!']
+  ];
+
+  for (var j = 0; j < memberSteps.length; j++) {
+    row++;
+    sheet.getRange(row, 1).setValue(memberSteps[j][0]).setFontWeight('bold').setFontColor('#7C3AED').setHorizontalAlignment('center');
+    sheet.getRange(row, 2, 1, 5).merge().setValue(memberSteps[j][1]).setFontColor(textColor).setWrap(true);
+    if (memberSteps[j][1].indexOf('TIP:') === 0) {
+      sheet.getRange(row, 1, 1, 6).setBackground(tipBg);
+    } else {
+      sheet.getRange(row, 1, 1, 6).setBackground(stepBg);
+    }
+  }
+
+  // ═══ SECTION 3: FILING GRIEVANCES ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('📋 STEP 3: Filing a Grievance')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#7C3AED');
+  sheet.setRowHeight(row, 35);
+
+  var grievanceSteps = [
+    ['3.1', 'Go to the Grievance Log tab'],
+    ['3.2', 'Enter a Grievance ID (format: GJOHN456 - G + first 2 letters of first/last name + 3 digits)'],
+    ['3.3', 'Enter the Member ID (must match a member in Member Directory)'],
+    ['3.4', 'Set Status to "Open" and Current Step to "Informal" or "Step I"'],
+    ['3.5', 'Enter the Incident Date (when the issue occurred)'],
+    ['3.6', 'Enter the Date Filed (when the grievance was submitted)'],
+    ['3.7', 'The system auto-calculates: Filing Deadline, Step I Due, Days to Deadline, etc.'],
+    ['3.8', 'TIP: Use Grievances menu → Sort by Status Priority to organize by urgency']
+  ];
+
+  for (var k = 0; k < grievanceSteps.length; k++) {
+    row++;
+    sheet.getRange(row, 1).setValue(grievanceSteps[k][0]).setFontWeight('bold').setFontColor('#7C3AED').setHorizontalAlignment('center');
+    sheet.getRange(row, 2, 1, 5).merge().setValue(grievanceSteps[k][1]).setFontColor(textColor).setWrap(true);
+    if (grievanceSteps[k][1].indexOf('TIP:') === 0) {
+      sheet.getRange(row, 1, 1, 6).setBackground(tipBg);
+    } else {
+      sheet.getRange(row, 1, 1, 6).setBackground(stepBg);
+    }
+  }
+
+  // ═══ SECTION 4: USING DASHBOARDS ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('📊 STEP 4: Using Dashboards')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#7C3AED');
+  sheet.setRowHeight(row, 35);
+
+  var dashboardInfo = [
+    ['💼 Dashboard', 'Executive overview with key metrics, steward performance, and trends'],
+    ['🎯 Custom View', 'Interactive popup with tabbed views - Overview, Members, Grievances, Analytics'],
+    ['📊 Member Satisfaction', 'Survey results dashboard (requires linked Google Form)'],
+    ['📱 Mobile Dashboard', 'Touch-friendly view for phones and tablets']
+  ];
+
+  row++;
+  sheet.getRange(row, 1, 1, 2).merge().setValue('Dashboard').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 3, 1, 4).merge().setValue('Description').setFontWeight('bold').setBackground('#E5E7EB');
+
+  for (var m = 0; m < dashboardInfo.length; m++) {
+    row++;
+    sheet.getRange(row, 1, 1, 2).merge().setValue(dashboardInfo[m][0]).setFontColor('#7C3AED').setFontWeight('bold');
+    sheet.getRange(row, 3, 1, 4).merge().setValue(dashboardInfo[m][1]).setFontColor(textColor).setWrap(true);
+  }
+
+  // ═══ SECTION 5: MENU OVERVIEW ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('📌 MENU QUICK REFERENCE')
+    .setBackground(sectionBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#7C3AED');
+  sheet.setRowHeight(row, 35);
+
+  var menuInfo = [
+    ['📊 509 Dashboard', 'Main dashboards, search, quick actions, mobile access'],
+    ['📋 Grievances', 'New grievances, folder management, calendar, notifications'],
+    ['👁️ View', 'Comfort View settings, themes, timeline options'],
+    ['⚙️ Settings', 'Repair dashboard, validations, triggers, formulas'],
+    ['🔧 Admin', 'Diagnostics, testing, data sync, demo/seed functions']
+  ];
+
+  row++;
+  sheet.getRange(row, 1, 1, 2).merge().setValue('Menu').setFontWeight('bold').setBackground('#E5E7EB');
+  sheet.getRange(row, 3, 1, 4).merge().setValue('Contains').setFontWeight('bold').setBackground('#E5E7EB');
+
+  for (var n = 0; n < menuInfo.length; n++) {
+    row++;
+    sheet.getRange(row, 1, 1, 2).merge().setValue(menuInfo[n][0]).setFontColor('#7C3AED').setFontWeight('bold');
+    sheet.getRange(row, 3, 1, 4).merge().setValue(menuInfo[n][1]).setFontColor(textColor);
+  }
+
+  // ═══ SECTION 6: TIPS FOR SUCCESS ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('💡 TIPS FOR SUCCESS')
+    .setBackground(tipBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#92400E');
+  sheet.setRowHeight(row, 35);
+
+  var tips = [
+    '✓ Always use dropdowns instead of typing - this ensures consistency',
+    '✓ Check the Dashboard daily to monitor deadlines and overdue items',
+    '✓ Use the Search function (509 Dashboard menu) to quickly find members or grievances',
+    '✓ Run DIAGNOSE SETUP (Admin menu) if something seems wrong',
+    '✓ Back up your data regularly (File → Download → Excel)',
+    '✓ Use the Message Alert checkbox to flag urgent grievances (they\'ll move to top)'
+  ];
+
+  for (var p = 0; p < tips.length; p++) {
+    row++;
+    sheet.getRange(row, 1, 1, 6).merge().setValue(tips[p]).setFontColor('#92400E').setBackground(tipBg);
+  }
+
+  // ═══ FOOTER ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 6).merge()
+    .setValue('Need more help? Check the ❓ FAQ tab or the Config tab\'s User Guide section.')
+    .setFontColor('#6B7280')
+    .setFontStyle('italic')
+    .setHorizontalAlignment('center');
+
+  // Set column widths
+  sheet.setColumnWidth(1, 80);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 150);
+  sheet.setColumnWidth(5, 150);
+  sheet.setColumnWidth(6, 150);
+
+  // Delete excess columns
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 6) {
+    sheet.deleteColumns(7, maxCols - 6);
+  }
+
+  return sheet;
+}
+
+/**
+ * Creates the FAQ sheet with common questions and answers
+ */
+function createFAQSheet(ss) {
+  ss = ss || SpreadsheetApp.getActiveSpreadsheet();
+  var sheetName = SHEETS.FAQ || '❓ FAQ';
+
+  var sheet = ss.getSheetByName(sheetName);
+  if (sheet) {
+    sheet.clear();
+  } else {
+    sheet = ss.insertSheet(sheetName);
+  }
+
+  // Define colors
+  var headerBg = '#059669';       // Green header
+  var questionBg = '#ECFDF5';     // Light green for questions
+  var answerBg = '#FFFFFF';       // White for answers
+  var categoryBg = '#D1FAE5';     // Medium green for categories
+  var textColor = '#1F2937';
+  var white = '#FFFFFF';
+
+  var row = 1;
+
+  // ═══ MAIN HEADER ═══
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('❓ FREQUENTLY ASKED QUESTIONS')
+    .setBackground(headerBg)
+    .setFontColor(white)
+    .setFontWeight('bold')
+    .setFontSize(20)
+    .setHorizontalAlignment('center')
+    .setVerticalAlignment('middle');
+  sheet.setRowHeight(row, 50);
+
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('Find answers to common questions about using the 509 Dashboard')
+    .setFontSize(12)
+    .setFontColor('#6B7280')
+    .setHorizontalAlignment('center');
+
+  // ═══ CATEGORY: GETTING STARTED ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('🚀 GETTING STARTED')
+    .setBackground(categoryBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#065F46');
+  sheet.setRowHeight(row, 35);
+
+  var gettingStartedFAQs = [
+    ['Q: How do I set up the dashboard for the first time?',
+     'A: Go to Admin menu → DIAGNOSE SETUP to check your system, then customize the Config tab with your organization\'s dropdown values (job titles, locations, stewards, etc.).'],
+    ['Q: Can I use this with existing member data?',
+     'A: Yes! You can paste member data into the Member Directory tab. Just make sure the columns match and Member IDs follow the format (MJOHN123).'],
+    ['Q: How do I test the system without real data?',
+     'A: Use Admin → Demo → Seed All Sample Data to generate 1,000 test members and 300 grievances. Use NUKE SEEDED DATA when done testing.']
+  ];
+
+  for (var i = 0; i < gettingStartedFAQs.length; i++) {
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(gettingStartedFAQs[i][0])
+      .setBackground(questionBg).setFontWeight('bold').setFontColor('#065F46').setWrap(true);
+    sheet.setRowHeight(row, 30);
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(gettingStartedFAQs[i][1])
+      .setBackground(answerBg).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 45);
+  }
+
+  // ═══ CATEGORY: MEMBER DIRECTORY ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('👥 MEMBER DIRECTORY')
+    .setBackground(categoryBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#065F46');
+  sheet.setRowHeight(row, 35);
+
+  var memberFAQs = [
+    ['Q: What format should Member IDs use?',
+     'A: Format is M + first 2 letters of first name + first 2 letters of last name + 3 random digits. Example: John Smith → MJOSM123'],
+    ['Q: Why are columns AB-AD not editable?',
+     'A: These columns are auto-calculated from the Grievance Log. Has Open Grievance, Grievance Status, and Days to Deadline update automatically.'],
+    ['Q: How do I assign a steward to multiple members?',
+     'A: Use the Assigned Steward dropdown in column P. You can select multiple stewards using the multi-select editor.'],
+    ['Q: What does the "Start Grievance" checkbox do?',
+     'A: Checking this opens a pre-filled grievance form for that member. The checkbox auto-resets after use.']
+  ];
+
+  for (var j = 0; j < memberFAQs.length; j++) {
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(memberFAQs[j][0])
+      .setBackground(questionBg).setFontWeight('bold').setFontColor('#065F46').setWrap(true);
+    sheet.setRowHeight(row, 30);
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(memberFAQs[j][1])
+      .setBackground(answerBg).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 45);
+  }
+
+  // ═══ CATEGORY: GRIEVANCES ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('📋 GRIEVANCES')
+    .setBackground(categoryBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#065F46');
+  sheet.setRowHeight(row, 35);
+
+  var grievanceFAQs = [
+    ['Q: How are deadlines calculated?',
+     'A: Based on Article 23A: Filing = Incident + 21 days, Step I = Filed + 30 days, Step II Appeal = Step I Decision + 10 days, Step II Decision = Appeal + 30 days.'],
+    ['Q: What does "Message Alert" do?',
+     'A: When checked, the row is highlighted yellow and moves to the top of the list when sorted. Use it to flag urgent cases.'],
+    ['Q: Why does Days to Deadline show "Overdue"?',
+     'A: This means the next deadline has passed. Check the Next Action Due column to see which deadline is overdue.'],
+    ['Q: How do I create a folder for grievance documents?',
+     'A: Select the grievance row, then go to Grievances → Drive Folders → Setup Folder. This creates a Google Drive folder with subfolders.'],
+    ['Q: Can I sync deadlines to my calendar?',
+     'A: Yes! Go to Grievances → Calendar → Sync Deadlines to Calendar. You\'ll need to grant calendar access the first time.']
+  ];
+
+  for (var k = 0; k < grievanceFAQs.length; k++) {
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(grievanceFAQs[k][0])
+      .setBackground(questionBg).setFontWeight('bold').setFontColor('#065F46').setWrap(true);
+    sheet.setRowHeight(row, 30);
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(grievanceFAQs[k][1])
+      .setBackground(answerBg).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 45);
+  }
+
+  // ═══ CATEGORY: TROUBLESHOOTING ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('🔧 TROUBLESHOOTING')
+    .setBackground(categoryBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#065F46');
+  sheet.setRowHeight(row, 35);
+
+  var troubleshootingFAQs = [
+    ['Q: Dropdowns are empty or not working',
+     'A: Check the Config tab - the corresponding column may be empty. Also run Settings → Setup Data Validations to reapply dropdowns.'],
+    ['Q: Data isn\'t syncing between sheets',
+     'A: Run Settings → Triggers → Install Auto-Sync Trigger. Also try Admin → Data Sync → Sync All Data Now.'],
+    ['Q: The dashboard shows wrong numbers',
+     'A: Try Settings → Refresh All Formulas. If issues persist, run Settings → REPAIR DASHBOARD.'],
+    ['Q: I accidentally deleted data - can I undo?',
+     'A: Use Ctrl+Z (or Cmd+Z on Mac) immediately. For older changes, go to File → Version history → See version history.'],
+    ['Q: Menus are not appearing',
+     'A: Close and reopen the spreadsheet. If still missing, go to Extensions → Apps Script and run the onOpen function manually.']
+  ];
+
+  for (var m = 0; m < troubleshootingFAQs.length; m++) {
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(troubleshootingFAQs[m][0])
+      .setBackground(questionBg).setFontWeight('bold').setFontColor('#065F46').setWrap(true);
+    sheet.setRowHeight(row, 30);
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(troubleshootingFAQs[m][1])
+      .setBackground(answerBg).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 45);
+  }
+
+  // ═══ CATEGORY: ADVANCED ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('⚡ ADVANCED')
+    .setBackground(categoryBg)
+    .setFontWeight('bold')
+    .setFontSize(14)
+    .setFontColor('#065F46');
+  sheet.setRowHeight(row, 35);
+
+  var advancedFAQs = [
+    ['Q: How do I link a Google Form for grievances?',
+     'A: Create a Google Form with matching fields, then use Admin → Setup & Triggers → Setup Grievance Form Trigger.'],
+    ['Q: Can multiple people use this at the same time?',
+     'A: Yes! Google Sheets supports real-time collaboration. Changes sync automatically between users.'],
+    ['Q: How do I customize the deadline days?',
+     'A: The default deadlines (21, 30, 10 days) are set in the Config tab columns AA-AD. You can modify these values.']
+  ];
+
+  for (var n = 0; n < advancedFAQs.length; n++) {
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(advancedFAQs[n][0])
+      .setBackground(questionBg).setFontWeight('bold').setFontColor('#065F46').setWrap(true);
+    sheet.setRowHeight(row, 30);
+    row++;
+    sheet.getRange(row, 1, 1, 5).merge().setValue(advancedFAQs[n][1])
+      .setBackground(answerBg).setFontColor(textColor).setWrap(true);
+    sheet.setRowHeight(row, 45);
+  }
+
+  // ═══ FOOTER ═══
+  row += 2;
+  sheet.getRange(row, 1, 1, 5).merge()
+    .setValue('Can\'t find your answer? Check the 📚 Getting Started tab or ask your administrator.')
+    .setFontColor('#6B7280')
+    .setFontStyle('italic')
+    .setHorizontalAlignment('center');
+
+  // Set column widths
+  sheet.setColumnWidth(1, 180);
+  sheet.setColumnWidth(2, 180);
+  sheet.setColumnWidth(3, 180);
+  sheet.setColumnWidth(4, 180);
+  sheet.setColumnWidth(5, 180);
+
+  // Delete excess columns
+  var maxCols = sheet.getMaxColumns();
+  if (maxCols > 5) {
+    sheet.deleteColumns(6, maxCols - 5);
+  }
+
+  // Freeze header
+  sheet.setFrozenRows(1);
 
   return sheet;
 }
