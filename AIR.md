@@ -171,7 +171,8 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- Sheet creation (7 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`
+- Sheet creation (10 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`, `createFunctionChecklistSheet_()`, `createGettingStartedSheet()`, `createFAQSheet()`
+- Config user guide: `addConfigUserGuide_()` - Adds user guide section to Config tab at row 30
 - Grievance Form Workflow:
   - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
   - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory
@@ -602,6 +603,18 @@ var FEEDBACK_COLS = {
 | 6 | 📊 Member Satisfaction | Data | 68-question Google Form survey with dashboard, charts (82 cols + dashboard) |
 | 7 | 💡 Feedback & Development | Data | Bug/feature tracking with priority (11 columns) |
 | 8 | ✅ Function Checklist | Reference | Function reference guide organized by 13 phases |
+
+### Help & Documentation Sheets
+
+| # | Sheet Name | Type | Purpose |
+|---|------------|------|---------|
+| 9 | 📚 Getting Started | Help | Step-by-step setup instructions, member/grievance guides, menu reference |
+| 10 | ❓ FAQ | Help | Frequently asked questions organized by category (20+ Q&As) |
+
+**Note:** The Config tab also includes a User Guide section starting at row 30 with:
+- How to add/edit dropdown options
+- Column quick reference
+- Pro tips and warnings
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 
