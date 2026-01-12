@@ -118,7 +118,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 ├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # ADHD accessibility & theming (focus mode, themes, pomodoro)
+├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -171,7 +171,8 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `searchMembers()` - Desktop search dialog
 - `startNewGrievance()` - Opens pre-filled Google Form for new grievance
 - `viewActiveGrievances()` - Navigate to Grievance Log
-- Sheet creation (7 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`
+- Sheet creation (10 functions): `createConfigSheet()`, `createMemberDirectory()`, `createGrievanceLog()`, `createDashboard()`, `createInteractiveDashboard()`, `createSatisfactionSheet()`, `createFeedbackSheet()`, `createFunctionChecklistSheet_()`, `createGettingStartedSheet()`, `createFAQSheet()`
+- Config user guide: `addConfigUserGuide_()` - Adds user guide section to Config tab at row 30
 - Grievance Form Workflow:
   - `GRIEVANCE_FORM_CONFIG` - Form URL and field entry ID configuration
   - `startNewGrievance()` - Opens pre-filled form with member data from Member Directory
@@ -283,8 +284,8 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
-**ADHDFeatures.gs** (~400 lines) - ADHD Accessibility & Theming
-- `showADHDControlPanel()` - Main ADHD settings panel
+**ADHDFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
+- `showADHDControlPanel()` - Main Comfort View settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
 - `applyADHDSettings()` - Apply visual settings
 - `activateFocusMode()`, `deactivateFocusMode()` - Focus mode (hide non-essential sheets)
@@ -297,7 +298,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `showThemeManager()` - Theme selection UI
 - `applyTheme()`, `applyThemeToSheet()`, `previewTheme()` - Theme application
 - `getCurrentTheme()`, `resetToDefaultTheme()`, `quickToggleDarkMode()` - Theme utilities
-- `setupADHDDefaults()` - Initialize ADHD-friendly defaults
+- `setupADHDDefaults()` - Initialize Comfort View defaults
 
 **TestingValidation.gs** (~474 lines) - Testing Framework & Data Validation
 - Testing Framework:
@@ -601,7 +602,19 @@ var FEEDBACK_COLS = {
 |---|------------|------|---------|
 | 6 | 📊 Member Satisfaction | Data | 68-question Google Form survey with dashboard, charts (82 cols + dashboard) |
 | 7 | 💡 Feedback & Development | Data | Bug/feature tracking with priority (11 columns) |
-| 8 | ✅ Menu Checklist | Reference | Function reference guide organized by 13 phases |
+| 8 | ✅ Function Checklist | Reference | Function reference guide organized by 13 phases |
+
+### Help & Documentation Sheets
+
+| # | Sheet Name | Type | Purpose |
+|---|------------|------|---------|
+| 9 | 📚 Getting Started | Help | Step-by-step setup instructions, member/grievance guides, menu reference |
+| 10 | ❓ FAQ | Help | Frequently asked questions organized by category (20+ Q&As) |
+
+**Note:** The Config tab also includes a User Guide section starting at row 30 with:
+- How to add/edit dropdown options
+- Column quick reference
+- Pro tips and warnings
 
 #### 💼 Dashboard - 12 Live Analytics Sections
 
@@ -710,59 +723,103 @@ Columns marked as **Multi-Select** support comma-separated values for multiple s
 
 ---
 
-## Menu System
+## Menu System (5 Menus)
+
+The menu system has been reorganized from 9 menus to 5 logical groups:
 
 ```
-👤 Dashboard
+📊 509 Dashboard
 ├── 📊 Smart Dashboard (Auto-Detect)
 ├── 🎯 Custom View
-├── 📊 Member Satisfaction          ← NEW: Interactive survey dashboard modal
-├── 🔍 Search Members
-├── 📋 View Active Grievances
+├── 📊 Member Satisfaction
 ├── 📱 Mobile Dashboard
-├── 📱 Get Mobile App URL        ← NEW: Shows web app URL for mobile access
+├── 🔍 Search Members
 ├── ⚡ Quick Actions
-└── Grievance Tools
-    ├── Start New Grievance
-    ├── Refresh Grievance Formulas
-    └── Refresh Member Directory Data
+└── 📱 Get Mobile App URL
 
-📊 Sheet Manager
-├── Rebuild Dashboard
-└── Refresh All Formulas
+📋 Grievances
+├── ➕ Start New Grievance
+├── 📋 View Active Grievances
+├── 📊 Sort by Status Priority
+├── 🔄 Refresh Grievance Data
+├── 🔄 Refresh Member Data
+├── 📁 Drive Folders (submenu)
+│   ├── 📁 Setup Folder for Grievance
+│   ├── 📁 View Grievance Files
+│   └── 📁 Batch Create All Folders
+├── 📅 Calendar (submenu)
+│   ├── 📅 Sync Deadlines to Calendar
+│   ├── 📅 View Upcoming Deadlines
+│   └── 🗑️ Clear Calendar Events
+└── 📬 Notifications (submenu)
+    ├── ⚙️ Notification Settings
+    ├── ⚙️ Alert Settings
+    ├── 📧 Send Steward Alerts Now
+    └── 🧪 Test Notifications
 
-🔧 Tools
-├── ADHD & Accessibility (submenu)
-├── Theming (submenu)
+👁️ View
+├── 📅 Simplify Timeline (Hide Steps)
+├── 📅 Show Full Timeline
+├── ♿ Comfort View (submenu)
+│   ├── ♿ Comfort View Panel
+│   ├── 🎯 Focus Mode
+│   ├── 🔲 Zebra Stripes
+│   ├── 📝 Quick Capture
+│   └── 🍅 Pomodoro
+├── 🎨 Theming (submenu)
+│   ├── 🎨 Theme Manager
+│   ├── 🌙 Dark Mode
+│   └── 🔄 Reset Theme
+└── 🎨 Comfort View Setup (submenu)
+    ├── 🎨 Setup Comfort View
+    └── ↩️ Undo Comfort View
+
+⚙️ Settings
+├── 📊 Rebuild Dashboard
+├── 🔄 Refresh All Formulas
+├── ⚙️ Setup Data Validations
+├── 🔧 REPAIR DASHBOARD
 ├── ☑️ Multi-Select (submenu)
 │   ├── 📝 Open Editor
 │   ├── ⚡ Enable Auto-Open
 │   └── 🚫 Disable Auto-Open
-├── Undo/Redo (submenu)
-├── Cache & Performance (submenu)
-└── Validation (submenu)
+├── 🔗 Live Formulas (submenu)
+│   ├── 🔗 Setup Live Grievance Links
+│   └── 👤 Setup Member ID Dropdown
+├── ⚡ Triggers (submenu)
+│   ├── ⚡ Install Auto-Sync Trigger
+│   └── 🚫 Remove Auto-Sync Trigger
+├── ✅ Validation (submenu)
+│   ├── 🔍 Run Bulk Validation
+│   ├── ⚙️ Validation Settings
+│   ├── 🧹 Clear Validation Indicators
+│   └── ⚡ Install Validation Trigger
+└── 🎨 Comfort View Setup (submenu)
 
-🏗️ Setup
-├── CREATE 509 DASHBOARD
-├── REPAIR DASHBOARD
-└── Setup Data Validations
-
-🎭 Demo
-├── 🚀 Seed All Sample Data (1,000 members + 300 grievances + 50 surveys + 3 feedback)
-└── 🗑️ Nuke Data (submenu)
-    ├── ☢️ NUKE SEEDED DATA
-    ├── 🧹 Clear Config Dropdowns Only
-    └── 🔄 Restore Config & Dropdowns
-
-⚙️ Administrator
-├── DIAGNOSE SETUP
-├── Verify Hidden Sheets
-└── Setup & Triggers (submenu)
-    ├── Setup All Hidden Sheets
-    ├── Repair All Hidden Sheets
-    ├── Install Auto-Sync Trigger
-    ├── Remove Auto-Sync Trigger
-    └── Save Form URLs to Config
+🔧 Admin
+├── 🔍 DIAGNOSE SETUP
+├── 🔍 Verify Hidden Sheets
+├── 🔧 Hidden Sheets (submenu)
+│   ├── 🔧 Setup All Hidden Sheets
+│   └── 🔧 Repair All Hidden Sheets
+├── 🔄 Data Sync (submenu)
+│   ├── 🔄 Sync All Data Now
+│   ├── 🔄 Sync Grievance → Members
+│   └── 🔄 Sync Members → Grievances
+├── 🧪 Testing (submenu)
+│   ├── 🧪 Run All Tests
+│   ├── ⚡ Quick Tests
+│   └── 📊 View Test Results
+├── 🗄️ Cache (submenu)
+│   ├── 🗄️ Cache Status
+│   ├── 🔥 Warm Caches
+│   └── 🗑️ Clear Caches
+├── 🎭 Demo (submenu)
+│   ├── 🚀 Seed All Sample Data
+│   └── ☢️ NUKE SEEDED DATA
+└── ⚡ Quick Seed (submenu)
+    ├── 🌱 Seed 50 Members
+    └── 🌱 Seed 100 Members
 ```
 
 ---

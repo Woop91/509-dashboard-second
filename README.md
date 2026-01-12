@@ -249,20 +249,22 @@ Project Files (9 source files → 1 consolidated deployment)
 
 Key Functions:
 ├── CREATE_509_DASHBOARD() - Main setup function
-├── Sheet Creation (8 sheets)
-│   ├── createConfigSheet()
+├── Sheet Creation (10 sheets)
+│   ├── createConfigSheet() + addConfigUserGuide_()
 │   ├── createMemberDirectory()
 │   ├── createGrievanceLog()
 │   ├── createDashboard()
 │   ├── createInteractiveDashboard()
 │   ├── createSatisfactionSheet()
 │   ├── createFeedbackSheet()
-│   └── createMenuChecklistSheet_()
+│   ├── createFunctionChecklistSheet_()
+│   ├── createGettingStartedSheet()
+│   └── createFAQSheet()
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
 │   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 50 surveys + 3 feedback entries
-│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Menu Checklist sheets
+│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Function Checklist sheets
 └── User Interface
     ├── onOpen() - Menu creation
     ├── refreshAllFormulas()
@@ -538,7 +540,7 @@ Features include:
 - **Seed 50 Members (30% Grievances)** - Quick seed option
 - **Seed 100 Members (50% Grievances)** - Quick seed with more grievances
 
-**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Menu Checklist sheets
+**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Function Checklist sheets
 
 **Limits**: Max 2,000 members per call (prevents timeout)
 
@@ -623,9 +625,9 @@ Features include:
 - Resolution
 - Notes
 
-### 9. Menu Checklist (✅ Menu Checklist)
+### 9. Function Checklist (✅ Function Checklist)
 
-**Purpose**: Function reference guide organized by 13 phases
+**Purpose**: Function reference guide organized by 13 phases with expected results
 
 **Phases**:
 1. Foundation & Setup
@@ -642,6 +644,29 @@ Features include:
 12. Validation
 13. Testing
 
+### 10. Getting Started (📚 Getting Started)
+
+**Purpose**: Step-by-step setup instructions for new users
+
+**Sections**:
+- First-Time Setup (5 minutes) - Config customization steps
+- Adding Members - Member Directory entry guide
+- Filing a Grievance - Grievance Log walkthrough
+- Using Dashboards - Dashboard descriptions table
+- Menu Quick Reference - 5 menus overview
+- Tips for Success - Best practices
+
+### 11. FAQ (❓ FAQ)
+
+**Purpose**: Frequently asked questions organized by category
+
+**Categories**:
+- Getting Started (3 Q&As)
+- Member Directory (4 Q&As)
+- Grievances (5 Q&As)
+- Troubleshooting (5 Q&As)
+- Advanced (3 Q&As)
+
 ## Sheet Structure
 
 ### Config Tab
@@ -653,6 +678,11 @@ Master lists for all dropdowns:
 - Grievance Status & Steps
 - Issue Categories
 - Articles Violated
+
+**User Guide (Row 30+)**: Built-in documentation with:
+- How to add/edit dropdown options
+- Column quick reference table
+- Pro tips and warnings
 
 ### Member Directory
 31 columns tracking:
