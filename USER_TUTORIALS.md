@@ -517,7 +517,7 @@ If something goes wrong, use these repair functions:
 
 - **AIR.md** - Complete technical reference
 - **STEWARD_GUIDE.md** - Guide for stewards
-- **ADHD_FRIENDLY_GUIDE.md** - Accessibility features
+- **COMFORT_VIEW_GUIDE.md** - Accessibility and visual comfort features
 - **GitHub Issues** - Report bugs or request features
 
 ---

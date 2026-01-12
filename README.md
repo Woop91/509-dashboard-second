@@ -257,12 +257,12 @@ Key Functions:
 │   ├── createInteractiveDashboard()
 │   ├── createSatisfactionSheet()
 │   ├── createFeedbackSheet()
-│   └── createMenuChecklistSheet_()
+│   └── createFunctionChecklistSheet_()
 ├── Data Management
 │   ├── setupDataValidations()
 │   ├── setupHiddenSheets()
 │   ├── SEED_SAMPLE_DATA() - Seeds 1K members + 300 grievances + 50 surveys + 3 feedback entries
-│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Menu Checklist sheets
+│   └── NUKE_SEEDED_DATA() - Clears seeded data + surveys + deletes Feedback & Function Checklist sheets
 └── User Interface
     ├── onOpen() - Menu creation
     ├── refreshAllFormulas()
@@ -538,7 +538,7 @@ Features include:
 - **Seed 50 Members (30% Grievances)** - Quick seed option
 - **Seed 100 Members (50% Grievances)** - Quick seed with more grievances
 
-**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Menu Checklist sheets
+**NUKE_SEEDED_DATA()** - Clears all member, grievance, and survey data; deletes Feedback & Function Checklist sheets
 
 **Limits**: Max 2,000 members per call (prevents timeout)
 
@@ -623,9 +623,9 @@ Features include:
 - Resolution
 - Notes
 
-### 9. Menu Checklist (✅ Menu Checklist)
+### 9. Function Checklist (✅ Function Checklist)
 
-**Purpose**: Function reference guide organized by 13 phases
+**Purpose**: Function reference guide organized by 13 phases with expected results
 
 **Phases**:
 1. Foundation & Setup
