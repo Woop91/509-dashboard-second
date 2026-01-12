@@ -4639,7 +4639,7 @@ function setupDriveFolderForGrievance() {
 
   // Must be on Grievance Log
   if (sheet.getName() !== SHEETS.GRIEVANCE_LOG) {
-    ui.alert('📁 Setup Folder', 'Please select a row in the Grievance Log first.', ui.ButtonSet.OK);
+    ui.alert('📁 Setup Folder', 'Please go to the Grievance Log sheet and select a grievance row first.', ui.ButtonSet.OK);
     return;
   }
 
@@ -4714,7 +4714,7 @@ function showGrievanceFiles() {
   var ui = SpreadsheetApp.getUi();
 
   if (sheet.getName() !== SHEETS.GRIEVANCE_LOG) {
-    ui.alert('📁 View Files', 'Please select a row in the Grievance Log first.', ui.ButtonSet.OK);
+    ui.alert('📁 View Files', 'Please go to the Grievance Log sheet and select a grievance row first.', ui.ButtonSet.OK);
     return;
   }
 
