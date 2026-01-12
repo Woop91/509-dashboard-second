@@ -8670,6 +8670,8 @@ function onEditAutoSync(e) {
       sortGrievanceLogByStatus();
       // Update Dashboard with new computed values
       syncDashboardValues();
+      // Auto-create folders for any grievances missing them
+      autoCreateMissingGrievanceFolders_();
     } else if (sheetName === SHEETS.MEMBER_DIR) {
       // Member Directory changed - sync to Grievance Log and Config
       syncNewValueToConfig(e);  // Bidirectional: add new values to Config
@@ -8683,6 +8685,74 @@ function onEditAutoSync(e) {
     }
   } catch (error) {
     Logger.log('Auto-sync error: ' + error.message);
+  }
+}
+
+/**
+ * Automatically create Drive folders for grievances that don't have one
+ * Called by onEditAutoSync when Grievance Log is edited
+ * @private
+ */
+function autoCreateMissingGrievanceFolders_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!sheet) return;
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+
+  // Get all data at once for efficiency
+  var data = sheet.getRange(2, 1, lastRow - 1, GRIEVANCE_COLS.DRIVE_FOLDER_URL).getValues();
+  var rootFolder = null;
+  var created = 0;
+
+  for (var i = 0; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    var memberId = data[i][GRIEVANCE_COLS.MEMBER_ID - 1];
+    var firstName = data[i][GRIEVANCE_COLS.FIRST_NAME - 1];
+    var lastName = data[i][GRIEVANCE_COLS.LAST_NAME - 1];
+    var existingFolderId = data[i][GRIEVANCE_COLS.DRIVE_FOLDER_ID - 1];
+
+    // Skip if no grievance ID or already has a folder
+    if (!grievanceId || existingFolderId) continue;
+
+    // Lazy-load root folder only when needed
+    if (!rootFolder) {
+      rootFolder = getOrCreateDashboardFolder_();
+    }
+
+    try {
+      // Create folder name: GXXX123 - FirstName LastName (MemberID)
+      var memberName = ((firstName || '') + ' ' + (lastName || '')).trim() || 'Unknown';
+      var folderName = grievanceId + ' - ' + memberName;
+      if (memberId) {
+        folderName += ' (' + memberId + ')';
+      }
+
+      // Create the folder
+      var folder = rootFolder.createFolder(folderName);
+
+      // Create subfolders for organization
+      folder.createFolder('📄 Documents');
+      folder.createFolder('📧 Correspondence');
+      folder.createFolder('📝 Notes');
+
+      // Update the sheet with folder info
+      var row = i + 2; // Convert to 1-indexed row number
+      sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_ID).setValue(folder.getId());
+      sheet.getRange(row, GRIEVANCE_COLS.DRIVE_FOLDER_URL).setValue(folder.getUrl());
+
+      created++;
+      Logger.log('Auto-created folder for ' + grievanceId + ': ' + folder.getUrl());
+
+    } catch (e) {
+      Logger.log('Error auto-creating folder for ' + grievanceId + ': ' + e.message);
+    }
+  }
+
+  if (created > 0) {
+    ss.toast('Auto-created ' + created + ' folder(s) for new grievance(s)', '📁 Folders Created', 3);
   }
 }
 
