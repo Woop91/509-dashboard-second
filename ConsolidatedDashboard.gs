@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-12T02:39:17.849Z
+ * - Build Date: 2026-01-12T03:03:14.591Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -1258,7 +1258,7 @@ function createConfigSheet(ss) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // USER GUIDE SECTION (Starting at Row 30)
+  // USER GUIDE SECTION (Starting at Row 50)
   // ═══════════════════════════════════════════════════════════════════════════
   addConfigUserGuide_(sheet);
 }
