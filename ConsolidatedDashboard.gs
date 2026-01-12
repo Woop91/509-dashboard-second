@@ -841,66 +841,40 @@ function generateNameBasedId(prefix, firstName, lastName, existingIds) {
 
 /**
  * Creates the menu system when the spreadsheet opens
+ * Reorganized into 5 logical menus for easier navigation
  */
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
 
-  // Main Dashboard Menu
-  ui.createMenu('👤 Dashboard')
+  // ============================================================================
+  // MENU 1: 509 Dashboard - Main user-facing menu
+  // ============================================================================
+  ui.createMenu('📊 509 Dashboard')
     .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
     .addItem('🎯 Custom View', 'showInteractiveDashboardTab')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
-    .addSeparator()
-    .addItem('📋 View Active Grievances', 'viewActiveGrievances')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
-    .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
-    .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addSeparator()
-    .addSubMenu(ui.createMenu('📋 Grievance Tools')
-      .addItem('➕ Start New Grievance', 'startNewGrievance')
-      .addItem('🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched')
-      .addItem('🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas')
-      .addItem('📊 Sort by Status Priority', 'sortGrievanceLogByStatus')
-      .addSeparator()
-      .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
-      .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
-      .addItem('📋 Setup Grievance Form Trigger', 'setupGrievanceFormTrigger')
-      .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
-    .addSubMenu(ui.createMenu('👤 Member Tools')
-      .addItem('📋 Get Contact Info Form Link', 'sendContactInfoForm')
-      .addItem('⚙️ Setup Contact Form Trigger', 'setupContactFormTrigger'))
-    .addSubMenu(ui.createMenu('📊 Survey Tools')
-      .addItem('📊 Get Satisfaction Survey Link', 'getSatisfactionSurveyLink')
-      .addItem('⚙️ Setup Survey Form Trigger', 'setupSatisfactionFormTrigger'))
-    .addToUi();
-
-  // Member Search Menu (standalone for quick access)
-  ui.createMenu('🔍 Search')
     .addItem('🔍 Search Members', 'searchMembers')
+    .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
+    .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
     .addToUi();
 
-  // View Menu - Timeline and display controls
-  ui.createMenu('👁️ View')
-    .addItem('📅 Simplify Timeline (Hide Steps)', 'simplifyTimelineView')
-    .addItem('📅 Show Full Timeline', 'showFullTimelineView')
+  // ============================================================================
+  // MENU 2: Grievances - All grievance-related functions
+  // ============================================================================
+  ui.createMenu('📋 Grievances')
+    .addItem('➕ Start New Grievance', 'startNewGrievance')
+    .addItem('📋 View Active Grievances', 'viewActiveGrievances')
+    .addItem('📊 Sort by Status Priority', 'sortGrievanceLogByStatus')
     .addSeparator()
-    .addItem('🎨 Apply Step Highlighting', 'applyStepHighlighting')
-    .addItem('🔲 Setup Column Groups', 'setupTimelineColumnGroups')
+    .addItem('🔄 Refresh Grievance Data', 'recalcAllGrievancesBatched')
+    .addItem('🔄 Refresh Member Data', 'refreshMemberDirectoryFormulas')
     .addSeparator()
-    .addItem('❄️ Freeze Key Columns', 'freezeKeyColumns')
-    .addItem('🔓 Unfreeze All Columns', 'unfreezeAllColumns')
-    .addToUi();
-
-  // Sheet Manager Menu
-  ui.createMenu('📊 Sheet Manager')
-    .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
-    .addItem('📈 Refresh Interactive Charts', 'refreshInteractiveCharts')
-    .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
-    .addSeparator()
-    .addSubMenu(ui.createMenu('📁 Google Drive')
+    .addSubMenu(ui.createMenu('📁 Drive Folders')
       .addItem('📁 Setup Folder for Grievance', 'setupDriveFolderForGrievance')
       .addItem('📁 View Grievance Files', 'showGrievanceFiles')
-      .addItem('📁 Batch Create Folders', 'batchCreateGrievanceFolders'))
+      .addItem('📁 Batch Create All Folders', 'batchCreateGrievanceFolders'))
     .addSubMenu(ui.createMenu('📅 Calendar')
       .addItem('📅 Sync Deadlines to Calendar', 'syncDeadlinesToCalendar')
       .addItem('📅 View Upcoming Deadlines', 'showUpcomingDeadlinesFromCalendar')
@@ -913,8 +887,19 @@ function onOpen() {
       .addItem('🧪 Test Notifications', 'testDeadlineNotifications'))
     .addToUi();
 
-  // Tools Menu (NEW)
-  ui.createMenu('🔧 Tools')
+  // ============================================================================
+  // MENU 3: View - Display and appearance options
+  // ============================================================================
+  ui.createMenu('👁️ View')
+    .addItem('📅 Simplify Timeline (Hide Steps)', 'simplifyTimelineView')
+    .addItem('📅 Show Full Timeline', 'showFullTimelineView')
+    .addSeparator()
+    .addItem('🎨 Apply Step Highlighting', 'applyStepHighlighting')
+    .addItem('🔲 Setup Column Groups', 'setupTimelineColumnGroups')
+    .addSeparator()
+    .addItem('❄️ Freeze Key Columns', 'freezeKeyColumns')
+    .addItem('🔓 Unfreeze All Columns', 'unfreezeAllColumns')
+    .addSeparator()
     .addSubMenu(ui.createMenu('♿ Comfort View')
       .addItem('♿ Comfort View Panel', 'showADHDControlPanel')
       .addItem('🎯 Focus Mode', 'activateFocusMode')
@@ -925,73 +910,62 @@ function onOpen() {
       .addItem('🎨 Theme Manager', 'showThemeManager')
       .addItem('🌙 Toggle Dark Mode', 'quickToggleDarkMode')
       .addItem('🔄 Reset Theme', 'resetToDefaultTheme'))
+    .addToUi();
+
+  // ============================================================================
+  // MENU 4: Settings - All configuration options
+  // ============================================================================
+  ui.createMenu('⚙️ Settings')
+    .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
+    .addItem('📊 Rebuild Dashboard', 'rebuildDashboard')
+    .addItem('🔄 Refresh All Formulas', 'refreshAllFormulas')
     .addSeparator()
+    .addSubMenu(ui.createMenu('🎨 Comfort View Setup')
+      .addItem('🎨 Setup Comfort View', 'setupADHDDefaults')
+      .addItem('↩️ Undo Comfort View', 'undoADHDDefaults'))
     .addSubMenu(ui.createMenu('☑️ Multi-Select')
       .addItem('📝 Open Editor', 'showMultiSelectDialog')
       .addSeparator()
       .addItem('⚡ Enable Auto-Open', 'installMultiSelectTrigger')
       .addItem('🚫 Disable Auto-Open', 'removeMultiSelectTrigger'))
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🗄️ Cache & Performance')
-      .addItem('🗄️ Cache Status', 'showCacheStatusDashboard')
-      .addItem('🔥 Warm Up Caches', 'warmUpCaches')
-      .addItem('🗑️ Clear All Caches', 'invalidateAllCaches'))
-    .addSeparator()
     .addSubMenu(ui.createMenu('✅ Validation')
       .addItem('🔍 Run Bulk Validation', 'runBulkValidation')
       .addItem('⚙️ Validation Settings', 'showValidationSettings')
       .addItem('🧹 Clear Indicators', 'clearValidationIndicators')
       .addItem('⚡ Install Validation Trigger', 'installValidationTrigger'))
-    .addToUi();
-
-  // Setup Menu
-  ui.createMenu('🏗️ Setup')
-    .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📋 Form Links')
+      .addItem('📋 Get Contact Info Form Link', 'sendContactInfoForm')
+      .addItem('📊 Get Satisfaction Survey Link', 'getSatisfactionSurveyLink')
+      .addSeparator()
+      .addItem('📋 Setup Grievance Form Trigger', 'setupGrievanceFormTrigger')
+      .addItem('⚙️ Setup Contact Form Trigger', 'setupContactFormTrigger')
+      .addItem('⚙️ Setup Survey Form Trigger', 'setupSatisfactionFormTrigger')
+      .addSeparator()
+      .addItem('💾 Save Form URLs to Config', 'saveFormUrlsToConfig'))
+    .addSubMenu(ui.createMenu('⚡ Triggers')
+      .addItem('⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger')
+      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger'))
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
-    .addItem('🎨 Setup Comfort View', 'setupADHDDefaults')
-    .addItem('↩️ Undo Comfort View', 'undoADHDDefaults')
+    .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
+    .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
     .addToUi();
 
-  // Demo Menu - only show if demo mode is not disabled
-  if (!isDemoModeDisabled()) {
-    ui.createMenu('🎭 Demo')
-      .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
-      .addSeparator()
-      .addSubMenu(ui.createMenu('🗑️ Nuke Data')
-        .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
-        .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
-        .addSeparator()
-        .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
-      .addToUi();
-  }
-
-  // Testing Menu (NEW)
-  ui.createMenu('🧪 Testing')
-    .addItem('🧪 Run All Tests', 'runAllTests')
-    .addItem('⚡ Run Quick Tests', 'runQuickTests')
-    .addSeparator()
-    .addItem('📊 View Test Results', 'viewTestResults')
-    .addToUi();
-
-  // Administrator Menu
-  ui.createMenu('⚙️ Administrator')
+  // ============================================================================
+  // MENU 5: Admin - Power user and diagnostic tools
+  // ============================================================================
+  ui.createMenu('🔧 Admin')
     .addItem('🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP')
     .addItem('🔍 Verify Hidden Sheets', 'verifyHiddenSheets')
     .addSeparator()
-    .addSubMenu(ui.createMenu('🔧 Setup & Triggers')
-      .addItem('🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets')
-      .addItem('🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets')
-      .addItem('⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger')
-      .addItem('🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger')
-      .addSeparator()
-      .addItem('📋 Save Form URLs to Config', 'saveFormUrlsToConfig'))
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🔄 Manual Sync')
+    .addSubMenu(ui.createMenu('🔄 Data Sync')
       .addItem('🔄 Sync All Data Now', 'syncAllData')
       .addItem('🔄 Sync Grievance → Members', 'syncGrievanceToMemberDirectory')
       .addItem('🔄 Sync Members → Grievances', 'syncMemberToGrievanceLog'))
-    .addSeparator()
+    .addSubMenu(ui.createMenu('🔧 Hidden Sheets')
+      .addItem('🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets')
+      .addItem('🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets'))
     .addSubMenu(ui.createMenu('📋 Audit Log')
       .addItem('📋 View Audit Log', 'viewAuditLog')
       .addItem('🔧 Setup Audit Log', 'setupAuditLogSheet')
@@ -1002,7 +976,23 @@ function onOpen() {
       .addItem('🗑️ Clear Old Entries (30+ days)', 'clearOldAuditEntries'))
     .addSubMenu(ui.createMenu('🩺 Data Quality')
       .addItem('🔍 Check Data Quality', 'fixDataQualityIssues')
-      .addItem('📋 View Missing Member IDs', 'showGrievancesWithMissingMemberIds'))
+      .addItem('📋 View Missing Member IDs', 'showGrievancesWithMissingMemberIds')
+      .addItem('🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers'))
+    .addSubMenu(ui.createMenu('🗄️ Cache & Performance')
+      .addItem('🗄️ Cache Status', 'showCacheStatusDashboard')
+      .addItem('🔥 Warm Up Caches', 'warmUpCaches')
+      .addItem('🗑️ Clear All Caches', 'invalidateAllCaches'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🎭 Demo Data')
+      .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
+      .addSeparator()
+      .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
+      .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
+      .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
+    .addSubMenu(ui.createMenu('🧪 Testing')
+      .addItem('🧪 Run All Tests', 'runAllTests')
+      .addItem('⚡ Run Quick Tests', 'runQuickTests')
+      .addItem('📊 View Test Results', 'viewTestResults'))
     .addToUi();
 }
 
