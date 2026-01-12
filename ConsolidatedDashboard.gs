@@ -915,8 +915,8 @@ function onOpen() {
 
   // Tools Menu (NEW)
   ui.createMenu('🔧 Tools')
-    .addSubMenu(ui.createMenu('♿ ADHD & Accessibility')
-      .addItem('♿ ADHD Control Panel', 'showADHDControlPanel')
+    .addSubMenu(ui.createMenu('♿ Comfort View')
+      .addItem('♿ Comfort View Panel', 'showADHDControlPanel')
       .addItem('🎯 Focus Mode', 'activateFocusMode')
       .addItem('🔲 Toggle Zebra Stripes', 'toggleZebraStripes')
       .addItem('📝 Quick Capture', 'showQuickCaptureNotepad')
@@ -949,8 +949,8 @@ function onOpen() {
     .addItem('🔧 REPAIR DASHBOARD', 'REPAIR_DASHBOARD')
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
-    .addItem('🎨 Setup ADHD Defaults', 'setupADHDDefaults')
-    .addItem('↩️ Undo ADHD Defaults', 'undoADHDDefaults')
+    .addItem('🎨 Setup Comfort View', 'setupADHDDefaults')
+    .addItem('↩️ Undo Comfort View', 'undoADHDDefaults')
     .addToUi();
 
   // Demo Menu - only show if demo mode is not disabled
@@ -8327,6 +8327,7 @@ function sortGrievanceLogByStatus() {
   }
 
   Logger.log('Grievance Log sorted by status priority');
+  ss.toast('Grievance Log sorted by status priority', '📊 Sorted', 2);
 }
 
 // ============================================================================

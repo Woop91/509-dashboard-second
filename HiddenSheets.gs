@@ -686,6 +686,7 @@ function sortGrievanceLogByStatus() {
   }
 
   Logger.log('Grievance Log sorted by status priority');
+  ss.toast('Grievance Log sorted by status priority', '📊 Sorted', 2);
 }
 
 // ============================================================================
