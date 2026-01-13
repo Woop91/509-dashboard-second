@@ -534,7 +534,9 @@ function getWebAppGrievanceListHtml() {
     '}' +
 
     'function loadData(){' +
+    '  console.log("Loading grievance data...");' +
     '  google.script.run.withSuccessHandler(function(data){' +
+    '    console.log("Data received:",data?data.length:0,"items");' +
     '    allData=data||[];' +
     '    if(initialFilter){' +
     '      currentFilter=initialFilter;' +
@@ -543,7 +545,8 @@ function getWebAppGrievanceListHtml() {
     '    }' +
     '    renderList();' +
     '  }).withFailureHandler(function(err){' +
-    '    document.getElementById("grievanceList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">⚠️</div><div>Error loading data</div></div>";' +
+    '    console.error("Failed to load data:",err);' +
+    '    document.getElementById("grievanceList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">⚠️</div><div>Error loading data</div><div style=\\"font-size:11px;color:#999;margin-top:8px\\">"+String(err||"Unknown error")+"</div></div>";' +
     '  }).getWebAppGrievanceList();' +
     '}' +
 
@@ -841,43 +844,65 @@ function getWebAppSearchResults(query, tab) {
  * @returns {Array} Grievance data with all fields
  */
 function getWebAppGrievanceList() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
-  if (!sheet || sheet.getLastRow() <= 1) return [];
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      Logger.log('getWebAppGrievanceList: No active spreadsheet');
+      return [];
+    }
 
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.QUICK_ACTIONS).getValues();
-  var tz = Session.getScriptTimeZone();
+    var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+    if (!sheet) {
+      Logger.log('getWebAppGrievanceList: Grievance Log sheet not found');
+      return [];
+    }
 
-  return data.map(function(row) {
-    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
-    // Skip blank rows - must have a valid grievance ID starting with G
-    if (!grievanceId || (typeof grievanceId === 'string' && !grievanceId.toString().match(/^G/i))) return null;
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      Logger.log('getWebAppGrievanceList: No data rows in sheet');
+      return [];
+    }
 
-    var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
-    var incident = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
-    var nextDue = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
-    var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+    var data = sheet.getRange(2, 1, lastRow - 1, GRIEVANCE_COLS.QUICK_ACTIONS).getValues();
+    var tz = Session.getScriptTimeZone();
 
-    return {
-      id: grievanceId,
-      memberId: row[GRIEVANCE_COLS.MEMBER_ID - 1] || '',
-      name: ((row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || '')).trim(),
-      status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
-      step: row[GRIEVANCE_COLS.CURRENT_STEP - 1] || 'Step I',
-      category: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
-      articles: row[GRIEVANCE_COLS.ARTICLES - 1] || 'N/A',
-      filedDate: filed instanceof Date ? Utilities.formatDate(filed, tz, 'MM/dd/yyyy') : (filed || 'N/A'),
-      incidentDate: incident instanceof Date ? Utilities.formatDate(incident, tz, 'MM/dd/yyyy') : (incident || 'N/A'),
-      nextActionDue: nextDue instanceof Date ? Utilities.formatDate(nextDue, tz, 'MM/dd/yyyy') : (nextDue || 'N/A'),
-      daysToDeadline: daysToDeadline,
-      isOverdue: daysToDeadline === 'Overdue' || (typeof daysToDeadline === 'number' && daysToDeadline < 0),
-      daysOpen: row[GRIEVANCE_COLS.DAYS_OPEN - 1] || 0,
-      location: row[GRIEVANCE_COLS.LOCATION - 1] || 'N/A',
-      unit: row[GRIEVANCE_COLS.UNIT - 1] || 'N/A',
-      steward: row[GRIEVANCE_COLS.STEWARD - 1] || 'N/A',
-      resolution: row[GRIEVANCE_COLS.RESOLUTION - 1] || ''
-    };
-  }).filter(function(g) { return g !== null; }).slice(0, 100);
+    var result = data.map(function(row) {
+      var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
+      // Skip blank rows - must have a valid grievance ID starting with G
+      if (!grievanceId || (typeof grievanceId === 'string' && !grievanceId.toString().match(/^G/i))) return null;
+
+      var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
+      var incident = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
+      var nextDue = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+      var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+      return {
+        id: grievanceId,
+        memberId: row[GRIEVANCE_COLS.MEMBER_ID - 1] || '',
+        name: ((row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || '')).trim(),
+        status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
+        step: row[GRIEVANCE_COLS.CURRENT_STEP - 1] || 'Step I',
+        category: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
+        articles: row[GRIEVANCE_COLS.ARTICLES - 1] || 'N/A',
+        filedDate: filed instanceof Date ? Utilities.formatDate(filed, tz, 'MM/dd/yyyy') : (filed || 'N/A'),
+        incidentDate: incident instanceof Date ? Utilities.formatDate(incident, tz, 'MM/dd/yyyy') : (incident || 'N/A'),
+        nextActionDue: nextDue instanceof Date ? Utilities.formatDate(nextDue, tz, 'MM/dd/yyyy') : (nextDue || 'N/A'),
+        daysToDeadline: daysToDeadline,
+        isOverdue: daysToDeadline === 'Overdue' || (typeof daysToDeadline === 'number' && daysToDeadline < 0),
+        daysOpen: row[GRIEVANCE_COLS.DAYS_OPEN - 1] || 0,
+        location: row[GRIEVANCE_COLS.LOCATION - 1] || 'N/A',
+        unit: row[GRIEVANCE_COLS.UNIT - 1] || 'N/A',
+        steward: row[GRIEVANCE_COLS.STEWARD - 1] || 'N/A',
+        resolution: row[GRIEVANCE_COLS.RESOLUTION - 1] || ''
+      };
+    }).filter(function(g) { return g !== null; }).slice(0, 100);
+
+    Logger.log('getWebAppGrievanceList: Returning ' + result.length + ' grievances');
+    return result;
+  } catch (e) {
+    Logger.log('getWebAppGrievanceList error: ' + e.toString());
+    throw new Error('Failed to load grievances: ' + e.message);
+  }
 }
 
 /**
@@ -885,32 +910,54 @@ function getWebAppGrievanceList() {
  * @returns {Array} Member data
  */
 function getWebAppMemberList() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
-  if (!sheet || sheet.getLastRow() <= 1) return [];
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      Logger.log('getWebAppMemberList: No active spreadsheet');
+      return [];
+    }
 
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MEMBER_COLS.QUICK_ACTIONS).getValues();
+    var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+    if (!sheet) {
+      Logger.log('getWebAppMemberList: Member Directory sheet not found');
+      return [];
+    }
 
-  return data.map(function(row) {
-    var memberId = row[MEMBER_COLS.MEMBER_ID - 1] || '';
-    // Skip blank rows - must have a valid member ID starting with M
-    if (!memberId || (typeof memberId === 'string' && !memberId.toString().match(/^M/i))) return null;
+    var lastRow = sheet.getLastRow();
+    if (lastRow <= 1) {
+      Logger.log('getWebAppMemberList: No data rows in sheet');
+      return [];
+    }
 
-    return {
-      id: memberId,
-      firstName: row[MEMBER_COLS.FIRST_NAME - 1] || '',
-      lastName: row[MEMBER_COLS.LAST_NAME - 1] || '',
-      name: ((row[MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (row[MEMBER_COLS.LAST_NAME - 1] || '')).trim(),
-      title: row[MEMBER_COLS.JOB_TITLE - 1] || 'N/A',
-      location: row[MEMBER_COLS.WORK_LOCATION - 1] || 'N/A',
-      unit: row[MEMBER_COLS.UNIT - 1] || 'N/A',
-      email: row[MEMBER_COLS.EMAIL - 1] || '',
-      phone: row[MEMBER_COLS.PHONE - 1] || '',
-      isSteward: row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes',
-      supervisor: row[MEMBER_COLS.SUPERVISOR - 1] || 'N/A',
-      hasOpenGrievance: row[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1] === 'Yes'
-    };
-  }).filter(function(m) { return m !== null; }).slice(0, 100);
+    var data = sheet.getRange(2, 1, lastRow - 1, MEMBER_COLS.QUICK_ACTIONS).getValues();
+
+    var result = data.map(function(row) {
+      var memberId = row[MEMBER_COLS.MEMBER_ID - 1] || '';
+      // Skip blank rows - must have a valid member ID starting with M
+      if (!memberId || (typeof memberId === 'string' && !memberId.toString().match(/^M/i))) return null;
+
+      return {
+        id: memberId,
+        firstName: row[MEMBER_COLS.FIRST_NAME - 1] || '',
+        lastName: row[MEMBER_COLS.LAST_NAME - 1] || '',
+        name: ((row[MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (row[MEMBER_COLS.LAST_NAME - 1] || '')).trim(),
+        title: row[MEMBER_COLS.JOB_TITLE - 1] || 'N/A',
+        location: row[MEMBER_COLS.WORK_LOCATION - 1] || 'N/A',
+        unit: row[MEMBER_COLS.UNIT - 1] || 'N/A',
+        email: row[MEMBER_COLS.EMAIL - 1] || '',
+        phone: row[MEMBER_COLS.PHONE - 1] || '',
+        isSteward: row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes',
+        supervisor: row[MEMBER_COLS.SUPERVISOR - 1] || 'N/A',
+        hasOpenGrievance: row[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1] === 'Yes'
+      };
+    }).filter(function(m) { return m !== null; }).slice(0, 100);
+
+    Logger.log('getWebAppMemberList: Returning ' + result.length + ' members');
+    return result;
+  } catch (e) {
+    Logger.log('getWebAppMemberList error: ' + e.toString());
+    throw new Error('Failed to load members: ' + e.message);
+  }
 }
 
 /**
