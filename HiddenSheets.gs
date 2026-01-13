@@ -603,10 +603,11 @@ function syncGrievanceFormulasToLog() {
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
 
-    // Format Days Open (S) and Days to Deadline (U) as whole numbers
+    // Format Days Open (S) as whole numbers, Next Action Due (T) as date
+    // Days to Deadline (U) uses General format to preserve "Overdue" text
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
     grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('General');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
@@ -1026,13 +1027,13 @@ function onEditAutoSync(e) {
   var sheet = e.range.getSheet();
   var sheetName = sheet.getName();
 
-  // Check for Start Grievance checkbox BEFORE debounce (needs immediate response)
-  if (sheetName === SHEETS.MEMBER_DIR) {
-    var col = e.range.getColumn();
-    var row = e.range.getRow();
+  // Check for action checkboxes BEFORE debounce (needs immediate response)
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
 
+  if (sheetName === SHEETS.MEMBER_DIR && row >= 2) {
     // Handle Start Grievance checkbox
-    if (col === MEMBER_COLS.START_GRIEVANCE && row >= 2 && e.range.getValue() === true) {
+    if (col === MEMBER_COLS.START_GRIEVANCE && e.range.getValue() === true) {
       // Uncheck immediately so it can be reused
       e.range.setValue(false);
 
@@ -1041,6 +1042,36 @@ function onEditAutoSync(e) {
         openGrievanceFormForRow_(sheet, row);
       } catch (err) {
         Logger.log('Error opening grievance form: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+
+    // Handle Quick Actions checkbox
+    if (col === MEMBER_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this member
+      try {
+        showMemberQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening member quick actions: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+  }
+
+  // Handle Grievance Log Quick Actions checkbox
+  if (sheetName === SHEETS.GRIEVANCE_LOG && row >= 2) {
+    if (col === GRIEVANCE_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this grievance
+      try {
+        showGrievanceQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening grievance quick actions: ' + err.message);
       }
       return; // Don't continue with sync for checkbox edits
     }
@@ -1367,10 +1398,11 @@ function setupDashboardCalcSheet() {
   var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);
 
   // Metrics with formulas (15 key metrics)
+  // Note: Using COUNTIF with "M*" and "G*" patterns to only count valid IDs (ignores blank rows)
   var metrics = [
-    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Total Members', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ',"M*")', 'Total union members in directory'],
     ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
-    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
+    ['Total Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"G*")', 'All grievances filed'],
     ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
     ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
     ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],
@@ -1738,7 +1770,10 @@ function computeDashboardMetrics_(memberData, grievanceData, configData) {
     }
 
     // Overdue and due this week
-    if (typeof daysToDeadline === 'number') {
+    // Note: daysToDeadline can be a number OR the string "Overdue"
+    if (daysToDeadline === 'Overdue') {
+      metrics.overdueCases++;
+    } else if (typeof daysToDeadline === 'number') {
       if (daysToDeadline < 0) metrics.overdueCases++;
       else if (daysToDeadline <= 7) metrics.dueThisWeek++;
     }
@@ -2542,8 +2577,7 @@ function fixDataQualityIssues() {
     issues.map(function(i) { return '<div class="issue">' + i + '</div>'; }).join('') +
     '<h3>How to Fix:</h3>' +
     '<div class="fix-option"><strong>Option 1:</strong> Manually update Member IDs in Grievance Log</div>' +
-    '<div class="fix-option"><strong>Option 2:</strong> Use "Setup Member ID Dropdown" to add validation</div>' +
-    '<div class="fix-option"><strong>Option 3:</strong> Add missing members to Member Directory first</div>' +
+    '<div class="fix-option"><strong>Option 2:</strong> Add missing members to Member Directory first</div>' +
     '<p style="margin-top:20px"><button class="primary" onclick="google.script.run.showGrievancesWithMissingMemberIds();google.script.host.close()">📋 View Affected Rows</button>' +
     '<button class="secondary" onclick="google.script.host.close()">Close</button></p>' +
     '</div></body></html>'

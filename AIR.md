@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.0 (No Formulas in Visible Sheets - Full JavaScript Computation)
-**Last Updated:** 2026-01-12
+**Version:** 2.0.3 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -780,7 +780,7 @@ The menu system has been reorganized from 9 menus to 5 logical groups:
 │   └── 🚫 Disable Auto-Open
 ├── 🔗 Live Formulas (submenu)
 │   ├── 🔗 Setup Live Grievance Links
-│   └── 👤 Setup Member ID Dropdown
+│   └── 👤 Clear Member ID Validation
 ├── ⚡ Triggers (submenu)
 │   ├── ⚡ Install Auto-Sync Trigger
 │   └── 🚫 Remove Auto-Sync Trigger
@@ -977,6 +977,326 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.0.3 (2026-01-13) - Member Add/Modify Forms & Chart Fixes
+
+**Added member ADD/MODIFY functionality to Interactive Dashboard and fixed By Section charts**
+
+**CRITICAL FIX: ConsolidatedDashboard.gs fully synced with MobileQuickActions.gs**
+
+> **Note:** Per the deployment model, only `ConsolidatedDashboard.gs` is deployed.
+> All feature development occurs in `MobileQuickActions.gs` and must be synced to `ConsolidatedDashboard.gs`.
+> This version includes a complete sync of all Interactive Dashboard features.
+
+---
+
+#### 1. Member ADD/MODIFY Forms in Interactive Dashboard
+
+**New Member Add Form:**
+- Added "➕ Add New Member" button to Members tab
+- Modal form with fields: First Name, Last Name, Job Title, Email, Phone, Work Location, Unit, Office Days (multi-select), Supervisor, Is Steward
+- Auto-generates Member ID using `generateNameBasedId()` pattern (M + first 2 chars + last 2 chars + 3 digits)
+- Saves new member to Member Directory sheet
+
+**Member Edit Form:**
+- Added "✏️ Edit Member" button on each expanded member item
+- Pre-populates form with existing member data
+- Updates member data in place without changing Member ID
+
+**Server-side Function:**
+- `saveInteractiveMember(memberData, mode)` - Handles both add and edit operations
+- Validates required fields (first name, last name)
+- Returns success status with member ID
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 765-792 (Add Member form modal HTML)
+- `MobileQuickActions.gs`: Lines 923 (Edit button in member list)
+- `MobileQuickActions.gs`: Lines 963-1055 (JavaScript form functions)
+- `MobileQuickActions.gs`: Lines 1668-1745 (saveInteractiveMember server function)
+
+---
+
+#### 2. Office Days Filter Added
+
+**New Filter Dropdown:**
+- Added "All Office Days" filter dropdown to Members tab
+- Filters members by their office days (Monday, Tuesday, etc.)
+- Days sorted in weekday order
+- Works in combination with Location/Unit filters and search
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 891-908 (loadMemberFilters updated)
+- `MobileQuickActions.gs`: Lines 911-912 (resetMemberFilters updated)
+- `MobileQuickActions.gs`: Lines 950 (filterMembers updated)
+
+---
+
+#### 3. GitHub Repository Link Added
+
+**Links Tab Enhancement:**
+- Added "📦 GitHub Repository" link to External Links section
+- Links to https://github.com/Woop91/509-dashboard-second
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 1260-1262 (renderResources updated)
+
+---
+
+#### 4. By Section Chart Fixes (Member Satisfaction Dashboard)
+
+**Fixed 100% Bar Issue:**
+- Charts now skip sections with zero responses instead of showing full bars
+- Added `hasValidData` check to show "No survey responses yet" message when appropriate
+- Bars properly clamp to 0-100% range
+
+**Removed Redundant Detail Cards:**
+- Replaced repetitive "Section Details" cards with actionable insights
+- Now shows "Areas Needing Attention" (scores < 6) and "Strong Performance" (scores >= 8)
+- More useful summary instead of repeating the same information from the bar chart
+
+**Added Clarifying Labels:**
+- Chart title now shows "(1-10 Scale)" for clarity
+- Added subtitle "Sorted by score - areas needing attention shown first"
+- Bar values now show "X responses" instead of just a number
+
+**Files Changed:**
+- `Code.gs`: Lines 6899-6937 (renderSections function completely rewritten)
+- `ConsolidatedDashboard.gs`: Lines 7713-7751 (same changes mirrored)
+- `ConsolidatedDashboard.gs`: Lines 7777, 7787, 7795-7796 (n= labels changed to responses/members)
+
+---
+
+#### 5. ConsolidatedDashboard.gs Full Sync
+
+**Critical sync to ensure deployed file has all features from source files.**
+
+**Data Functions Updated:**
+- `getInteractiveMemberData()` - Now returns all 16 member fields (firstName, lastName, email, phone, officeDays, unit, supervisor, hasOpenGrievance, assignedSteward, etc.)
+- `getInteractiveGrievanceData()` - Now returns all 16 grievance fields (currentStep, isOverdue, daysToDeadline, daysOpen, incidentDate, nextActionDue, location, articles, steward, resolution, etc.)
+- Both functions now properly skip blank rows (validates ID starts with M/G)
+
+**Grievances Tab Enhanced:**
+- Added "⚠️ Overdue" filter button with danger styling
+- Added expandable grievance details with all fields on click
+- Added `toggleGrievanceDetail()`, `showGrievanceDetail()` functions
+- Filter buttons now highlight when active
+- Proper Overdue filter that checks `isOverdue` property
+
+**Overview Tab Enhanced:**
+- Clickable stat cards (Total Members, Total Grievances, Open Cases)
+- Added `showOpenCases()` function to jump to filtered grievances
+- Added `loadOverduePreview()` to show overdue cases on overview
+
+**CSS Styles Added:**
+- `.badge-overdue` - Pulsing red badge for overdue items
+- `.action-btn-danger` - Red button style for danger actions
+
+**Files Changed:**
+- `ConsolidatedDashboard.gs`: Lines 12182-12183 (badge-overdue CSS)
+- `ConsolidatedDashboard.gs`: Lines 12192-12193 (action-btn-danger CSS)
+- `ConsolidatedDashboard.gs`: Lines 12332-12338 (Grievances tab with Overdue filter)
+- `ConsolidatedDashboard.gs`: Lines 12373-12415 (loadOverview, renderOverview, showOpenCases, loadOverduePreview)
+- `ConsolidatedDashboard.gs`: Lines 12525-12624 (grievance functions with expandable details)
+- `ConsolidatedDashboard.gs`: Lines 12750-12824 (getInteractiveMemberData, getInteractiveGrievanceData)
+
+---
+
+### Version 2.0.2 (2026-01-13) - Interactive Dashboard & Satisfaction Survey Improvements
+
+**Comprehensive updates to the Custom View popup modal and Member Satisfaction Dashboard**
+
+---
+
+#### 1. Interactive Dashboard (Custom View) Enhancements
+
+**Stability Improvements:**
+- Added error handling with `safeRun()` wrapper for all JavaScript functions
+- Added `.withFailureHandler()` to all `google.script.run` calls
+- Error states now display friendly messages instead of blank pages
+
+**Overdue Cases Filter:**
+- Added **"⚠️ Overdue"** filter button to Grievances tab
+- Overdue cases now shown on Overview tab with preview section
+- Clicking "View All Overdue Cases" navigates to filtered view
+
+**Blank Row Filtering:**
+- All data functions now validate IDs start with "M" (members) or "G" (grievances)
+- `getInteractiveOverviewData()`, `getInteractiveMemberData()`, `getInteractiveGrievanceData()`, `getInteractiveAnalyticsData()` all updated
+- Prevents blank spreadsheet rows from appearing in modal
+
+**Clickable List Items with Details:**
+- Members: Click to expand showing email, phone, office days, supervisor, assigned steward
+- Grievances: Click to expand showing incident date, next due date, days open, articles, resolution
+- "Quick Actions" and "View in Sheet" buttons on expanded items
+
+**Member Filters:**
+- Location dropdown filter
+- Unit dropdown filter
+- Reset button to clear all filters
+- Filters work in combination with search
+
+**Resource Links Tab:**
+- New "🔗 Links" tab added
+- Shows Grievance Form, Contact Form, Satisfaction Survey links from Config sheet
+- Quick access to open full spreadsheet
+- Quick action buttons for common operations
+
+**Navigation Functions:**
+- `navigateToMemberInSheet(memberId)` - Jump to member in sheet
+- `navigateToGrievanceInSheet(grievanceId)` - Jump to grievance in sheet
+- `showMemberDirectory()`, `showGrievanceLog()`, `showConfigSheet()` - Tab navigation
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 594-1533 (complete overhaul)
+
+---
+
+#### 2. Member Satisfaction Dashboard Improvements
+
+**NPS Terminology Changed to Intuitive Language:**
+- "NPS Score" → "Loyalty Score"
+- "Strong NPS Score" → "Members Highly Recommend"
+- "NPS Needs Improvement" → "Member Loyalty Needs Attention"
+- Added "Moderate Member Loyalty" insight for scores 0-49
+
+**Loyalty Score Explanation:**
+- Added info card explaining Loyalty Score meaning
+- Shows score ranges: 50+ = Excellent, 0-49 = Good, Below 0 = Needs work
+- Explains it's based on "Would Recommend" question
+
+**Clickable Response Details:**
+- Responses tab items now expandable on click
+- Shows individual scores: Satisfaction, Trust, Feel Protected, Would Recommend
+- Shows Steward Contact status and Steward Rating if applicable
+
+**Sample Size Labels Improved:**
+- Changed "n=X" to "X responses" or "X members" throughout
+- More intuitive for non-technical users
+
+**Files Changed:**
+- `Code.gs`: Lines 6543-7260 (Satisfaction Dashboard HTML/JS)
+- `Code.gs`: Lines 7112-7133 (NPS insights)
+- `Code.gs`: Lines 7179-7258 (Response data function expanded)
+- `ConsolidatedDashboard.gs`: Same changes mirrored
+
+---
+
+### Version 1.9.1 (2026-01-13) - Grievance Log Bug Fixes & Quick Actions Checkbox
+
+**Bug Fixes: Member ID Dropdown, Overdue Cases, Blank Row Counting + New Quick Actions Checkbox Feature**
+
+Fixed three issues in the Grievance Log and Dashboard:
+
+---
+
+#### 1. Member ID Dropdown Removed
+
+**Issue:** Member ID column (B) in Grievance Log had a dropdown validation that restricted entries to existing Member IDs from Member Directory.
+
+**Fix:**
+- Removed dropdown validation from Member ID column
+- `setupGrievanceMemberDropdown()` now CLEARS validation instead of adding it
+- Member ID now allows free text entry for flexibility
+
+**Files Changed:**
+- `Code.gs`: Commented out `setMemberIdValidation()` call in `setupDataValidations()`
+- `Code.gs`: Updated `setupGrievanceMemberDropdown()` to clear validations
+- `ConsolidatedDashboard.gs`: Same changes
+
+---
+
+#### 2. Overdue Cases Not Populating in Dashboard
+
+**Issue:** The Dashboard "Overdue Cases" metric was always showing 0, even when overdue grievances existed.
+
+**Root Cause:**
+- Days to Deadline column stores the text `"Overdue"` for past-due cases (not negative numbers)
+- `computeDashboardMetrics_()` only checked `typeof daysToDeadline === 'number'`
+- String "Overdue" failed the number check, so overdue cases were never counted
+
+**Fix:** Added explicit check for the string "Overdue" before the number check:
+```javascript
+// Before (broken):
+if (typeof daysToDeadline === 'number') {
+  if (daysToDeadline < 0) metrics.overdueCases++;
+}
+
+// After (fixed):
+if (daysToDeadline === 'Overdue') {
+  metrics.overdueCases++;
+} else if (typeof daysToDeadline === 'number') {
+  if (daysToDeadline < 0) metrics.overdueCases++;
+}
+```
+
+**Files Changed:**
+- `HiddenSheets.gs`: Line ~1744 in `computeDashboardMetrics_()`
+- `ConsolidatedDashboard.gs`: Line ~10049 in `computeDashboardMetrics_()`
+
+---
+
+#### 3. Blank Rows Being Counted as Grievances
+
+**Issue:** Adding blank rows to the Grievance Log caused them to be counted in the "Total Grievances" metric.
+
+**Root Cause:** The formula used `COUNTA(...)-1` which counts any non-empty cell (including spaces or formatting artifacts).
+
+**Fix:** Changed to `COUNTIF(...,"G*")` for grievance IDs and `COUNTIF(...,"M*")` for member IDs, which only counts cells starting with the valid ID prefix.
+
+```javascript
+// Before (broken):
+['Total Grievances', '=COUNTA(...)-1']
+['Total Members', '=COUNTA(...)-1']
+
+// After (fixed):
+['Total Grievances', '=COUNTIF(...,"G*")']
+['Total Members', '=COUNTIF(...,"M*")']
+```
+
+**Files Changed:**
+- `HiddenSheets.gs`: Lines ~1373-1375 in `setupDashboardCalcSheet()`
+- `ConsolidatedDashboard.gs`: Lines ~2169-2171 and ~9686-9688
+
+---
+
+#### Additional Change: Days to Deadline Number Format
+
+Changed Days to Deadline column format from `'0'` to `'General'` to better preserve the "Overdue" text display.
+
+**Files Changed:**
+- `HiddenSheets.gs`: Line ~610 in `syncGrievanceFormulasToLog()`
+- `ConsolidatedDashboard.gs`: Line ~8924
+
+---
+
+#### 4. Quick Actions Checkbox (New Feature)
+
+**Feature:** Added "⚡ Actions" checkbox column to both Grievance Log and Member Directory that opens the Quick Actions dialog when checked.
+
+**Benefits:**
+- No need to navigate to menu items - just check the checkbox in the row
+- Checkbox auto-unchecks after opening the dialog so it can be reused
+- Works with the existing Quick Actions dialogs (calendar sync, drive folder, email, etc.)
+
+**Implementation:**
+- Member Directory: Column AF (QUICK_ACTIONS = 32)
+- Grievance Log: Column AI (QUICK_ACTIONS = 35)
+
+**How It Works:**
+1. User checks the ⚡ Actions checkbox in any data row
+2. `onEditAutoSync()` trigger detects the checkbox change
+3. Checkbox is immediately unchecked (reset for reuse)
+4. Quick Actions dialog opens showing available actions for that row:
+   - **Member Directory**: Start Grievance, Send Email, View Grievance History, Copy ID
+   - **Grievance Log**: Sync to Calendar, Setup Drive Folder, Quick Status Update, Copy ID
+
+**Files Changed:**
+- `Constants.gs`: Added `QUICK_ACTIONS` to MEMBER_COLS and GRIEVANCE_COLS
+- `Code.gs`: Updated `createMemberDirectory()` and `createGrievanceLog()` to add checkboxes
+- `HiddenSheets.gs`: Updated `onEditAutoSync()` to handle Quick Actions checkbox clicks
+- `ConsolidatedDashboard.gs`: Same updates
+
+---
 
 ### Version 1.9.0 (2026-01-11) - Visual Enhancements, Progress Tracking & Grievance Form Workflow
 
@@ -1429,10 +1749,10 @@ Grievance Log ──────────────┘
 | Z | Work Location | Member Directory (by Member ID) |
 | AA | Steward | Member Directory (by Member ID) |
 
-**Member ID Validation:**
-- Column B (Member ID) uses dropdown validation
-- Only Member IDs that exist in Member Directory are allowed
-- Prevents orphan grievances with invalid member references
+**Member ID Entry:**
+- Column B (Member ID) allows free text entry (no dropdown restriction)
+- Member IDs should match Member Directory entries for auto-lookup to work
+- Invalid/mismatched Member IDs will result in empty lookup fields (C-D, X-AA)
 
 **Code Changes:**
 - `HiddenSheets.gs`: Rewrote `syncGrievanceFormulasToLog()` to lookup member data directly from Member Directory instead of using hidden sheet formulas
