@@ -1163,7 +1163,7 @@ function getInteractiveDashboardHtml() {
     '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Members by Location</div><div class=\\"bar-chart\\">";' +
     '  var maxLoc=Math.max.apply(null,data.memberStats.byLocation.map(function(l){return l.count}))||1;' +
     '  data.memberStats.byLocation.forEach(function(loc){' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+loc.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(loc.count/maxLoc*100)+"%25;background:#059669\\"></div></div><div class=\\"bar-value\\">"+loc.count+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+loc.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(loc.count/maxLoc*100)+"%;background:#059669\\"></div></div><div class=\\"bar-value\\">"+loc.count+"</div></div>";' +
     '  });' +
     '  if(data.memberStats.byLocation.length===0)html+="<div class=\\"empty-state\\">No location data</div>";' +
     '  html+="</div></div>";' +
@@ -1171,7 +1171,7 @@ function getInteractiveDashboardHtml() {
     '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🏢 Members by Unit</div><div class=\\"bar-chart\\">";' +
     '  var maxUnit=Math.max.apply(null,data.memberStats.byUnit.map(function(u){return u.count}))||1;' +
     '  data.memberStats.byUnit.forEach(function(unit){' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+unit.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(unit.count/maxUnit*100)+"%25;background:#1a73e8\\"></div></div><div class=\\"bar-value\\">"+unit.count+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+unit.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(unit.count/maxUnit*100)+"%;background:#1a73e8\\"></div></div><div class=\\"bar-value\\">"+unit.count+"</div></div>";' +
     '  });' +
     '  if(data.memberStats.byUnit.length===0)html+="<div class=\\"empty-state\\">No unit data</div>";' +
     '  html+="</div></div>";' +
@@ -1179,16 +1179,16 @@ function getInteractiveDashboardHtml() {
     '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Grievance Status Distribution</div><div class=\\"bar-chart\\">";' +
     '  var total=data.statusCounts.open+data.statusCounts.pending+data.statusCounts.closed;' +
     '  if(total>0){' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Open</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.open/total*100)+"%25;background:#dc2626\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.open+"</div></div>";' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Pending</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.pending/total*100)+"%25;background:#f97316\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.pending+"</div></div>";' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Closed</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.closed/total*100)+"%25;background:#059669\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.closed+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Open</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.open/total*100)+"%;background:#dc2626\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.open+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Pending</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.pending/total*100)+"%;background:#f97316\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.pending+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">Closed</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(data.statusCounts.closed/total*100)+"%;background:#059669\\"></div></div><div class=\\"bar-value\\">"+data.statusCounts.closed+"</div></div>";' +
     '  }else{html+="<div class=\\"empty-state\\">No grievances</div>"}' +
     '  html+="</div></div>";' +
     // Issue category chart
     '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📋 Top Issue Categories</div><div class=\\"bar-chart\\">";' +
     '  var maxCat=Math.max.apply(null,data.topCategories.map(function(c){return c.count}))||1;' +
     '  data.topCategories.forEach(function(cat){' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+cat.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(cat.count/maxCat*100)+"%25;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+cat.count+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\" style=\\"width:120px\\">"+cat.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+(cat.count/maxCat*100)+"%;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+cat.count+"</div></div>";' +
     '  });' +
     '  if(data.topCategories.length===0)html+="<div class=\\"empty-state\\">No data</div>";' +
     '  html+="</div></div>";' +

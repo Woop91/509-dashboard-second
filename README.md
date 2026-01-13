@@ -1,6 +1,26 @@
-# 509 Dashboard - Google Apps Script v3.45
+# 509 Dashboard - Google Apps Script v3.46
 
 Complete union member database and grievance tracking system for Local 509.
+
+## 🆕 What's New in v3.46
+
+### Bug Fix: Dashboard Bar Charts (January 2026)
+
+**Fixed:** All bar charts in Member Satisfaction Dashboard and Smart Dashboard were showing at 100% width regardless of actual data values.
+
+**Cause:** CSS width property was using `%25` (URL-encoded) instead of `%`. CSS doesn't URL-decode inline styles.
+
+**Affected Areas:**
+- Member Satisfaction Dashboard (By Section, By Worksite, By Role, Priorities)
+- Smart Dashboard / Mobile Quick Actions (Location, Unit, Status, Categories)
+
+**Also Improved:**
+- Mobile Web App error handling with detailed error messages
+- Added console logging for debugging
+
+**Important:** After updating code in Apps Script, you must **redeploy the web app** for mobile changes to take effect.
+
+---
 
 ## 🆕 What's New in v3.45
 

@@ -6912,7 +6912,7 @@ function getSatisfactionDashboardHtml() {
     '    if(s.responseCount===0)return;' +  // Skip sections with no data
     '    var pct=Math.max(0,Math.min(100,(s.avg/maxScore)*100));' +  // Clamp to 0-100%
     '    var color=getScoreColor(s.avg);' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+s.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+s.responseCount+" responses</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+s.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+s.responseCount+" responses</div></div>";' +
     '  });' +
     '  }' +
     '  html+="</div></div>";' +
@@ -6960,7 +6960,7 @@ function getSatisfactionDashboardHtml() {
     '    data.byWorksite.forEach(function(w){' +
     '      var pct=(w.avg/10)*100;' +
     '      var color=getScoreColor(w.avg);' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+" responses</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+" responses</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -6970,7 +6970,7 @@ function getSatisfactionDashboardHtml() {
     '    data.byRole.forEach(function(r){' +
     '      var pct=(r.avg/10)*100;' +
     '      var color=getScoreColor(r.avg);' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+r.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+r.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+r.count+" responses</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+r.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+r.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+r.count+" responses</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -6993,7 +6993,7 @@ function getSatisfactionDashboardHtml() {
     '    var maxP=Math.max.apply(null,data.topPriorities.map(function(p){return p.count}))||1;' +
     '    data.topPriorities.forEach(function(p){' +
     '      var pct=(p.count/maxP)*100;' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+p.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+p.count+"</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+p.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:#7C3AED\\"></div></div><div class=\\"bar-value\\">"+p.count+"</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
