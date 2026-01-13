@@ -978,6 +978,107 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
+### Version 2.0.4 (2026-01-13) - Mobile Web App v2.0 Enhancements
+
+**Major upgrade to the standalone Mobile Web App (WebApp.gs) with full feature parity**
+
+---
+
+#### 1. Dashboard (Home) Page Enhanced
+
+**6 Clickable Stats in 3x2 Grid:**
+- Members - links to Members page
+- Grievances - links to Grievances page
+- Active - links to Grievances filtered to Open
+- Pending - links to Grievances filtered to Pending
+- Overdue - links to Grievances filtered to Overdue
+- Win Rate - displays grievance success percentage
+
+**Overdue Preview Section:**
+- Shows top 3 overdue cases dynamically
+- Red danger styling with "View All X Overdue Cases" button
+- Links directly to filtered grievance view
+
+**New Functions:**
+- `getWebAppDashboardStats()` - Returns stats with winRate and totalMembers
+
+---
+
+#### 2. Grievances (Cases) Page Enhanced
+
+**New Overdue Filter Button:**
+- Added "⚠️ Overdue" filter pill with danger (red) styling
+- Pulsing animation on overdue badges
+
+**Expandable Card Details:**
+- Tap any grievance card to expand/collapse details
+- Shows: Filed date, Incident date, Next due, Days open, Location, Articles, Steward, Resolution
+- Overdue cards have red left border
+
+**URL Filter Parameter:**
+- Supports `?page=grievances&filter=overdue` for direct linking
+- Auto-selects filter pill based on URL parameter
+
+**Updated Data Function:**
+- `getWebAppGrievanceList()` now returns 16 fields (same as Interactive Dashboard)
+- Includes: isOverdue, daysToDeadline, daysOpen, incidentDate, nextActionDue, location, articles, steward, resolution
+
+---
+
+#### 3. New Members Page
+
+**New page accessible via `?page=members`**
+
+**Features:**
+- Search by name, ID, title, location
+- Filter pills: All, Stewards, With Grievance
+- Expandable cards with email, phone, unit, supervisor
+- Steward badge and Open Grievance badge
+- Orange left border for members with open grievances
+
+**New Functions:**
+- `getWebAppMemberListHtml()` - Returns Members page HTML
+- `getWebAppMemberList()` - Returns member data (12 fields)
+
+---
+
+#### 4. New Links Page
+
+**New page accessible via `?page=links`**
+
+**Features:**
+- Forms section: Grievance Form, Contact Form, Satisfaction Survey (if configured)
+- Resources section: Spreadsheet link, GitHub Repository link
+- GitHub card with dark styling
+
+**New Functions:**
+- `getWebAppLinksHtml()` - Returns Links page HTML
+- `getWebAppResourceLinks()` - Returns configured form URLs and GitHub link
+
+---
+
+#### 5. Navigation Enhanced
+
+**5-Item Bottom Navigation (all pages):**
+- Home (Dashboard)
+- Search
+- Cases (Grievances)
+- Members
+- Links
+
+**Updated styling for 5-item layout:**
+- Smaller icons (22px)
+- Compact padding
+- Shorter labels
+
+---
+
+**Files Changed:**
+- `WebApp.gs`: Complete rewrite with 5 pages and enhanced features
+- `README.md`: Updated Mobile Web App section to v2.0
+
+---
+
 ### Version 2.0.3 (2026-01-13) - Member Add/Modify Forms & Chart Fixes
 
 **Added member ADD/MODIFY functionality to Interactive Dashboard and fixed By Section charts**

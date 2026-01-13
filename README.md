@@ -4,17 +4,27 @@ Complete union member database and grievance tracking system for Local 509.
 
 ## 🆕 What's New in v3.45
 
-### Mobile Web App (January 2026) ⭐ NEW
+### Mobile Web App v2.0 (January 2026) ⭐ ENHANCED
 
 **Problem:** Google Sheets mobile app doesn't show Apps Script menus, so you couldn't access the dashboard or search on your phone.
 
-**Solution:** New standalone web app you can access via URL on any mobile browser!
+**Solution:** Enhanced standalone web app you can access via URL on any mobile browser!
 
-**Features:**
-- 📊 **Dashboard** - Stats cards (Total, Active, Pending, Overdue)
-- 🔍 **Search** - Find members or grievances instantly
-- 📋 **Grievance List** - Filter by status (Open, Pending, Resolved)
-- 📱 **Home Screen** - Add to your phone's home screen for app-like access
+**Features (5 Pages):**
+- 📊 **Dashboard (Home)** - 6 clickable stats (Members, Grievances, Active, Pending, Overdue, Win Rate), Overdue preview section, Quick Actions
+- 🔍 **Search** - Find members or grievances instantly with tabbed results
+- 📋 **Grievances (Cases)** - Filter by status including **Overdue filter**, expandable cards with full details
+- 👥 **Members** - Member directory with search, filter by Stewards or With Grievance, expandable details
+- 🔗 **Links** - Quick access to forms, Spreadsheet link, **GitHub Repository**
+
+**New in v2.0:**
+- ⚠️ **Overdue Filter** - Dedicated filter button with pulsing badge
+- 📱 **Expandable Cards** - Tap any grievance/member to see full details
+- 🔢 **Win Rate Stat** - Shows grievance success rate
+- 👥 **Members Page** - Browse and filter member directory
+- 🔗 **Links Page** - Forms, resources, and GitHub repo
+- 📊 **Clickable Stats** - Tap stats to navigate directly to filtered views
+- 🚨 **Overdue Preview** - Dashboard shows top 3 overdue cases
 
 **How to Deploy:**
 1. Go to Extensions → Apps Script
