@@ -14104,6 +14104,9 @@ function SEED_MEMBERS(count, grievancePercent) {
     return;
   }
 
+  // Ensure Member Directory has enough columns (AF = column 32)
+  ensureMinimumColumns(sheet, MEMBER_COLS.QUICK_ACTIONS);
+
   // Always ensure Config has data for all required columns
   ss.toast('Ensuring Config data exists...', '🌱 Seeding', 2);
   seedConfigData();  // seedConfigData now only populates EMPTY columns
@@ -14271,6 +14274,9 @@ function SEED_MEMBERS_ONLY(count) {
     SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
     return;
   }
+
+  // Ensure Member Directory has enough columns (AF = column 32)
+  ensureMinimumColumns(sheet, MEMBER_COLS.QUICK_ACTIONS);
 
   // Always ensure Config has data for all required columns
   seedConfigData();
@@ -14452,6 +14458,20 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
 }
 
 /**
+ * Ensure a sheet has at least the minimum required columns
+ * @param {Sheet} sheet - The sheet to check
+ * @param {number} requiredColumns - Minimum number of columns needed
+ */
+function ensureMinimumColumns(sheet, requiredColumns) {
+  var currentColumns = sheet.getMaxColumns();
+  if (currentColumns < requiredColumns) {
+    var columnsToAdd = requiredColumns - currentColumns;
+    sheet.insertColumnsAfter(currentColumns, columnsToAdd);
+    Logger.log('Added ' + columnsToAdd + ' columns to ' + sheet.getName() + ' (now has ' + requiredColumns + ' columns)');
+  }
+}
+
+/**
  * Seed N grievances
  * @param {number} count - Number of grievances to seed (max 300)
  */
@@ -14467,6 +14487,9 @@ function SEED_GRIEVANCES(count) {
     SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
     return;
   }
+
+  // Ensure Grievance Log has enough columns (AI = column 35)
+  ensureMinimumColumns(grievanceSheet, GRIEVANCE_COLS.QUICK_ACTIONS);
 
   // Get members
   var memberData = memberSheet.getDataRange().getValues();
