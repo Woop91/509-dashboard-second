@@ -8,12 +8,12 @@ Deploy the **entire 509 Dashboard** using a **single file**.
 
 ## 📦 What You Get
 
-- ✅ **9 modules** in one auto-generated file (~460 KB)
-- ✅ **5 visible sheets** + 6 hidden calculation sheets
+- ✅ **9 modules** in one auto-generated file (~660 KB)
+- ✅ **11 visible sheets** + 6 hidden calculation sheets
 - ✅ **Copy/paste deployment** - no complex setup
 - ✅ **Demo data seeding** (members + grievances)
 - ✅ **12-section Dashboard** with real-time metrics
-- ✅ **ADHD-friendly** design and features
+- ✅ **Comfort View** design and accessibility features
 - ✅ **Mobile-optimized** quick actions and web app
 
 ---
@@ -83,6 +83,12 @@ Your dashboard is fully operational with:
 - ✅ Grievance Log (34 columns)
 - ✅ 💼 Dashboard (12 analytics sections)
 - ✅ 🎯 Custom View (interactive metrics)
+- ✅ 📊 Member Satisfaction (survey tracking)
+- ✅ 💡 Feedback & Development (bug/feature tracking)
+- ✅ ✅ Function Checklist (function reference)
+- ✅ 📚 Getting Started (setup instructions)
+- ✅ ❓ FAQ (common questions)
+- ✅ 📖 Config Guide (dropdown configuration help)
 - ✅ 6 hidden calculation sheets (self-healing formulas)
 
 ---
@@ -96,7 +102,7 @@ Your dashboard is fully operational with:
 | Constants.gs | SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS |
 | Code.gs | Main setup, menus, sheet creation, Dashboard |
 | HiddenSheets.gs | 6 self-healing calculation sheets |
-| ADHDFeatures.gs | Accessibility (themes, focus mode, pomodoro) |
+| ADHDFeatures.gs | Comfort View accessibility (themes, focus mode, pomodoro) |
 | MobileQuickActions.gs | Mobile UI, quick actions, modal popup |
 | PerformanceUndo.gs | Caching layer, undo/redo system |
 | SeedNuke.gs | Demo data seeding and clearing |
@@ -149,7 +155,7 @@ Your dashboard is fully operational with:
 | README.md | Complete feature documentation |
 | AIR.md | Technical reference for developers |
 | USER_TUTORIALS.md | Step-by-step user guides |
-| ADHD_FRIENDLY_GUIDE.md | Accessibility features |
+| COMFORT_VIEW_GUIDE.md | Accessibility features (Comfort View) |
 | STEWARD_GUIDE.md | Guide for union stewards |
 
 ---

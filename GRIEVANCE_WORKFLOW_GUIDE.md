@@ -230,7 +230,7 @@ All grievance workflow features are in:
 
 - [Main README](README.md) - Overall dashboard documentation
 - [Interactive Dashboard Guide](INTERACTIVE_DASHBOARD_GUIDE.md) - Custom views
-- [ADHD-Friendly Guide](ADHD_FRIENDLY_GUIDE.md) - Accessibility features
+- [Comfort View Guide](COMFORT_VIEW_GUIDE.md) - Accessibility features
 - [Steward Guide](STEWARD_GUIDE.md) - Positive reinforcement tips
 
 ---
