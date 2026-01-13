@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.5 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Version:** 2.0.6 (No Formulas in Visible Sheets - Full JavaScript Computation)
 **Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -977,6 +977,59 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.0.6 (2026-01-13) - Fix Dashboard Bar Charts and Mobile WebApp
+
+**Bug Fix: Bar charts showing 100% full in all dashboards**
+
+All bar charts in Member Satisfaction Dashboard, Smart Dashboard, and Mobile Quick Actions were displaying at full width regardless of actual data values.
+
+**Root Cause:**
+CSS `width` property was using `%25` (URL-encoded percent sign) instead of `%`. CSS does not URL-decode inline style values, so `width:70%25` was invalid and browsers defaulted to full width or ignored the value entirely.
+
+**Example of bug:**
+```javascript
+// BEFORE (broken) - %25 is not valid CSS
+style="width:"+pct+"%25;background:#059669"
+
+// AFTER (fixed) - uses proper % symbol
+style="width:"+pct+"%;background:#059669"
+```
+
+**Files Fixed:**
+- `Code.gs` - 4 bar chart instances in Member Satisfaction Dashboard (lines 6915, 6963, 6973, 6996)
+- `MobileQuickActions.gs` - 6 bar chart instances in Smart Dashboard (lines 1166, 1174, 1182, 1183, 1184, 1191)
+- `ConsolidatedDashboard.gs` - All instances updated via rebuild
+
+**Affected Dashboards:**
+- Member Satisfaction Dashboard (📊 Member Satisfaction modal)
+  - By Section satisfaction scores
+  - Satisfaction by Worksite
+  - Satisfaction by Role
+  - Top Member Priorities
+- Smart Dashboard / Mobile Dashboard (📊 509 Dashboard modal)
+  - Members by Location
+  - Members by Unit
+  - Grievance Status Distribution
+  - Top Issue Categories
+
+**Enhancement: Mobile WebApp Error Handling**
+
+Improved error handling and debugging for the standalone Mobile Web App (`WebApp.gs`):
+
+- Added `try-catch` error handling to `getWebAppGrievanceList()` and `getWebAppMemberList()`
+- Added `Logger.log()` statements for server-side debugging
+- Added `console.log()` statements for client-side debugging in browser dev tools
+- Error messages now display the actual error instead of generic "Error loading data"
+
+**Important Deployment Note:**
+After updating the code in Google Apps Script, you must **redeploy the web app** for changes to take effect:
+1. Go to Extensions → Apps Script
+2. Click "Deploy" → "Manage deployments"
+3. Edit existing deployment or create new one
+4. Click "Deploy"
+
+---
 
 ### Version 2.0.5 (2026-01-13) - Fix Grievance Seeding Range Error
 
