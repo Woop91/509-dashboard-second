@@ -1027,13 +1027,13 @@ function onEditAutoSync(e) {
   var sheet = e.range.getSheet();
   var sheetName = sheet.getName();
 
-  // Check for Start Grievance checkbox BEFORE debounce (needs immediate response)
-  if (sheetName === SHEETS.MEMBER_DIR) {
-    var col = e.range.getColumn();
-    var row = e.range.getRow();
+  // Check for action checkboxes BEFORE debounce (needs immediate response)
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
 
+  if (sheetName === SHEETS.MEMBER_DIR && row >= 2) {
     // Handle Start Grievance checkbox
-    if (col === MEMBER_COLS.START_GRIEVANCE && row >= 2 && e.range.getValue() === true) {
+    if (col === MEMBER_COLS.START_GRIEVANCE && e.range.getValue() === true) {
       // Uncheck immediately so it can be reused
       e.range.setValue(false);
 
@@ -1042,6 +1042,36 @@ function onEditAutoSync(e) {
         openGrievanceFormForRow_(sheet, row);
       } catch (err) {
         Logger.log('Error opening grievance form: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+
+    // Handle Quick Actions checkbox
+    if (col === MEMBER_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this member
+      try {
+        showMemberQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening member quick actions: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+  }
+
+  // Handle Grievance Log Quick Actions checkbox
+  if (sheetName === SHEETS.GRIEVANCE_LOG && row >= 2) {
+    if (col === GRIEVANCE_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this grievance
+      try {
+        showGrievanceQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening grievance quick actions: ' + err.message);
       }
       return; // Don't continue with sync for checkbox edits
     }

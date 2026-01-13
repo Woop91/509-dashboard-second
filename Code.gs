@@ -655,6 +655,9 @@ function createMemberDirectory(ss) {
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
+  // Add checkbox for Quick Actions column (opens quick actions dialog when checked)
+  sheet.getRange(2, MEMBER_COLS.QUICK_ACTIONS, 4999, 1).insertCheckboxes();
+
   // Format date columns (MM/dd/yyyy)
   var dateColumns = [
     MEMBER_COLS.LAST_VIRTUAL_MTG,
@@ -815,6 +818,9 @@ function createGrievanceLog(ss) {
 
   // Add checkbox for Message Alert column (pre-allocate for future rows)
   sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 4999, 1).insertCheckboxes();
+
+  // Add checkbox for Quick Actions column (opens quick actions dialog when checked)
+  sheet.getRange(2, GRIEVANCE_COLS.QUICK_ACTIONS, 4999, 1).insertCheckboxes();
 
   // Format date columns
   var dateColumns = [

@@ -978,9 +978,9 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
-### Version 1.9.1 (2026-01-13) - Grievance Log Bug Fixes
+### Version 1.9.1 (2026-01-13) - Grievance Log Bug Fixes & Quick Actions Checkbox
 
-**Bug Fixes: Member ID Dropdown, Overdue Cases, Blank Row Counting**
+**Bug Fixes: Member ID Dropdown, Overdue Cases, Blank Row Counting + New Quick Actions Checkbox Feature**
 
 Fixed three issues in the Grievance Log and Dashboard:
 
@@ -1063,6 +1063,35 @@ Changed Days to Deadline column format from `'0'` to `'General'` to better prese
 **Files Changed:**
 - `HiddenSheets.gs`: Line ~610 in `syncGrievanceFormulasToLog()`
 - `ConsolidatedDashboard.gs`: Line ~8924
+
+---
+
+#### 4. Quick Actions Checkbox (New Feature)
+
+**Feature:** Added "⚡ Actions" checkbox column to both Grievance Log and Member Directory that opens the Quick Actions dialog when checked.
+
+**Benefits:**
+- No need to navigate to menu items - just check the checkbox in the row
+- Checkbox auto-unchecks after opening the dialog so it can be reused
+- Works with the existing Quick Actions dialogs (calendar sync, drive folder, email, etc.)
+
+**Implementation:**
+- Member Directory: Column AF (QUICK_ACTIONS = 32)
+- Grievance Log: Column AI (QUICK_ACTIONS = 35)
+
+**How It Works:**
+1. User checks the ⚡ Actions checkbox in any data row
+2. `onEditAutoSync()` trigger detects the checkbox change
+3. Checkbox is immediately unchecked (reset for reuse)
+4. Quick Actions dialog opens showing available actions for that row:
+   - **Member Directory**: Start Grievance, Send Email, View Grievance History, Copy ID
+   - **Grievance Log**: Sync to Calendar, Setup Drive Folder, Quick Status Update, Copy ID
+
+**Files Changed:**
+- `Constants.gs`: Added `QUICK_ACTIONS` to MEMBER_COLS and GRIEVANCE_COLS
+- `Code.gs`: Updated `createMemberDirectory()` and `createGrievanceLog()` to add checkboxes
+- `HiddenSheets.gs`: Updated `onEditAutoSync()` to handle Quick Actions checkbox clicks
+- `ConsolidatedDashboard.gs`: Same updates
 
 ---
 

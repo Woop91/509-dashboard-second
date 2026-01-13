@@ -70,7 +70,7 @@ var COLORS = {
 };
 
 // ============================================================================
-// MEMBER DIRECTORY COLUMNS (31 columns total: A-AE)
+// MEMBER DIRECTORY COLUMNS (32 columns total: A-AF)
 // ============================================================================
 
 /**
@@ -126,13 +126,16 @@ var MEMBER_COLS = {
   NEXT_DEADLINE: 30,               // AD - Script-calculated (static value)
   START_GRIEVANCE: 31,             // AE - Checkbox to start grievance
 
+  // Section 9: Quick Actions (AF)
+  QUICK_ACTIONS: 32,               // AF - Checkbox to open Quick Actions dialog
+
   // ALIASES - For backward compatibility
   LOCATION: 5,                     // Alias for WORK_LOCATION
   DAYS_TO_DEADLINE: 30             // Alias for NEXT_DEADLINE
 };
 
 // ============================================================================
-// GRIEVANCE LOG COLUMNS (34 columns total: A-AH)
+// GRIEVANCE LOG COLUMNS (35 columns total: A-AI)
 // ============================================================================
 
 /**
@@ -197,7 +200,10 @@ var GRIEVANCE_COLS = {
 
   // Section 12: Drive Integration (AG-AH)
   DRIVE_FOLDER_ID: 33,    // AG - Google Drive folder ID
-  DRIVE_FOLDER_URL: 34    // AH - Google Drive folder URL
+  DRIVE_FOLDER_URL: 34,   // AH - Google Drive folder URL
+
+  // Section 13: Quick Actions (AI)
+  QUICK_ACTIONS: 35       // AI - Checkbox to open Quick Actions dialog
 };
 
 // ============================================================================
@@ -586,7 +592,8 @@ function getMemberHeaders() {
     'Last Virtual Mtg', 'Last In-Person Mtg', 'Open Rate %', 'Volunteer Hours',
     'Interest: Local', 'Interest: Chapter', 'Interest: Allied', 'Home Town',
     'Recent Contact Date', 'Contact Steward', 'Contact Notes',
-    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance'
+    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance',
+    '⚡ Actions'
   ];
 }
 
@@ -607,7 +614,8 @@ function getGrievanceHeaders() {
     'Member Email', 'Unit', 'Work Location', 'Assigned Steward',
     'Resolution',
     'Message Alert', 'Coordinator Message', 'Acknowledged By', 'Acknowledged Date',
-    'Drive Folder ID', 'Drive Folder URL'
+    'Drive Folder ID', 'Drive Folder URL',
+    '⚡ Actions'
   ];
 }
 

@@ -100,7 +100,7 @@ var COLORS = {
 };
 
 // ============================================================================
-// MEMBER DIRECTORY COLUMNS (31 columns total: A-AE)
+// MEMBER DIRECTORY COLUMNS (32 columns total: A-AF)
 // ============================================================================
 
 /**
@@ -156,13 +156,16 @@ var MEMBER_COLS = {
   NEXT_DEADLINE: 30,               // AD - Script-calculated (static value)
   START_GRIEVANCE: 31,             // AE - Checkbox to start grievance
 
+  // Section 9: Quick Actions (AF)
+  QUICK_ACTIONS: 32,               // AF - Checkbox to open Quick Actions dialog
+
   // ALIASES - For backward compatibility
   LOCATION: 5,                     // Alias for WORK_LOCATION
   DAYS_TO_DEADLINE: 30             // Alias for NEXT_DEADLINE
 };
 
 // ============================================================================
-// GRIEVANCE LOG COLUMNS (34 columns total: A-AH)
+// GRIEVANCE LOG COLUMNS (35 columns total: A-AI)
 // ============================================================================
 
 /**
@@ -227,7 +230,10 @@ var GRIEVANCE_COLS = {
 
   // Section 12: Drive Integration (AG-AH)
   DRIVE_FOLDER_ID: 33,    // AG - Google Drive folder ID
-  DRIVE_FOLDER_URL: 34    // AH - Google Drive folder URL
+  DRIVE_FOLDER_URL: 34,   // AH - Google Drive folder URL
+
+  // Section 13: Quick Actions (AI)
+  QUICK_ACTIONS: 35       // AI - Checkbox to open Quick Actions dialog
 };
 
 // ============================================================================
@@ -616,7 +622,8 @@ function getMemberHeaders() {
     'Last Virtual Mtg', 'Last In-Person Mtg', 'Open Rate %', 'Volunteer Hours',
     'Interest: Local', 'Interest: Chapter', 'Interest: Allied', 'Home Town',
     'Recent Contact Date', 'Contact Steward', 'Contact Notes',
-    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance'
+    'Has Open Grievance?', 'Grievance Status', 'Days to Deadline', 'Start Grievance',
+    '⚡ Actions'
   ];
 }
 
@@ -637,7 +644,8 @@ function getGrievanceHeaders() {
     'Member Email', 'Unit', 'Work Location', 'Assigned Steward',
     'Resolution',
     'Message Alert', 'Coordinator Message', 'Acknowledged By', 'Acknowledged Date',
-    'Drive Folder ID', 'Drive Folder URL'
+    'Drive Folder ID', 'Drive Folder URL',
+    '⚡ Actions'
   ];
 }
 
@@ -1483,6 +1491,9 @@ function createMemberDirectory(ss) {
   // Add checkbox for Start Grievance column (pre-allocate for future rows)
   sheet.getRange(2, MEMBER_COLS.START_GRIEVANCE, 4999, 1).insertCheckboxes();
 
+  // Add checkbox for Quick Actions column (opens quick actions dialog when checked)
+  sheet.getRange(2, MEMBER_COLS.QUICK_ACTIONS, 4999, 1).insertCheckboxes();
+
   // Format date columns (MM/dd/yyyy)
   var dateColumns = [
     MEMBER_COLS.LAST_VIRTUAL_MTG,
@@ -1643,6 +1654,9 @@ function createGrievanceLog(ss) {
 
   // Add checkbox for Message Alert column (pre-allocate for future rows)
   sheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, 4999, 1).insertCheckboxes();
+
+  // Add checkbox for Quick Actions column (opens quick actions dialog when checked)
+  sheet.getRange(2, GRIEVANCE_COLS.QUICK_ACTIONS, 4999, 1).insertCheckboxes();
 
   // Format date columns
   var dateColumns = [
@@ -9332,13 +9346,13 @@ function onEditAutoSync(e) {
   var sheet = e.range.getSheet();
   var sheetName = sheet.getName();
 
-  // Check for Start Grievance checkbox BEFORE debounce (needs immediate response)
-  if (sheetName === SHEETS.MEMBER_DIR) {
-    var col = e.range.getColumn();
-    var row = e.range.getRow();
+  // Check for action checkboxes BEFORE debounce (needs immediate response)
+  var col = e.range.getColumn();
+  var row = e.range.getRow();
 
+  if (sheetName === SHEETS.MEMBER_DIR && row >= 2) {
     // Handle Start Grievance checkbox
-    if (col === MEMBER_COLS.START_GRIEVANCE && row >= 2 && e.range.getValue() === true) {
+    if (col === MEMBER_COLS.START_GRIEVANCE && e.range.getValue() === true) {
       // Uncheck immediately so it can be reused
       e.range.setValue(false);
 
@@ -9347,6 +9361,36 @@ function onEditAutoSync(e) {
         openGrievanceFormForRow_(sheet, row);
       } catch (err) {
         Logger.log('Error opening grievance form: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+
+    // Handle Quick Actions checkbox
+    if (col === MEMBER_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this member
+      try {
+        showMemberQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening member quick actions: ' + err.message);
+      }
+      return; // Don't continue with sync for checkbox edits
+    }
+  }
+
+  // Handle Grievance Log Quick Actions checkbox
+  if (sheetName === SHEETS.GRIEVANCE_LOG && row >= 2) {
+    if (col === GRIEVANCE_COLS.QUICK_ACTIONS && e.range.getValue() === true) {
+      // Uncheck immediately so it can be reused
+      e.range.setValue(false);
+
+      // Open quick actions dialog for this grievance
+      try {
+        showGrievanceQuickActions(row);
+      } catch (err) {
+        Logger.log('Error opening grievance quick actions: ' + err.message);
       }
       return; // Don't continue with sync for checkbox edits
     }
