@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.2 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Version:** 2.0.3 (No Formulas in Visible Sheets - Full JavaScript Computation)
 **Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -977,6 +977,88 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.0.3 (2026-01-13) - Member Add/Modify Forms & Chart Fixes
+
+**Added member ADD/MODIFY functionality to Interactive Dashboard and fixed By Section charts**
+
+---
+
+#### 1. Member ADD/MODIFY Forms in Interactive Dashboard
+
+**New Member Add Form:**
+- Added "➕ Add New Member" button to Members tab
+- Modal form with fields: First Name, Last Name, Job Title, Email, Phone, Work Location, Unit, Office Days (multi-select), Supervisor, Is Steward
+- Auto-generates Member ID using `generateNameBasedId()` pattern (M + first 2 chars + last 2 chars + 3 digits)
+- Saves new member to Member Directory sheet
+
+**Member Edit Form:**
+- Added "✏️ Edit Member" button on each expanded member item
+- Pre-populates form with existing member data
+- Updates member data in place without changing Member ID
+
+**Server-side Function:**
+- `saveInteractiveMember(memberData, mode)` - Handles both add and edit operations
+- Validates required fields (first name, last name)
+- Returns success status with member ID
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 765-792 (Add Member form modal HTML)
+- `MobileQuickActions.gs`: Lines 923 (Edit button in member list)
+- `MobileQuickActions.gs`: Lines 963-1055 (JavaScript form functions)
+- `MobileQuickActions.gs`: Lines 1668-1745 (saveInteractiveMember server function)
+
+---
+
+#### 2. Office Days Filter Added
+
+**New Filter Dropdown:**
+- Added "All Office Days" filter dropdown to Members tab
+- Filters members by their office days (Monday, Tuesday, etc.)
+- Days sorted in weekday order
+- Works in combination with Location/Unit filters and search
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 891-908 (loadMemberFilters updated)
+- `MobileQuickActions.gs`: Lines 911-912 (resetMemberFilters updated)
+- `MobileQuickActions.gs`: Lines 950 (filterMembers updated)
+
+---
+
+#### 3. GitHub Repository Link Added
+
+**Links Tab Enhancement:**
+- Added "📦 GitHub Repository" link to External Links section
+- Links to https://github.com/Woop91/509-dashboard-second
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 1260-1262 (renderResources updated)
+
+---
+
+#### 4. By Section Chart Fixes (Member Satisfaction Dashboard)
+
+**Fixed 100% Bar Issue:**
+- Charts now skip sections with zero responses instead of showing full bars
+- Added `hasValidData` check to show "No survey responses yet" message when appropriate
+- Bars properly clamp to 0-100% range
+
+**Removed Redundant Detail Cards:**
+- Replaced repetitive "Section Details" cards with actionable insights
+- Now shows "Areas Needing Attention" (scores < 6) and "Strong Performance" (scores >= 8)
+- More useful summary instead of repeating the same information from the bar chart
+
+**Added Clarifying Labels:**
+- Chart title now shows "(1-10 Scale)" for clarity
+- Added subtitle "Sorted by score - areas needing attention shown first"
+- Bar values now show "X responses" instead of just a number
+
+**Files Changed:**
+- `Code.gs`: Lines 6899-6937 (renderSections function completely rewritten)
+- `ConsolidatedDashboard.gs`: Lines 7713-7751 (same changes mirrored)
+- `ConsolidatedDashboard.gs`: Lines 7777, 7787, 7795-7796 (n= labels changed to responses/members)
+
+---
 
 ### Version 2.0.2 (2026-01-13) - Interactive Dashboard & Satisfaction Survey Improvements
 

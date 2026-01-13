@@ -6900,28 +6900,39 @@ function getSatisfactionDashboardHtml() {
     'function renderSections(data){' +
     '  var c=document.getElementById("sections-charts");' +
     '  var html="";' +
-    // Section scores bar chart
-    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Average Score by Section</div><div class=\\"bar-chart\\">";' +
+    '  if(!data.sections||data.sections.length===0){c.innerHTML="<div class=\\"empty-state\\">No section data available</div>";return}' +
+    // Section scores bar chart - scale to actual data range, not always 0-10
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Average Score by Section (1-10 Scale)</div>";' +
+    '  html+="<div style=\\"font-size:11px;color:#666;margin-bottom:12px\\">Sorted by score - areas needing attention shown first</div>";' +
+    '  html+="<div class=\\"bar-chart\\">";' +
     '  var maxScore=10;' +
+    '  var hasValidData=data.sections.some(function(s){return s.avg>0&&s.responseCount>0});' +
+    '  if(!hasValidData){html+="<div class=\\"empty-state\\">No survey responses yet</div>";}else{' +
     '  data.sections.forEach(function(s){' +
-    '    var pct=(s.avg/maxScore)*100;' +
+    '    if(s.responseCount===0)return;' +  // Skip sections with no data
+    '    var pct=Math.max(0,Math.min(100,(s.avg/maxScore)*100));' +  // Clamp to 0-100%
     '    var color=getScoreColor(s.avg);' +
-    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+s.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+s.responseCount+"</div></div>";' +
+    '    html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+s.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+s.responseCount+" responses</div></div>";' +
     '  });' +
+    '  }' +
     '  html+="</div></div>";' +
-    // Section detail cards
-    '  html+="<div class=\\"chart-title\\" style=\\"margin-bottom:15px\\">📋 Section Details</div>";' +
-    '  data.sections.forEach(function(s){' +
-    '    var color=getScoreColor(s.avg);' +
-    '    var pct=(s.avg/10)*100;' +
-    '    var progressClass=getProgressClass(s.avg);' +
-    '    html+="<div class=\\"section-card\\"><div class=\\"section-header\\"><div class=\\"section-title\\">"+s.name+"</div><div class=\\"section-score\\" style=\\"color:"+color+"\\">"+s.avg.toFixed(1)+"/10</div></div>";' +
-    '    html+="<div class=\\"progress-bar\\"><div class=\\"progress-fill "+progressClass+"\\" style=\\"width:"+pct+"%25\\"></div></div>";' +
-    '    if(s.questions&&s.questions.length>0){' +
-    '      html+="<div style=\\"margin-top:10px;font-size:12px;color:#666\\">"+s.questions.length+" questions • "+s.responseCount+" responses</div>";' +
+    // Summary insights instead of redundant detail cards
+    '  var lowScoring=data.sections.filter(function(s){return s.avg>0&&s.avg<6&&s.responseCount>0});' +
+    '  var highScoring=data.sections.filter(function(s){return s.avg>=8&&s.responseCount>0});' +
+    '  if(lowScoring.length>0||highScoring.length>0){' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">💡 Section Insights</div>";' +
+    '    if(lowScoring.length>0){' +
+    '      html+="<div class=\\"insight-card warning\\" style=\\"margin-bottom:10px\\"><div class=\\"insight-title\\">⚠️ Areas Needing Attention</div><div class=\\"insight-text\\">";' +
+    '      lowScoring.forEach(function(s,i){html+=(i>0?", ":"")+s.name+" ("+s.avg.toFixed(1)+")"});' +
+    '      html+="</div></div>";' +
+    '    }' +
+    '    if(highScoring.length>0){' +
+    '      html+="<div class=\\"insight-card success\\" style=\\"margin-bottom:10px\\"><div class=\\"insight-title\\">✅ Strong Performance</div><div class=\\"insight-text\\">";' +
+    '      highScoring.forEach(function(s,i){html+=(i>0?", ":"")+s.name+" ("+s.avg.toFixed(1)+")"});' +
+    '      html+="</div></div>";' +
     '    }' +
     '    html+="</div>";' +
-    '  });' +
+    '  }' +
     '  c.innerHTML=html;' +
     '}' +
 
