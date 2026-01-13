@@ -125,7 +125,7 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
     .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
-    .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+    .addItem('👤 Clear Member ID Validation', 'setupGrievanceMemberDropdown')
     .addToUi();
 
   // ============================================================================
@@ -2654,7 +2654,7 @@ function createFunctionChecklistSheet_() {
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched', 'Recalculates deadline and status formulas for all grievances'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas', 'Updates calculated columns in Member Directory'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas', 'Creates formulas linking grievances to member data'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown', 'Adds member ID dropdown to Grievance Log for easy selection'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Clear Member ID Validation', 'setupGrievanceMemberDropdown', 'Removes dropdown from Member ID column to allow free text entry'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers', 'Converts text dates to proper date format for calculations'],
 
     // ═══ PHASE 6: Google Drive ═══

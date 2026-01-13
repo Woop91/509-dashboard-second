@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.0 (No Formulas in Visible Sheets - Full JavaScript Computation)
-**Last Updated:** 2026-01-12
+**Version:** 2.0.1 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -780,7 +780,7 @@ The menu system has been reorganized from 9 menus to 5 logical groups:
 │   └── 🚫 Disable Auto-Open
 ├── 🔗 Live Formulas (submenu)
 │   ├── 🔗 Setup Live Grievance Links
-│   └── 👤 Setup Member ID Dropdown
+│   └── 👤 Clear Member ID Validation
 ├── ⚡ Triggers (submenu)
 │   ├── ⚡ Install Auto-Sync Trigger
 │   └── 🚫 Remove Auto-Sync Trigger
@@ -977,6 +977,94 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 1.9.1 (2026-01-13) - Grievance Log Bug Fixes
+
+**Bug Fixes: Member ID Dropdown, Overdue Cases, Blank Row Counting**
+
+Fixed three issues in the Grievance Log and Dashboard:
+
+---
+
+#### 1. Member ID Dropdown Removed
+
+**Issue:** Member ID column (B) in Grievance Log had a dropdown validation that restricted entries to existing Member IDs from Member Directory.
+
+**Fix:**
+- Removed dropdown validation from Member ID column
+- `setupGrievanceMemberDropdown()` now CLEARS validation instead of adding it
+- Member ID now allows free text entry for flexibility
+
+**Files Changed:**
+- `Code.gs`: Commented out `setMemberIdValidation()` call in `setupDataValidations()`
+- `Code.gs`: Updated `setupGrievanceMemberDropdown()` to clear validations
+- `ConsolidatedDashboard.gs`: Same changes
+
+---
+
+#### 2. Overdue Cases Not Populating in Dashboard
+
+**Issue:** The Dashboard "Overdue Cases" metric was always showing 0, even when overdue grievances existed.
+
+**Root Cause:**
+- Days to Deadline column stores the text `"Overdue"` for past-due cases (not negative numbers)
+- `computeDashboardMetrics_()` only checked `typeof daysToDeadline === 'number'`
+- String "Overdue" failed the number check, so overdue cases were never counted
+
+**Fix:** Added explicit check for the string "Overdue" before the number check:
+```javascript
+// Before (broken):
+if (typeof daysToDeadline === 'number') {
+  if (daysToDeadline < 0) metrics.overdueCases++;
+}
+
+// After (fixed):
+if (daysToDeadline === 'Overdue') {
+  metrics.overdueCases++;
+} else if (typeof daysToDeadline === 'number') {
+  if (daysToDeadline < 0) metrics.overdueCases++;
+}
+```
+
+**Files Changed:**
+- `HiddenSheets.gs`: Line ~1744 in `computeDashboardMetrics_()`
+- `ConsolidatedDashboard.gs`: Line ~10049 in `computeDashboardMetrics_()`
+
+---
+
+#### 3. Blank Rows Being Counted as Grievances
+
+**Issue:** Adding blank rows to the Grievance Log caused them to be counted in the "Total Grievances" metric.
+
+**Root Cause:** The formula used `COUNTA(...)-1` which counts any non-empty cell (including spaces or formatting artifacts).
+
+**Fix:** Changed to `COUNTIF(...,"G*")` for grievance IDs and `COUNTIF(...,"M*")` for member IDs, which only counts cells starting with the valid ID prefix.
+
+```javascript
+// Before (broken):
+['Total Grievances', '=COUNTA(...)-1']
+['Total Members', '=COUNTA(...)-1']
+
+// After (fixed):
+['Total Grievances', '=COUNTIF(...,"G*")']
+['Total Members', '=COUNTIF(...,"M*")']
+```
+
+**Files Changed:**
+- `HiddenSheets.gs`: Lines ~1373-1375 in `setupDashboardCalcSheet()`
+- `ConsolidatedDashboard.gs`: Lines ~2169-2171 and ~9686-9688
+
+---
+
+#### Additional Change: Days to Deadline Number Format
+
+Changed Days to Deadline column format from `'0'` to `'General'` to better preserve the "Overdue" text display.
+
+**Files Changed:**
+- `HiddenSheets.gs`: Line ~610 in `syncGrievanceFormulasToLog()`
+- `ConsolidatedDashboard.gs`: Line ~8924
+
+---
 
 ### Version 1.9.0 (2026-01-11) - Visual Enhancements, Progress Tracking & Grievance Form Workflow
 
@@ -1429,10 +1517,10 @@ Grievance Log ──────────────┘
 | Z | Work Location | Member Directory (by Member ID) |
 | AA | Steward | Member Directory (by Member ID) |
 
-**Member ID Validation:**
-- Column B (Member ID) uses dropdown validation
-- Only Member IDs that exist in Member Directory are allowed
-- Prevents orphan grievances with invalid member references
+**Member ID Entry:**
+- Column B (Member ID) allows free text entry (no dropdown restriction)
+- Member IDs should match Member Directory entries for auto-lookup to work
+- Invalid/mismatched Member IDs will result in empty lookup fields (C-D, X-AA)
 
 **Code Changes:**
 - `HiddenSheets.gs`: Rewrote `syncGrievanceFormulasToLog()` to lookup member data directly from Member Directory instead of using hidden sheet formulas

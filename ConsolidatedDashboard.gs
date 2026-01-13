@@ -953,7 +953,7 @@ function onOpen() {
     .addSeparator()
     .addItem('⚙️ Setup Data Validations', 'setupDataValidations')
     .addItem('🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas')
-    .addItem('👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown')
+    .addItem('👤 Clear Member ID Validation', 'setupGrievanceMemberDropdown')
     .addToUi();
 
   // ============================================================================
@@ -3483,7 +3483,7 @@ function createFunctionChecklistSheet_() {
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Grievance Formulas', 'recalcAllGrievancesBatched', 'Recalculates deadline and status formulas for all grievances'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔄 Refresh Member Directory Data', 'refreshMemberDirectoryFormulas', 'Updates calculated columns in Member Directory'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔗 Setup Live Grievance Links', 'setupLiveGrievanceFormulas', 'Creates formulas linking grievances to member data'],
-    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Setup Member ID Dropdown', 'setupGrievanceMemberDropdown', 'Adds member ID dropdown to Grievance Log for easy selection'],
+    ['5️⃣ Grievances', '👤 Grievance Tools', '👤 Clear Member ID Validation', 'setupGrievanceMemberDropdown', 'Removes dropdown from Member ID column to allow free text entry'],
     ['5️⃣ Grievances', '👤 Grievance Tools', '🔧 Fix Overdue Text Data', 'fixOverdueTextToNumbers', 'Converts text dates to proper date format for calculations'],
 
     // ═══ PHASE 6: Google Drive ═══
@@ -10045,7 +10045,10 @@ function computeDashboardMetrics_(memberData, grievanceData, configData) {
     }
 
     // Overdue and due this week
-    if (typeof daysToDeadline === 'number') {
+    // Note: daysToDeadline can be a number OR the string "Overdue"
+    if (daysToDeadline === 'Overdue') {
+      metrics.overdueCases++;
+    } else if (typeof daysToDeadline === 'number') {
       if (daysToDeadline < 0) metrics.overdueCases++;
       else if (daysToDeadline <= 7) metrics.dueThisWeek++;
     }
@@ -10849,8 +10852,7 @@ function fixDataQualityIssues() {
     issues.map(function(i) { return '<div class="issue">' + i + '</div>'; }).join('') +
     '<h3>How to Fix:</h3>' +
     '<div class="fix-option"><strong>Option 1:</strong> Manually update Member IDs in Grievance Log</div>' +
-    '<div class="fix-option"><strong>Option 2:</strong> Use "Setup Member ID Dropdown" to add validation</div>' +
-    '<div class="fix-option"><strong>Option 3:</strong> Add missing members to Member Directory first</div>' +
+    '<div class="fix-option"><strong>Option 2:</strong> Add missing members to Member Directory first</div>' +
     '<p style="margin-top:20px"><button class="primary" onclick="google.script.run.showGrievancesWithMissingMemberIds();google.script.host.close()">📋 View Affected Rows</button>' +
     '<button class="secondary" onclick="google.script.host.close()">Close</button></p>' +
     '</div></body></html>'

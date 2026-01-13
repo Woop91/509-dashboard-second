@@ -1740,7 +1740,10 @@ function computeDashboardMetrics_(memberData, grievanceData, configData) {
     }
 
     // Overdue and due this week
-    if (typeof daysToDeadline === 'number') {
+    // Note: daysToDeadline can be a number OR the string "Overdue"
+    if (daysToDeadline === 'Overdue') {
+      metrics.overdueCases++;
+    } else if (typeof daysToDeadline === 'number') {
       if (daysToDeadline < 0) metrics.overdueCases++;
       else if (daysToDeadline <= 7) metrics.dueThisWeek++;
     }
@@ -2544,8 +2547,7 @@ function fixDataQualityIssues() {
     issues.map(function(i) { return '<div class="issue">' + i + '</div>'; }).join('') +
     '<h3>How to Fix:</h3>' +
     '<div class="fix-option"><strong>Option 1:</strong> Manually update Member IDs in Grievance Log</div>' +
-    '<div class="fix-option"><strong>Option 2:</strong> Use "Setup Member ID Dropdown" to add validation</div>' +
-    '<div class="fix-option"><strong>Option 3:</strong> Add missing members to Member Directory first</div>' +
+    '<div class="fix-option"><strong>Option 2:</strong> Add missing members to Member Directory first</div>' +
     '<p style="margin-top:20px"><button class="primary" onclick="google.script.run.showGrievancesWithMissingMemberIds();google.script.host.close()">📋 View Affected Rows</button>' +
     '<button class="secondary" onclick="google.script.host.close()">Close</button></p>' +
     '</div></body></html>'
