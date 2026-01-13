@@ -370,6 +370,87 @@
       color: #6a1b9a;
       margin-bottom: 5px;
     }
+
+    /* Quick Links Section */
+    .quick-links {
+      background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+      border: 2px solid #ce93d8;
+      border-radius: 12px;
+      padding: 25px 35px;
+      margin: 30px 0;
+    }
+
+    .quick-links h2 {
+      margin-top: 0;
+      border: none;
+      padding: 0;
+      text-align: center;
+      color: #6a1b9a;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .link-card {
+      background: white;
+      border-radius: 8px;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #333;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .link-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .link-icon {
+      font-size: 1.8em;
+      flex-shrink: 0;
+    }
+
+    .link-info h4 {
+      margin: 0 0 4px 0;
+      color: #6a1b9a;
+      font-size: 1em;
+    }
+
+    .link-info p {
+      margin: 0;
+      font-size: 0.85em;
+      color: #666;
+    }
+
+    .link-url {
+      font-size: 0.75em;
+      color: #9e9e9e;
+      word-break: break-all;
+      margin-top: 5px;
+    }
+
+    /* Inline links */
+    a {
+      color: #6a1b9a;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .external-link::after {
+      content: " ↗";
+      font-size: 0.8em;
+    }
   </style>
 </head>
 <body>
@@ -435,6 +516,45 @@
         </ol>
       </li>
     </ol>
+  </div>
+
+  <!-- Quick Links Section -->
+  <div class="quick-links">
+    <h2>🔗 Quick Links</h2>
+    <div class="links-grid">
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform" target="_blank" class="link-card">
+        <span class="link-icon">📋</span>
+        <div class="link-info">
+          <h4>Grievance Form</h4>
+          <p>Start a new grievance case (pre-fillable)</p>
+        </div>
+      </a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform" target="_blank" class="link-card">
+        <span class="link-icon">📇</span>
+        <div class="link-info">
+          <h4>Contact Info Form</h4>
+          <p>Member self-service contact update</p>
+        </div>
+      </a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform" target="_blank" class="link-card">
+        <span class="link-icon">📊</span>
+        <div class="link-info">
+          <h4>Satisfaction Survey</h4>
+          <p>68-question member satisfaction survey</p>
+        </div>
+      </a>
+      <a href="https://github.com/Woop91/509-dashboard-second" target="_blank" class="link-card">
+        <span class="link-icon">📦</span>
+        <div class="link-info">
+          <h4>GitHub Repository</h4>
+          <p>Source code, documentation & releases</p>
+        </div>
+      </a>
+    </div>
+    <p style="text-align: center; margin-top: 20px; color: #666; font-size: 0.9em;">
+      <strong>Note:</strong> The Google Spreadsheet URL is specific to your deployment.<br>
+      Access it via the deployed web app's Links page or directly from Google Drive.
+    </p>
   </div>
 
   <!-- Section 1: System Overview -->
@@ -523,6 +643,7 @@
   <div class="feature-card">
     <h4><span class="feature-icon">📋</span> Purpose</h4>
     <p>Initiates new grievance cases with pre-filled member data for accuracy and efficiency.</p>
+    <p><strong>Form Link:</strong> <a href="https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform" target="_blank" class="external-link">Open Grievance Form</a></p>
   </div>
 
   <h3>How It Works</h3>
@@ -587,6 +708,7 @@
   <div class="feature-card">
     <h4><span class="feature-icon">📇</span> Purpose</h4>
     <p>Allows members to self-update their contact information, keeping the directory current without manual data entry.</p>
+    <p><strong>Form Link:</strong> <a href="https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform" target="_blank" class="external-link">Open Contact Info Form</a></p>
   </div>
 
   <h3>Fields Collected</h3>
@@ -626,6 +748,7 @@
   <div class="feature-card">
     <h4><span class="feature-icon">📊</span> Purpose</h4>
     <p>Comprehensive 68-question member satisfaction survey covering all aspects of union representation and member experience.</p>
+    <p><strong>Form Link:</strong> <a href="https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform" target="_blank" class="external-link">Open Satisfaction Survey</a></p>
   </div>
 
   <h3>Survey Sections (11 Total)</h3>
@@ -1297,17 +1420,17 @@
       <th>Dashboard</th>
     </tr>
     <tr>
-      <td>📋 Grievance Form</td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform" target="_blank">📋 Grievance Form ↗</a></td>
       <td>Grievance Log</td>
       <td>Mobile App Cases, Interactive Dashboard</td>
     </tr>
     <tr>
-      <td>📇 Contact Info Form</td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform" target="_blank">📇 Contact Info Form ↗</a></td>
       <td>Member Directory</td>
       <td>Mobile App Members, Interactive Dashboard</td>
     </tr>
     <tr>
-      <td>📊 Satisfaction Survey</td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform" target="_blank">📊 Satisfaction Survey ↗</a></td>
       <td>Member Satisfaction Sheet</td>
       <td>Satisfaction Dashboard (4 tabs)</td>
     </tr>
@@ -1374,7 +1497,57 @@
     </tr>
   </table>
 
-  <div class="info-box" style="margin-top: 40px;">
+  <h2>All Links & Resources</h2>
+
+  <table>
+    <tr>
+      <th>Resource</th>
+      <th>URL</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td>📋 <strong>Grievance Form</strong></td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform" target="_blank">Open Form ↗</a></td>
+      <td>Start new grievance cases</td>
+    </tr>
+    <tr>
+      <td>📇 <strong>Contact Info Form</strong></td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform" target="_blank">Open Form ↗</a></td>
+      <td>Member contact updates</td>
+    </tr>
+    <tr>
+      <td>📊 <strong>Satisfaction Survey</strong></td>
+      <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform" target="_blank">Open Survey ↗</a></td>
+      <td>68-question member survey</td>
+    </tr>
+    <tr>
+      <td>📦 <strong>GitHub Repository</strong></td>
+      <td><a href="https://github.com/Woop91/509-dashboard-second" target="_blank">View on GitHub ↗</a></td>
+      <td>Source code, releases, issues</td>
+    </tr>
+    <tr>
+      <td>📄 <strong>Google Spreadsheet</strong></td>
+      <td><em>Unique to each deployment</em></td>
+      <td>Access via deployed web app Links page</td>
+    </tr>
+    <tr>
+      <td>📱 <strong>Mobile Web App</strong></td>
+      <td><em>Deployed URL from Apps Script</em></td>
+      <td>On-the-go access (add to home screen)</td>
+    </tr>
+  </table>
+
+  <div class="highlight-box" style="margin-top: 25px;">
+    <strong>GitHub Resources Available:</strong>
+    <ul style="margin-bottom: 0;">
+      <li><strong>Source Code</strong> - All .gs files for Google Apps Script</li>
+      <li><strong>Documentation</strong> - README, setup guides, workflow guides</li>
+      <li><strong>Issues</strong> - Report bugs or request features</li>
+      <li><strong>Releases</strong> - Version history and changelogs</li>
+    </ul>
+  </div>
+
+  <div class="info-box" style="margin-top: 25px;">
     <strong>Need Help?</strong> Access the built-in documentation sheets: 📚 Getting Started, ❓ FAQ, and 📖 Config Guide within the spreadsheet.
   </div>
 
