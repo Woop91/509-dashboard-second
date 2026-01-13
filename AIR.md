@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.3 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Version:** 2.0.5 (No Formulas in Visible Sheets - Full JavaScript Computation)
 **Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -977,6 +977,27 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.0.5 (2026-01-13) - Fix Grievance Seeding Range Error
+
+**Bug Fix: "Coordinates outside dimensions" error when seeding grievances**
+
+The error occurred because `SEED_GRIEVANCES` and `SEED_MEMBERS` functions tried to write data to columns beyond the sheet's default dimensions. When a Google Sheet is created via `insertSheet()`, it only has 26 columns (A-Z), but the Grievance Log requires 35 columns (A-AI) and Member Directory requires 32 columns (A-AF).
+
+**Root Cause:**
+- `SEED_GRIEVANCES` at line 1111 tried to write 34 columns of data
+- If Grievance Log sheet only had 26 columns, `getRange()` would fail
+
+**Fix Applied:**
+- Added `ensureMinimumColumns(sheet, requiredColumns)` helper function
+- Called at start of `SEED_GRIEVANCES`, `SEED_MEMBERS`, and `SEED_MEMBERS_ONLY`
+- Automatically expands sheet columns if needed before writing data
+
+**Files Updated:**
+- `SeedNuke.gs` - Added helper function and column checks
+- `ConsolidatedDashboard.gs` - Same updates for deployed version
+
+---
 
 ### Version 2.0.4 (2026-01-13) - Mobile Web App v2.0 Enhancements
 
