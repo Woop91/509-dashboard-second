@@ -2164,15 +2164,16 @@ function createInteractiveDashboard(ss) {
   var gResolutionCol = getColumnLetter(GRIEVANCE_COLS.RESOLUTION);
 
   // Metric lookup table (row 10-17)
+  // Note: Using COUNTIF with "M*" and "G*" patterns to only count valid IDs (ignores blank rows)
   var metricData = [
-    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Total Members', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ',"M*")', 'Total union members in directory'],
     ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
-    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
+    ['Total Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"G*")', 'All grievances filed'],
     ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
     ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
     ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],
     ['Won', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")', 'Cases won'],
-    ['Win Rate', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/(COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1)*100,1)&"%","0%")', 'Win percentage of all cases']
+    ['Win Rate', '=IFERROR(ROUND(COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Won")/COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"G*")*100,1)&"%","0%")', 'Win percentage of all cases']
   ];
 
   for (var i = 0; i < metricData.length; i++) {
@@ -2946,8 +2947,8 @@ function setupDataValidations() {
   setMultiSelectValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
-  // Member ID dropdown - links to valid Member IDs from Member Directory
-  setMemberIdValidation(grievanceSheet, memberSheet);
+  // Note: Member ID does NOT have dropdown - allows free text entry for flexibility
+  // setMemberIdValidation(grievanceSheet, memberSheet);  // REMOVED: Member ID should not have dropdown
 
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STATUS, configSheet, CONFIG_COLS.GRIEVANCE_STATUS);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.CURRENT_STEP, configSheet, CONFIG_COLS.GRIEVANCE_STEP);
@@ -7285,34 +7286,25 @@ function setupLiveGrievanceFormulas() {
 }
 
 /**
- * Setup Member ID dropdown in Grievance Log
- * Creates data validation that references Member Directory Member IDs
+ * Remove Member ID dropdown from Grievance Log
+ * Clears any existing data validation to allow free text entry
  */
 function setupGrievanceMemberDropdown() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
   var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
 
-  if (!memberSheet || !grievanceSheet) {
-    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+  if (!grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Grievance Log not found.');
     return;
   }
 
-  ss.toast('Setting up Member ID dropdown...', '🔄 Setup', 3);
+  ss.toast('Removing Member ID dropdown...', '🔄 Setup', 3);
 
-  // Get column letter for Member ID in Member Directory
-  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  // Clear any existing data validation from Member ID column (column B, rows 2-1000)
+  // This allows free text entry for Member ID
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).clearDataValidations();
 
-  // Create data validation rule that references Member Directory Member IDs
-  var rule = SpreadsheetApp.newDataValidation()
-    .requireValueInRange(memberSheet.getRange(mMemberIdCol + '2:' + mMemberIdCol), true)
-    .setAllowInvalid(true)  // Allow manual entry too
-    .build();
-
-  // Apply to Member ID column in Grievance Log (column B, rows 2-1000)
-  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).setDataValidation(rule);
-
-  ss.toast('Member ID dropdown set up!', '✅ Success', 3);
+  ss.toast('Member ID dropdown removed - free text entry enabled!', '✅ Success', 3);
 }
 
 /**
@@ -8916,10 +8908,11 @@ function syncGrievanceFormulasToLog() {
     // S, T, U: Days Open, Next Action Due, Days to Deadline
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 3).setValues(metricsUpdates);
 
-    // Format Days Open (S) and Days to Deadline (U) as whole numbers
+    // Format Days Open (S) as whole numbers, Next Action Due (T) as date
+    // Days to Deadline (U) uses General format to preserve "Overdue" text
     grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_OPEN, metricsUpdates.length, 1).setNumberFormat('0');
     grievanceSheet.getRange(2, GRIEVANCE_COLS.NEXT_ACTION_DUE, metricsUpdates.length, 1).setNumberFormat('MM/dd/yyyy');
-    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('0');
+    grievanceSheet.getRange(2, GRIEVANCE_COLS.DAYS_TO_DEADLINE, metricsUpdates.length, 1).setNumberFormat('General');
 
     // X, Y, Z, AA: Email, Unit, Location, Steward
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_EMAIL, contactUpdates.length, 4).setValues(contactUpdates);
@@ -9680,10 +9673,11 @@ function setupDashboardCalcSheet() {
   var gDateClosedCol = getColumnLetter(GRIEVANCE_COLS.DATE_CLOSED);
 
   // Metrics with formulas (15 key metrics)
+  // Note: Using COUNTIF with "M*" and "G*" patterns to only count valid IDs (ignores blank rows)
   var metrics = [
-    ['Total Members', '=COUNTA(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ')-1', 'Total union members in directory'],
+    ['Total Members', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mIdCol + ':' + mIdCol + ',"M*")', 'Total union members in directory'],
     ['Active Stewards', '=COUNTIF(\'' + SHEETS.MEMBER_DIR + '\'!' + mStewardCol + ':' + mStewardCol + ',"Yes")', 'Members marked as stewards'],
-    ['Total Grievances', '=COUNTA(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ')-1', 'All grievances filed'],
+    ['Total Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gIdCol + ':' + gIdCol + ',"G*")', 'All grievances filed'],
     ['Open Grievances', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Open")', 'Currently open cases'],
     ['Pending Info', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Pending Info")', 'Cases awaiting information'],
     ['Settled', '=COUNTIF(\'' + SHEETS.GRIEVANCE_LOG + '\'!' + gStatusCol + ':' + gStatusCol + ',"Settled")', 'Cases settled'],

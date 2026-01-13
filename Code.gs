@@ -2118,8 +2118,8 @@ function setupDataValidations() {
   setMultiSelectValidation(memberSheet, MEMBER_COLS.ASSIGNED_STEWARD, configSheet, CONFIG_COLS.STEWARDS);
 
   // Grievance Log Validations
-  // Member ID dropdown - links to valid Member IDs from Member Directory
-  setMemberIdValidation(grievanceSheet, memberSheet);
+  // Note: Member ID does NOT have dropdown - allows free text entry for flexibility
+  // setMemberIdValidation(grievanceSheet, memberSheet);  // REMOVED: Member ID should not have dropdown
 
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.STATUS, configSheet, CONFIG_COLS.GRIEVANCE_STATUS);
   setDropdownValidation(grievanceSheet, GRIEVANCE_COLS.CURRENT_STEP, configSheet, CONFIG_COLS.GRIEVANCE_STEP);
@@ -6457,34 +6457,25 @@ function setupLiveGrievanceFormulas() {
 }
 
 /**
- * Setup Member ID dropdown in Grievance Log
- * Creates data validation that references Member Directory Member IDs
+ * Remove Member ID dropdown from Grievance Log
+ * Clears any existing data validation to allow free text entry
  */
 function setupGrievanceMemberDropdown() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
   var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
 
-  if (!memberSheet || !grievanceSheet) {
-    SpreadsheetApp.getUi().alert('Error: Required sheets not found.');
+  if (!grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Error: Grievance Log not found.');
     return;
   }
 
-  ss.toast('Setting up Member ID dropdown...', '🔄 Setup', 3);
+  ss.toast('Removing Member ID dropdown...', '🔄 Setup', 3);
 
-  // Get column letter for Member ID in Member Directory
-  var mMemberIdCol = getColumnLetter(MEMBER_COLS.MEMBER_ID);
+  // Clear any existing data validation from Member ID column (column B, rows 2-1000)
+  // This allows free text entry for Member ID
+  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).clearDataValidations();
 
-  // Create data validation rule that references Member Directory Member IDs
-  var rule = SpreadsheetApp.newDataValidation()
-    .requireValueInRange(memberSheet.getRange(mMemberIdCol + '2:' + mMemberIdCol), true)
-    .setAllowInvalid(true)  // Allow manual entry too
-    .build();
-
-  // Apply to Member ID column in Grievance Log (column B, rows 2-1000)
-  grievanceSheet.getRange(2, GRIEVANCE_COLS.MEMBER_ID, 998, 1).setDataValidation(rule);
-
-  ss.toast('Member ID dropdown set up!', '✅ Success', 3);
+  ss.toast('Member ID dropdown removed - free text entry enabled!', '✅ Success', 3);
 }
 
 /**
