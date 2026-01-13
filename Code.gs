@@ -6627,13 +6627,20 @@ function getSatisfactionDashboardHtml() {
     '.action-btn-secondary{background:#f3f4f6;color:#374151}' +
     '.action-btn-secondary:hover{background:#e5e7eb}' +
 
-    // List items for responses
+    // List items for responses (clickable)
     '.list-container{display:flex;flex-direction:column;gap:10px}' +
-    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
-    '.list-item:hover{box-shadow:0 4px 8px rgba(0,0,0,0.1)}' +
+    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);cursor:pointer;transition:all 0.2s}' +
+    '.list-item:hover{box-shadow:0 4px 8px rgba(0,0,0,0.1);transform:translateY(-1px)}' +
+    '.list-item-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
     '.list-item-main{flex:1;min-width:200px}' +
     '.list-item-title{font-weight:600;color:#1f2937;margin-bottom:3px}' +
     '.list-item-subtitle{font-size:12px;color:#666}' +
+    '.list-item-details{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #eee}' +
+    '.list-item.expanded .list-item-details{display:block}' +
+    '.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}' +
+    '.detail-item{font-size:12px}' +
+    '.detail-item-label{color:#666;margin-bottom:2px}' +
+    '.detail-item-value{font-weight:600;color:#1f2937}' +
 
     // Search input
     '.search-container{position:relative;margin-bottom:15px}' +
@@ -6786,7 +6793,7 @@ function getSatisfactionDashboardHtml() {
     '  var html="";' +
     '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.avgOverall.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction</div></div>";' +
-    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">NPS Score</div></div>";' +
+    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Loyalty Score</div></div>";' +
     '  html+="<div class=\\"stat-card purple\\"><div class=\\"stat-value\\">"+data.responseRate+"</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
     '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"green":data.avgSteward>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
     '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"green":data.avgLeadership>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
@@ -6799,8 +6806,9 @@ function getSatisfactionDashboardHtml() {
     '  gauges+=renderGauge(data.avgRecommend,"Would\\nRecommend");' +
     '  gauges+="</div></div>";' +
     '  document.getElementById("overview-gauges").innerHTML=gauges;' +
-    // Insights
+    // Insights - add Loyalty Score explanation first
     '  var insights="";' +
+    '  insights+="<div class=\\"insight-card\\" style=\\"background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left-color:#2563eb\\"><div class=\\"insight-title\\">ℹ️ Understanding Loyalty Score</div><div class=\\"insight-text\\">The <strong>Loyalty Score</strong> (ranging from -100 to +100) measures how likely members are to recommend the union. <strong>50+</strong> = Excellent (many advocates), <strong>0-49</strong> = Good (room for growth), <strong>Below 0</strong> = Needs work (more critics than advocates). It\'s based on the \\"Would Recommend\\" question.</div></div>";' +
     '  if(data.insights&&data.insights.length>0){' +
     '    data.insights.forEach(function(i){' +
     '      insights+="<div class=\\"insight-card "+i.type+"\\"><div class=\\"insight-title\\">"+i.icon+" "+i.title+"</div><div class=\\"insight-text\\">"+i.text+"</div></div>";' +
@@ -6821,17 +6829,32 @@ function getSatisfactionDashboardHtml() {
     '  google.script.run.withSuccessHandler(function(data){allResponses=data;renderResponses(data)}).getSatisfactionResponseData();' +
     '}' +
 
-    // Render responses
+    // Render responses with clickable details
     'function renderResponses(data){' +
     '  var c=document.getElementById("responses-list");' +
     '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">📝</div><p>No responses found</p></div>";return}' +
-    '  c.innerHTML=data.slice(0,50).map(function(r){' +
+    '  c.innerHTML=data.slice(0,50).map(function(r,i){' +
     '    var scoreClass=getScoreClass(r.avgScore);' +
     '    var scoreColor=getScoreColor(r.avgScore);' +
-    '    return"<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+r.worksite+" - "+r.role+"</div><div class=\\"list-item-subtitle\\">"+r.shift+" • "+r.timeInRole+" • "+r.date+"</div></div><div><span class=\\"score-indicator score-"+scoreClass+"\\" style=\\"color:"+scoreColor+"\\">"+r.avgScore.toFixed(1)+"/10</span></div></div>";' +
+    '    return"<div class=\\"list-item\\" onclick=\\"toggleResponse(this)\\">' +
+    '      <div class=\\"list-item-header\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+r.worksite+" - "+r.role+"</div><div class=\\"list-item-subtitle\\">"+r.shift+" • "+r.timeInRole+" • "+r.date+"</div></div><div><span class=\\"score-indicator score-"+scoreClass+"\\" style=\\"color:"+scoreColor+"\\">"+r.avgScore.toFixed(1)+"/10</span></div></div>' +
+    '      <div class=\\"list-item-details\\">' +
+    '        <div class=\\"detail-grid\\">' +
+    '          <div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Satisfaction</div><div class=\\"detail-item-value\\" style=\\"color:"+getScoreColor(r.satisfaction)+"\\">"+r.satisfaction+"/10</div></div>' +
+    '          <div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Trust in Union</div><div class=\\"detail-item-value\\" style=\\"color:"+getScoreColor(r.trust)+"\\">"+r.trust+"/10</div></div>' +
+    '          <div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Feel Protected</div><div class=\\"detail-item-value\\" style=\\"color:"+getScoreColor(r.protected)+"\\">"+r.protected+"/10</div></div>' +
+    '          <div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Would Recommend</div><div class=\\"detail-item-value\\" style=\\"color:"+getScoreColor(r.recommend)+"\\">"+r.recommend+"/10</div></div>' +
+    '          "+(r.stewardContact?"<div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Steward Contact</div><div class=\\"detail-item-value\\">Yes</div></div>":"")+"' +
+    '          "+(r.stewardRating>0?"<div class=\\"detail-item\\"><div class=\\"detail-item-label\\">Steward Rating</div><div class=\\"detail-item-value\\" style=\\"color:"+getScoreColor(r.stewardRating)+"\\">"+r.stewardRating.toFixed(1)+"/10</div></div>":"")+"' +
+    '        </div>' +
+    '      </div>' +
+    '    </div>";' +
     '  }).join("");' +
-    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" responses</p></div>";' +
+    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" responses. Use search/filters to narrow.</p></div>";' +
     '}' +
+
+    // Toggle response details
+    'function toggleResponse(el){el.classList.toggle("expanded")}' +
 
     // Filter responses
     'function filterResponses(query){' +
@@ -6926,7 +6949,7 @@ function getSatisfactionDashboardHtml() {
     '    data.byWorksite.forEach(function(w){' +
     '      var pct=(w.avg/10)*100;' +
     '      var color=getScoreColor(w.avg);' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">n="+w.count+"</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+" responses</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -6936,7 +6959,7 @@ function getSatisfactionDashboardHtml() {
     '    data.byRole.forEach(function(r){' +
     '      var pct=(r.avg/10)*100;' +
     '      var color=getScoreColor(r.avg);' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+r.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+r.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">n="+r.count+"</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+r.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%25;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+r.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+r.count+" responses</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -6944,8 +6967,8 @@ function getSatisfactionDashboardHtml() {
     '  if(data.stewardImpact){' +
     '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🤝 Impact of Steward Contact</div>";' +
     '    html+="<div class=\\"stats-grid\\">";' +
-    '    html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.stewardImpact.withContact.toFixed(1)+"</div><div class=\\"stat-label\\">With Steward Contact (n="+data.stewardImpact.withContactCount+")</div></div>";' +
-    '    html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.stewardImpact.withoutContact.toFixed(1)+"</div><div class=\\"stat-label\\">Without Contact (n="+data.stewardImpact.withoutContactCount+")</div></div>";' +
+    '    html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.stewardImpact.withContact.toFixed(1)+"</div><div class=\\"stat-label\\">With Steward Contact ("+data.stewardImpact.withContactCount+" members)</div></div>";' +
+    '    html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.stewardImpact.withoutContact.toFixed(1)+"</div><div class=\\"stat-label\\">Without Contact ("+data.stewardImpact.withoutContactCount+" members)</div></div>";' +
     '    html+="</div>";' +
     '    var diff=data.stewardImpact.withContact-data.stewardImpact.withoutContact;' +
     '    if(diff>0){' +
@@ -7113,15 +7136,22 @@ function getSatisfactionOverviewData() {
     data.insights.push({
       type: '',
       icon: '🎯',
-      title: 'Strong NPS Score',
-      text: 'Net Promoter Score of ' + data.npsScore + ' indicates members actively recommend the union.'
+      title: 'Members Highly Recommend',
+      text: 'Loyalty Score of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
     });
-  } else if (data.npsScore < 0) {
+  } else if (data.npsScore >= 0) {
+    data.insights.push({
+      type: '',
+      icon: '📊',
+      title: 'Moderate Member Loyalty',
+      text: 'Loyalty Score of ' + data.npsScore + ' shows members are neutral. Focus on converting neutral members to advocates.'
+    });
+  } else {
     data.insights.push({
       type: 'warning',
-      icon: '📊',
-      title: 'NPS Needs Improvement',
-      text: 'Current NPS of ' + data.npsScore + ' suggests more detractors than promoters.'
+      icon: '⚠️',
+      title: 'Member Loyalty Needs Attention',
+      text: 'Loyalty Score of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
     });
   }
 
@@ -7166,28 +7196,44 @@ function getSatisfactionResponseData() {
   if (lastRow <= 1) return [];
 
   var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
 
-  // Get worksite, role, shift, time in role, and satisfaction scores
+  // Get worksite, role, shift, time in role, steward contact, and satisfaction scores
   var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
   var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
   var shiftData = sheet.getRange(2, SATISFACTION_COLS.Q3_SHIFT, numRows, 1).getValues();
   var timeData = sheet.getRange(2, SATISFACTION_COLS.Q4_TIME_IN_ROLE, numRows, 1).getValues();
+  var stewardContactData = sheet.getRange(2, SATISFACTION_COLS.Q5_STEWARD_CONTACT, numRows, 1).getValues();
   var timestampData = sheet.getRange(2, 1, numRows, 1).getValues();
   var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+  var stewardRatingsData = sheet.getRange(2, SATISFACTION_COLS.Q10_TIMELY_RESPONSE, numRows, 7).getValues();
 
   var responses = [];
   for (var i = 0; i < numRows; i++) {
+    // Get individual scores
+    var satisfaction = parseFloat(satisfactionData[i][0]) || 0;
+    var trust = parseFloat(satisfactionData[i][1]) || 0;
+    var protected_ = parseFloat(satisfactionData[i][2]) || 0;
+    var recommend = parseFloat(satisfactionData[i][3]) || 0;
+
     // Calculate average satisfaction score
-    var scores = satisfactionData[i];
     var sum = 0, count = 0;
-    scores.forEach(function(s) {
-      var v = parseFloat(s);
-      if (v > 0) { sum += v; count++; }
+    [satisfaction, trust, protected_, recommend].forEach(function(s) {
+      if (s > 0) { sum += s; count++; }
     });
     var avgScore = count > 0 ? sum / count : 0;
 
+    // Calculate steward rating average
+    var stewardSum = 0, stewardCount = 0;
+    stewardRatingsData[i].forEach(function(s) {
+      var v = parseFloat(s);
+      if (v > 0) { stewardSum += v; stewardCount++; }
+    });
+    var stewardRating = stewardCount > 0 ? stewardSum / stewardCount : 0;
+
     var ts = timestampData[i][0];
-    var dateStr = ts instanceof Date ? Utilities.formatDate(ts, Session.getScriptTimeZone(), 'MM/dd/yyyy') : (ts || 'N/A');
+    var dateStr = ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : (ts || 'N/A');
+    var stewardContact = stewardContactData[i][0];
 
     responses.push({
       worksite: worksiteData[i][0] || 'Unknown',
@@ -7195,7 +7241,13 @@ function getSatisfactionResponseData() {
       shift: shiftData[i][0] || 'N/A',
       timeInRole: timeData[i][0] || 'N/A',
       date: dateStr,
-      avgScore: avgScore
+      avgScore: avgScore,
+      satisfaction: satisfaction,
+      trust: trust,
+      protected: protected_,
+      recommend: recommend,
+      stewardContact: stewardContact === 'Yes',
+      stewardRating: stewardRating
     });
   }
 

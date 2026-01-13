@@ -7623,7 +7623,7 @@ function getSatisfactionDashboardHtml() {
     '  var html="";' +
     '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.avgOverall.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction</div></div>";' +
-    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">NPS Score</div></div>";' +
+    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Loyalty Score</div></div>";' +
     '  html+="<div class=\\"stat-card purple\\"><div class=\\"stat-value\\">"+data.responseRate+"</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
     '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"green":data.avgSteward>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
     '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"green":data.avgLeadership>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
@@ -7950,15 +7950,22 @@ function getSatisfactionOverviewData() {
     data.insights.push({
       type: '',
       icon: '🎯',
-      title: 'Strong NPS Score',
-      text: 'Net Promoter Score of ' + data.npsScore + ' indicates members actively recommend the union.'
+      title: 'Members Highly Recommend',
+      text: 'Loyalty Score of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
     });
-  } else if (data.npsScore < 0) {
+  } else if (data.npsScore >= 0) {
+    data.insights.push({
+      type: '',
+      icon: '📊',
+      title: 'Moderate Member Loyalty',
+      text: 'Loyalty Score of ' + data.npsScore + ' shows members are neutral. Focus on converting neutral members to advocates.'
+    });
+  } else {
     data.insights.push({
       type: 'warning',
-      icon: '📊',
-      title: 'NPS Needs Improvement',
-      text: 'Current NPS of ' + data.npsScore + ' suggests more detractors than promoters.'
+      icon: '⚠️',
+      title: 'Member Loyalty Needs Attention',
+      text: 'Loyalty Score of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
     });
   }
 

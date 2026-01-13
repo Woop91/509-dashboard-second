@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.1 (No Formulas in Visible Sheets - Full JavaScript Computation)
+**Version:** 2.0.2 (No Formulas in Visible Sheets - Full JavaScript Computation)
 **Last Updated:** 2026-01-13
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -977,6 +977,86 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.0.2 (2026-01-13) - Interactive Dashboard & Satisfaction Survey Improvements
+
+**Comprehensive updates to the Custom View popup modal and Member Satisfaction Dashboard**
+
+---
+
+#### 1. Interactive Dashboard (Custom View) Enhancements
+
+**Stability Improvements:**
+- Added error handling with `safeRun()` wrapper for all JavaScript functions
+- Added `.withFailureHandler()` to all `google.script.run` calls
+- Error states now display friendly messages instead of blank pages
+
+**Overdue Cases Filter:**
+- Added **"⚠️ Overdue"** filter button to Grievances tab
+- Overdue cases now shown on Overview tab with preview section
+- Clicking "View All Overdue Cases" navigates to filtered view
+
+**Blank Row Filtering:**
+- All data functions now validate IDs start with "M" (members) or "G" (grievances)
+- `getInteractiveOverviewData()`, `getInteractiveMemberData()`, `getInteractiveGrievanceData()`, `getInteractiveAnalyticsData()` all updated
+- Prevents blank spreadsheet rows from appearing in modal
+
+**Clickable List Items with Details:**
+- Members: Click to expand showing email, phone, office days, supervisor, assigned steward
+- Grievances: Click to expand showing incident date, next due date, days open, articles, resolution
+- "Quick Actions" and "View in Sheet" buttons on expanded items
+
+**Member Filters:**
+- Location dropdown filter
+- Unit dropdown filter
+- Reset button to clear all filters
+- Filters work in combination with search
+
+**Resource Links Tab:**
+- New "🔗 Links" tab added
+- Shows Grievance Form, Contact Form, Satisfaction Survey links from Config sheet
+- Quick access to open full spreadsheet
+- Quick action buttons for common operations
+
+**Navigation Functions:**
+- `navigateToMemberInSheet(memberId)` - Jump to member in sheet
+- `navigateToGrievanceInSheet(grievanceId)` - Jump to grievance in sheet
+- `showMemberDirectory()`, `showGrievanceLog()`, `showConfigSheet()` - Tab navigation
+
+**Files Changed:**
+- `MobileQuickActions.gs`: Lines 594-1533 (complete overhaul)
+
+---
+
+#### 2. Member Satisfaction Dashboard Improvements
+
+**NPS Terminology Changed to Intuitive Language:**
+- "NPS Score" → "Loyalty Score"
+- "Strong NPS Score" → "Members Highly Recommend"
+- "NPS Needs Improvement" → "Member Loyalty Needs Attention"
+- Added "Moderate Member Loyalty" insight for scores 0-49
+
+**Loyalty Score Explanation:**
+- Added info card explaining Loyalty Score meaning
+- Shows score ranges: 50+ = Excellent, 0-49 = Good, Below 0 = Needs work
+- Explains it's based on "Would Recommend" question
+
+**Clickable Response Details:**
+- Responses tab items now expandable on click
+- Shows individual scores: Satisfaction, Trust, Feel Protected, Would Recommend
+- Shows Steward Contact status and Steward Rating if applicable
+
+**Sample Size Labels Improved:**
+- Changed "n=X" to "X responses" or "X members" throughout
+- More intuitive for non-technical users
+
+**Files Changed:**
+- `Code.gs`: Lines 6543-7260 (Satisfaction Dashboard HTML/JS)
+- `Code.gs`: Lines 7112-7133 (NPS insights)
+- `Code.gs`: Lines 7179-7258 (Response data function expanded)
+- `ConsolidatedDashboard.gs`: Same changes mirrored
+
+---
 
 ### Version 1.9.1 (2026-01-13) - Grievance Log Bug Fixes & Quick Actions Checkbox
 
