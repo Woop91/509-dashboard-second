@@ -982,6 +982,12 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 **Added member ADD/MODIFY functionality to Interactive Dashboard and fixed By Section charts**
 
+**CRITICAL FIX: ConsolidatedDashboard.gs fully synced with MobileQuickActions.gs**
+
+> **Note:** Per the deployment model, only `ConsolidatedDashboard.gs` is deployed.
+> All feature development occurs in `MobileQuickActions.gs` and must be synced to `ConsolidatedDashboard.gs`.
+> This version includes a complete sync of all Interactive Dashboard features.
+
 ---
 
 #### 1. Member ADD/MODIFY Forms in Interactive Dashboard
@@ -1057,6 +1063,41 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 - `Code.gs`: Lines 6899-6937 (renderSections function completely rewritten)
 - `ConsolidatedDashboard.gs`: Lines 7713-7751 (same changes mirrored)
 - `ConsolidatedDashboard.gs`: Lines 7777, 7787, 7795-7796 (n= labels changed to responses/members)
+
+---
+
+#### 5. ConsolidatedDashboard.gs Full Sync
+
+**Critical sync to ensure deployed file has all features from source files.**
+
+**Data Functions Updated:**
+- `getInteractiveMemberData()` - Now returns all 16 member fields (firstName, lastName, email, phone, officeDays, unit, supervisor, hasOpenGrievance, assignedSteward, etc.)
+- `getInteractiveGrievanceData()` - Now returns all 16 grievance fields (currentStep, isOverdue, daysToDeadline, daysOpen, incidentDate, nextActionDue, location, articles, steward, resolution, etc.)
+- Both functions now properly skip blank rows (validates ID starts with M/G)
+
+**Grievances Tab Enhanced:**
+- Added "⚠️ Overdue" filter button with danger styling
+- Added expandable grievance details with all fields on click
+- Added `toggleGrievanceDetail()`, `showGrievanceDetail()` functions
+- Filter buttons now highlight when active
+- Proper Overdue filter that checks `isOverdue` property
+
+**Overview Tab Enhanced:**
+- Clickable stat cards (Total Members, Total Grievances, Open Cases)
+- Added `showOpenCases()` function to jump to filtered grievances
+- Added `loadOverduePreview()` to show overdue cases on overview
+
+**CSS Styles Added:**
+- `.badge-overdue` - Pulsing red badge for overdue items
+- `.action-btn-danger` - Red button style for danger actions
+
+**Files Changed:**
+- `ConsolidatedDashboard.gs`: Lines 12182-12183 (badge-overdue CSS)
+- `ConsolidatedDashboard.gs`: Lines 12192-12193 (action-btn-danger CSS)
+- `ConsolidatedDashboard.gs`: Lines 12332-12338 (Grievances tab with Overdue filter)
+- `ConsolidatedDashboard.gs`: Lines 12373-12415 (loadOverview, renderOverview, showOpenCases, loadOverduePreview)
+- `ConsolidatedDashboard.gs`: Lines 12525-12624 (grievance functions with expandable details)
+- `ConsolidatedDashboard.gs`: Lines 12750-12824 (getInteractiveMemberData, getInteractiveGrievanceData)
 
 ---
 

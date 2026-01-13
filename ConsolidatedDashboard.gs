@@ -12179,6 +12179,8 @@ function getInteractiveDashboardHtml() {
     '.badge-open{background:#fee2e2;color:#dc2626}' +
     '.badge-pending{background:#fef3c7;color:#d97706}' +
     '.badge-closed{background:#d1fae5;color:#059669}' +
+    '.badge-overdue{background:#fef2f2;color:#dc2626;font-weight:600;animation:pulse 2s infinite}' +
+    '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.7}}' +
 
     // Action buttons
     '.action-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border:none;border-radius:8px;' +
@@ -12187,14 +12189,39 @@ function getInteractiveDashboardHtml() {
     '.action-btn-primary:hover{background:#5B21B6}' +
     '.action-btn-secondary{background:#f3f4f6;color:#374151}' +
     '.action-btn-secondary:hover{background:#e5e7eb}' +
+    '.action-btn-danger{background:#dc2626;color:white}' +
+    '.action-btn-danger:hover{background:#b91c1c}' +
 
-    // List items
+    // List items - clickable with expandable details
     '.list-container{display:flex;flex-direction:column;gap:10px}' +
-    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
-    '.list-item:hover{box-shadow:0 4px 8px rgba(0,0,0,0.1)}' +
-    '.list-item-main{flex:1;min-width:200px}' +
+    '.list-item{background:white;padding:15px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.06);cursor:pointer;transition:all 0.2s}' +
+    '.list-item:hover{box-shadow:0 4px 12px rgba(0,0,0,0.12);transform:translateY(-1px)}' +
+    '.list-item-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}' +
+    '.list-item-main{flex:1;min-width:180px}' +
     '.list-item-title{font-weight:600;color:#1f2937;margin-bottom:3px}' +
     '.list-item-subtitle{font-size:12px;color:#666}' +
+    '.list-item-details{display:none;margin-top:12px;padding-top:12px;border-top:1px solid #eee;font-size:12px;color:#374151}' +
+    '.list-item.expanded .list-item-details{display:block}' +
+    '.detail-row{display:flex;gap:8px;margin-bottom:6px}' +
+    '.detail-label{color:#666;min-width:90px}' +
+    '.detail-value{color:#1f2937;font-weight:500}' +
+    '.detail-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}' +
+
+    // Filter dropdowns
+    '.filter-bar{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}' +
+    '.filter-select{padding:8px 12px;border:2px solid #e5e7eb;border-radius:6px;font-size:12px;background:white;cursor:pointer}' +
+    '.filter-select:focus{outline:none;border-color:#7C3AED}' +
+
+    // Resource links
+    '.link-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}' +
+    '.resource-link{display:flex;align-items:center;gap:8px;padding:10px;background:#f8f4ff;border:none;border-radius:8px;text-decoration:none;color:#7C3AED;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s}' +
+    '.resource-link:hover{background:#7C3AED;color:white}' +
+
+    // Error state
+    '.error-state{text-align:center;padding:30px;color:#dc2626;background:#fef2f2;border-radius:8px;margin:10px}' +
+
+    // Additional badge styles
+    '.badge-steward{background:#ddd6fe;color:#7c3aed}' +
 
     // Search input
     '.search-container{position:relative;margin-bottom:15px}' +
@@ -12259,34 +12286,59 @@ function getInteractiveDashboardHtml() {
     '<div class="subtitle">Real-time union data at your fingertips</div>' +
     '</div>' +
 
-    // Tab Navigation
+    // Tab Navigation (5 tabs)
     '<div class="tabs">' +
     '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
     '<button class="tab" onclick="switchTab(\'members\',this)" id="tab-members"><span class="tab-icon">👥</span>Members</button>' +
     '<button class="tab" onclick="switchTab(\'grievances\',this)" id="tab-grievances"><span class="tab-icon">📋</span>Grievances</button>' +
     '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">📈</span>Analytics</button>' +
+    '<button class="tab" onclick="switchTab(\'resources\',this)" id="tab-resources"><span class="tab-icon">🔗</span>Links</button>' +
     '</div>' +
 
     // Overview Tab
     '<div class="tab-content active" id="content-overview">' +
     '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
-    '<div id="overview-actions" style="margin-top:15px;display:flex;flex-wrap:wrap;gap:10px"></div>' +
+    '<div id="overview-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px"></div>' +
+    '<div id="overview-overdue" style="margin-top:15px"></div>' +
     '</div>' +
 
-    // Members Tab
+    // Members Tab with filters and Add form
     '<div class="tab-content" id="content-members">' +
-    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="member-search" placeholder="Search members..." oninput="filterMembers(this.value)"></div>' +
+    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="member-search" placeholder="Search by name, ID, title, location..." oninput="filterMembers()"></div>' +
+    '<div class="filter-bar" id="member-filters"></div>' +
+    '<div style="margin-bottom:12px"><button class="action-btn action-btn-primary" onclick="showAddMemberForm()">➕ Add New Member</button></div>' +
     '<div class="list-container" id="members-list"><div class="loading"><div class="spinner"></div><p>Loading members...</p></div></div>' +
+    // Add Member Form Modal
+    '<div id="member-form-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:1000;overflow-y:auto;padding:20px">' +
+    '<div style="background:white;max-width:500px;margin:20px auto;border-radius:12px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,0.2)">' +
+    '<h3 id="member-form-title" style="margin:0 0 15px;color:#7C3AED">➕ Add New Member</h3>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">First Name *</label><input type="text" id="form-firstName" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter first name"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Last Name *</label><input type="text" id="form-lastName" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter last name"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Job Title</label><input type="text" id="form-jobTitle" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter job title"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Email</label><input type="email" id="form-email" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter email address"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Phone</label><input type="tel" id="form-phone" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter phone number"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Work Location</label><select id="form-location" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px"><option value="">Select location...</option></select></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Unit</label><select id="form-unit" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px"><option value="">Select unit...</option></select></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Office Days</label><select id="form-officeDays" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" multiple size="3"><option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option></select><small style="color:#999;font-size:10px">Hold Ctrl/Cmd to select multiple days</small></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Supervisor</label><input type="text" id="form-supervisor" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px" placeholder="Enter supervisor name"></div>' +
+    '<div class="form-group" style="margin-bottom:12px"><label style="display:block;font-size:12px;color:#666;margin-bottom:4px">Is Steward?</label><select id="form-isSteward" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:6px;font-size:14px"><option value="No">No</option><option value="Yes">Yes</option></select></div>' +
+    '<input type="hidden" id="form-memberId" value="">' +
+    '<input type="hidden" id="form-mode" value="add">' +
+    '<div style="display:flex;gap:10px;margin-top:20px">' +
+    '<button class="action-btn action-btn-primary" style="flex:1" onclick="saveMemberForm()">💾 Save Member</button>' +
+    '<button class="action-btn action-btn-secondary" style="flex:1" onclick="closeMemberForm()">Cancel</button>' +
+    '</div></div></div>' +
     '</div>' +
 
     // Grievances Tab
     '<div class="tab-content" id="content-grievances">' +
-    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="grievance-search" placeholder="Search grievances..." oninput="filterGrievances(this.value)"></div>' +
-    '<div style="display:flex;gap:8px;margin-bottom:15px;flex-wrap:wrap">' +
-    '<button class="action-btn action-btn-primary" onclick="filterGrievanceStatus(\'all\')">All</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Open\')">Open</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Pending Info\')">Pending</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="filterGrievanceStatus(\'Closed\')">Closed</button>' +
+    '<div class="search-container"><span class="search-icon">🔍</span><input type="text" class="search-input" id="grievance-search" placeholder="Search by ID, member name, issue..." oninput="filterGrievances()"></div>' +
+    '<div class="filter-bar" id="grievance-filter-bar">' +
+    '<button class="action-btn action-btn-primary active" data-filter="all" onclick="filterGrievanceStatus(\'all\',this)">All</button>' +
+    '<button class="action-btn action-btn-secondary" data-filter="Open" onclick="filterGrievanceStatus(\'Open\',this)">Open</button>' +
+    '<button class="action-btn action-btn-secondary" data-filter="Pending Info" onclick="filterGrievanceStatus(\'Pending Info\',this)">Pending</button>' +
+    '<button class="action-btn action-btn-danger" data-filter="Overdue" onclick="filterGrievanceStatus(\'Overdue\',this)">⚠️ Overdue</button>' +
+    '<button class="action-btn action-btn-secondary" data-filter="Closed" onclick="filterGrievanceStatus(\'Closed\',this)">Closed</button>' +
     '</div>' +
     '<div class="list-container" id="grievances-list"><div class="loading"><div class="spinner"></div><p>Loading grievances...</p></div></div>' +
     '</div>' +
@@ -12296,110 +12348,287 @@ function getInteractiveDashboardHtml() {
     '<div id="analytics-charts"><div class="loading"><div class="spinner"></div><p>Loading analytics...</p></div></div>' +
     '</div>' +
 
+    // Resources/Links Tab
+    '<div class="tab-content" id="content-resources">' +
+    '<div id="resources-content"><div class="loading"><div class="spinner"></div><p>Loading links...</p></div></div>' +
+    '</div>' +
+
     // JavaScript
     '<script>' +
-    'var allMembers=[];var allGrievances=[];var currentGrievanceFilter="all";' +
+    'var allMembers=[];var allGrievances=[];var currentGrievanceFilter="all";var memberFilters={location:"all",unit:"all",officeDays:"all"};var resourceLinks={};' +
 
-    // Tab switching
+    // Error handler wrapper
+    'function safeRun(fn,fallback){try{fn()}catch(e){console.error(e);if(fallback)fallback(e)}}' +
+
+    // Tab switching with error handling
     'function switchTab(tabName,btn){' +
-    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
-    '  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
-    '  btn.classList.add("active");' +
-    '  document.getElementById("content-"+tabName).classList.add("active");' +
-    '  if(tabName==="members"&&allMembers.length===0)loadMembers();' +
-    '  if(tabName==="grievances"&&allGrievances.length===0)loadGrievances();' +
-    '  if(tabName==="analytics")loadAnalytics();' +
+    '  safeRun(function(){' +
+    '    document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
+    '    document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
+    '    btn.classList.add("active");' +
+    '    document.getElementById("content-"+tabName).classList.add("active");' +
+    '    if(tabName==="members"&&allMembers.length===0)loadMembers();' +
+    '    if(tabName==="grievances"&&allGrievances.length===0)loadGrievances();' +
+    '    if(tabName==="analytics")loadAnalytics();' +
+    '    if(tabName==="resources")loadResources();' +
+    '  });' +
     '}' +
 
-    // Load overview data
+    // Load overview data with error handling
     'function loadOverview(){' +
-    '  google.script.run.withSuccessHandler(function(data){renderOverview(data)}).getInteractiveOverviewData();' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){safeRun(function(){renderOverview(data)},function(){document.getElementById("overview-stats").innerHTML="<div class=\\"error-state\\">Error loading stats</div>"})})'  +
+    '    .withFailureHandler(function(e){document.getElementById("overview-stats").innerHTML="<div class=\\"error-state\\">Failed to load: "+e.message+"</div>"})' +
+    '    .getInteractiveOverviewData();' +
     '}' +
 
-    // Render overview
+    // Render overview with clickable stats and overdue preview
     'function renderOverview(data){' +
     '  var html="";' +
-    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalMembers+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  html+="<div class=\\"stat-card\\" onclick=\\"switchTab(\'members\',document.getElementById(\'tab-members\'))\\"><div class=\\"stat-value\\">"+data.totalMembers+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.activeStewards+"</div><div class=\\"stat-label\\">Stewards</div></div>";' +
-    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalGrievances+"</div><div class=\\"stat-label\\">Total Grievances</div></div>";' +
-    '  html+="<div class=\\"stat-card red\\"><div class=\\"stat-value\\">"+data.openGrievances+"</div><div class=\\"stat-label\\">Open Cases</div></div>";' +
+    '  html+="<div class=\\"stat-card\\" onclick=\\"switchTab(\'grievances\',document.getElementById(\'tab-grievances\'))\\"><div class=\\"stat-value\\">"+data.totalGrievances+"</div><div class=\\"stat-label\\">Total Grievances</div></div>";' +
+    '  html+="<div class=\\"stat-card red\\" onclick=\\"showOpenCases()\\"><div class=\\"stat-value\\">"+data.openGrievances+"</div><div class=\\"stat-label\\">Open Cases</div></div>";' +
     '  html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+data.pendingInfo+"</div><div class=\\"stat-label\\">Pending Info</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.winRate+"</div><div class=\\"stat-label\\">Win Rate</div></div>";' +
     '  document.getElementById("overview-stats").innerHTML=html;' +
     '  var actions="";' +
-    '  actions+="<button class=\\"action-btn action-btn-primary\\" onclick=\\"google.script.run.showMobileUnifiedSearch()\\">🔍 Quick Search</button>";' +
-    '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"google.script.run.showMobileGrievanceList()\\">📋 View All Grievances</button>";' +
+    '  actions+="<button class=\\"action-btn action-btn-primary\\" onclick=\\"google.script.run.showMobileUnifiedSearch()\\">🔍 Search</button>";' +
+    '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"google.script.run.showMobileGrievanceList()\\">📋 All Grievances</button>";' +
     '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"google.script.run.showMyAssignedGrievances()\\">👤 My Cases</button>";' +
     '  actions+="<button class=\\"action-btn action-btn-secondary\\" onclick=\\"location.reload()\\">🔄 Refresh</button>";' +
     '  document.getElementById("overview-actions").innerHTML=actions;' +
+    '  loadOverduePreview();' +
     '}' +
 
-    // Load members
+    // Show open cases - switch to grievances tab with Open filter
+    'function showOpenCases(){switchTab("grievances",document.getElementById("tab-grievances"));setTimeout(function(){filterGrievanceStatus("Open",document.querySelector("[data-filter=\\"Open\\"]"))},300)}' +
+
+    // Load overdue preview on overview
+    'function loadOverduePreview(){' +
+    '  google.script.run.withSuccessHandler(function(data){' +
+    '    var overdue=data.filter(function(g){return g.isOverdue});' +
+    '    if(overdue.length===0){document.getElementById("overview-overdue").innerHTML="";return}' +
+    '    var html="<div class=\\"chart-container\\" style=\\"border-left:4px solid #dc2626\\"><div class=\\"chart-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
+    '    html+="<div class=\\"list-container\\">";' +
+    '    overdue.slice(0,3).forEach(function(g){html+="<div class=\\"list-item\\" onclick=\\"showGrievanceDetail(\'"+g.id+"\')\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+g.id+" - "+g.memberName+"</div><div class=\\"list-item-subtitle\\">"+g.issueType+" • "+g.currentStep+"</div></div><span class=\\"badge badge-overdue\\">Overdue</span></div>"});' +
+    '    if(overdue.length>3)html+="<button class=\\"action-btn action-btn-danger\\" style=\\"width:100%;margin-top:8px\\" onclick=\\"switchTab(\'grievances\',document.getElementById(\'tab-grievances\'));setTimeout(function(){filterGrievanceStatus(\'Overdue\',document.querySelector(\'[data-filter=Overdue]\'))},300)\\">View All "+overdue.length+" Overdue Cases</button>";' +
+    '    html+="</div></div>";' +
+    '    document.getElementById("overview-overdue").innerHTML=html;' +
+    '  }).getInteractiveGrievanceData();' +
+    '}' +
+
+    // Load members with filters
     'function loadMembers(){' +
-    '  google.script.run.withSuccessHandler(function(data){allMembers=data;renderMembers(data)}).getInteractiveMemberData();' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){allMembers=data||[];renderMembers(allMembers);loadMemberFilters()})' +
+    '    .withFailureHandler(function(e){document.getElementById("members-list").innerHTML="<div class=\\"error-state\\">Failed to load members</div>"})' +
+    '    .getInteractiveMemberData();' +
     '}' +
 
-    // Render members
+    // Load member filter dropdowns
+    'function loadMemberFilters(){' +
+    '  var locations={};var units={};var officeDays={};' +
+    '  allMembers.forEach(function(m){' +
+    '    if(m.location&&m.location!=="N/A")locations[m.location]=1;' +
+    '    if(m.unit&&m.unit!=="N/A")units[m.unit]=1;' +
+    '    if(m.officeDays&&m.officeDays!=="N/A"){m.officeDays.split(",").forEach(function(d){var day=d.trim();if(day)officeDays[day]=1})}' +
+    '  });' +
+    '  var html="<select class=\\"filter-select\\" id=\\"filter-location\\" onchange=\\"memberFilters.location=this.value;filterMembers()\\"><option value=\\"all\\">All Locations</option>";' +
+    '  Object.keys(locations).sort().forEach(function(l){html+="<option value=\\""+l+"\\">"+l+"</option>"});' +
+    '  html+="</select><select class=\\"filter-select\\" id=\\"filter-unit\\" onchange=\\"memberFilters.unit=this.value;filterMembers()\\"><option value=\\"all\\">All Units</option>";' +
+    '  Object.keys(units).sort().forEach(function(u){html+="<option value=\\""+u+"\\">"+u+"</option>"});' +
+    '  html+="</select><select class=\\"filter-select\\" id=\\"filter-officeDays\\" onchange=\\"memberFilters.officeDays=this.value;filterMembers()\\"><option value=\\"all\\">All Office Days</option>";' +
+    '  Object.keys(officeDays).sort(function(a,b){var days=["Monday","Tuesday","Wednesday","Thursday","Friday"];return days.indexOf(a)-days.indexOf(b)}).forEach(function(d){html+="<option value=\\""+d+"\\">"+d+"</option>"});' +
+    '  html+="</select><button class=\\"action-btn action-btn-secondary\\" onclick=\\"resetMemberFilters()\\">Reset</button>";' +
+    '  document.getElementById("member-filters").innerHTML=html;' +
+    '  populateFormDropdowns(locations,units);' +
+    '}' +
+
+    // Reset member filters
+    'function resetMemberFilters(){memberFilters={location:"all",unit:"all",officeDays:"all"};document.getElementById("member-search").value="";document.getElementById("filter-location").value="all";document.getElementById("filter-unit").value="all";document.getElementById("filter-officeDays").value="all";renderMembers(allMembers)}' +
+
+    // Render members with clickable details
     'function renderMembers(data){' +
     '  var c=document.getElementById("members-list");' +
     '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">👥</div><p>No members found</p></div>";return}' +
-    '  c.innerHTML=data.slice(0,50).map(function(m){' +
-    '    return "<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+m.name+"</div><div class=\\"list-item-subtitle\\">"+m.id+" • "+m.title+" • "+m.location+"</div></div><div><span class=\\"badge "+(m.isSteward?"badge-closed":"badge-open")+"\\">"+(m.isSteward?"Steward":"Member")+"</span></div></div>"' +
+    '  c.innerHTML=data.slice(0,50).map(function(m,i){' +
+    '    var badge=m.isSteward?"<span class=\\"badge badge-steward\\">Steward</span>":"";' +
+    '    if(m.hasOpenGrievance)badge+="<span class=\\"badge badge-open\\" style=\\"margin-left:4px\\">Has Case</span>";' +
+    '    return "<div class=\\"list-item\\" onclick=\\"toggleMemberDetail(this,"+i+")\\">' +
+    '      <div class=\\"list-item-header\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+m.name+"</div><div class=\\"list-item-subtitle\\">"+m.id+" • "+m.title+"</div></div><div>"+badge+"</div></div>' +
+    '      <div class=\\"list-item-details\\">' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📍 Location:</span><span class=\\"detail-value\\">"+m.location+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">🏢 Unit:</span><span class=\\"detail-value\\">"+m.unit+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📧 Email:</span><span class=\\"detail-value\\">"+(m.email||"N/A")+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📱 Phone:</span><span class=\\"detail-value\\">"+(m.phone||"N/A")+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📅 Office Days:</span><span class=\\"detail-value\\">"+m.officeDays+"</span></div>' +
+    '        <div class=\\"detail-actions\\">' +
+    '          <button class=\\"action-btn action-btn-primary\\" onclick=\\"event.stopPropagation();showEditMemberForm("+i+")\\">✏️ Edit</button>' +
+    '          <button class=\\"action-btn action-btn-secondary\\" onclick=\\"event.stopPropagation();google.script.run.navigateToMemberInSheet(\'"+m.id+"\')\\">📄 View in Sheet</button>' +
+    '        </div></div></div>"' +
     '  }).join("");' +
     '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" members</p></div>";' +
     '}' +
 
-    // Filter members
-    'function filterMembers(query){' +
-    '  if(!query||query.length<2){renderMembers(allMembers);return}' +
-    '  query=query.toLowerCase();' +
-    '  var filtered=allMembers.filter(function(m){return m.name.toLowerCase().indexOf(query)>=0||m.id.toLowerCase().indexOf(query)>=0||m.title.toLowerCase().indexOf(query)>=0});' +
+    // Toggle member detail
+    'function toggleMemberDetail(el,idx){el.classList.toggle("expanded")}' +
+
+    // Filter members with all criteria
+    'function filterMembers(){' +
+    '  var query=(document.getElementById("member-search").value||"").toLowerCase();' +
+    '  var filtered=allMembers.filter(function(m){' +
+    '    if(memberFilters.location!=="all"&&m.location!==memberFilters.location)return false;' +
+    '    if(memberFilters.unit!=="all"&&m.unit!==memberFilters.unit)return false;' +
+    '    if(memberFilters.officeDays!=="all"&&m.officeDays&&m.officeDays.indexOf(memberFilters.officeDays)<0)return false;' +
+    '    if(query&&query.length>=2){return m.name.toLowerCase().indexOf(query)>=0||m.id.toLowerCase().indexOf(query)>=0||m.title.toLowerCase().indexOf(query)>=0||(m.email||"").toLowerCase().indexOf(query)>=0}' +
+    '    return true;' +
+    '  });' +
     '  renderMembers(filtered);' +
+    '}' +
+
+    // Populate form dropdowns
+    'function populateFormDropdowns(locations,units){' +
+    '  var locSelect=document.getElementById("form-location");var unitSelect=document.getElementById("form-unit");' +
+    '  locSelect.innerHTML="<option value=\\"\\">Select location...</option>";unitSelect.innerHTML="<option value=\\"\\">Select unit...</option>";' +
+    '  Object.keys(locations).sort().forEach(function(l){locSelect.innerHTML+="<option value=\\""+l+"\\">"+l+"</option>"});' +
+    '  Object.keys(units).sort().forEach(function(u){unitSelect.innerHTML+="<option value=\\""+u+"\\">"+u+"</option>"});' +
+    '}' +
+
+    // Show add member form
+    'function showAddMemberForm(){' +
+    '  document.getElementById("member-form-title").innerHTML="➕ Add New Member";' +
+    '  document.getElementById("form-mode").value="add";document.getElementById("form-memberId").value="";' +
+    '  document.getElementById("form-firstName").value="";document.getElementById("form-lastName").value="";' +
+    '  document.getElementById("form-jobTitle").value="";document.getElementById("form-email").value="";' +
+    '  document.getElementById("form-phone").value="";document.getElementById("form-location").value="";' +
+    '  document.getElementById("form-unit").value="";document.getElementById("form-supervisor").value="";' +
+    '  document.getElementById("form-isSteward").value="No";' +
+    '  var daysSelect=document.getElementById("form-officeDays");for(var i=0;i<daysSelect.options.length;i++)daysSelect.options[i].selected=false;' +
+    '  document.getElementById("member-form-modal").style.display="block";' +
+    '}' +
+
+    // Show edit member form
+    'function showEditMemberForm(idx){' +
+    '  var m=allMembers[idx];if(!m)return;' +
+    '  document.getElementById("member-form-title").innerHTML="✏️ Edit Member: "+m.name;' +
+    '  document.getElementById("form-mode").value="edit";document.getElementById("form-memberId").value=m.id;' +
+    '  document.getElementById("form-firstName").value=m.firstName||"";document.getElementById("form-lastName").value=m.lastName||"";' +
+    '  document.getElementById("form-jobTitle").value=m.title!=="N/A"?m.title:"";document.getElementById("form-email").value=m.email||"";' +
+    '  document.getElementById("form-phone").value=m.phone||"";document.getElementById("form-location").value=m.location!=="N/A"?m.location:"";' +
+    '  document.getElementById("form-unit").value=m.unit!=="N/A"?m.unit:"";document.getElementById("form-supervisor").value=m.supervisor!=="N/A"?m.supervisor:"";' +
+    '  document.getElementById("form-isSteward").value=m.isSteward?"Yes":"No";' +
+    '  var daysSelect=document.getElementById("form-officeDays");' +
+    '  var memberDays=m.officeDays&&m.officeDays!=="N/A"?m.officeDays.split(",").map(function(d){return d.trim()}):[];' +
+    '  for(var i=0;i<daysSelect.options.length;i++){daysSelect.options[i].selected=memberDays.indexOf(daysSelect.options[i].value)>=0}' +
+    '  document.getElementById("member-form-modal").style.display="block";' +
+    '}' +
+
+    // Close member form
+    'function closeMemberForm(){document.getElementById("member-form-modal").style.display="none"}' +
+
+    // Save member form
+    'function saveMemberForm(){' +
+    '  var mode=document.getElementById("form-mode").value;' +
+    '  var firstName=document.getElementById("form-firstName").value.trim();' +
+    '  var lastName=document.getElementById("form-lastName").value.trim();' +
+    '  if(!firstName||!lastName){alert("First name and last name are required");return}' +
+    '  var daysSelect=document.getElementById("form-officeDays");var selectedDays=[];' +
+    '  for(var i=0;i<daysSelect.options.length;i++){if(daysSelect.options[i].selected)selectedDays.push(daysSelect.options[i].value)}' +
+    '  var memberData={memberId:document.getElementById("form-memberId").value,firstName:firstName,lastName:lastName,' +
+    '    jobTitle:document.getElementById("form-jobTitle").value.trim(),email:document.getElementById("form-email").value.trim(),' +
+    '    phone:document.getElementById("form-phone").value.trim(),location:document.getElementById("form-location").value,' +
+    '    unit:document.getElementById("form-unit").value,officeDays:selectedDays.join(", "),' +
+    '    supervisor:document.getElementById("form-supervisor").value.trim(),isSteward:document.getElementById("form-isSteward").value};' +
+    '  var btn=document.querySelector("#member-form-modal .action-btn-primary");btn.disabled=true;btn.innerHTML="⏳ Saving...";' +
+    '  google.script.run.withSuccessHandler(function(result){btn.disabled=false;btn.innerHTML="💾 Save Member";closeMemberForm();' +
+    '    alert(mode==="add"?"Member added successfully!":"Member updated successfully!");allMembers=[];loadMembers();' +
+    '  }).withFailureHandler(function(e){btn.disabled=false;btn.innerHTML="💾 Save Member";alert("Error: "+e.message)}).saveInteractiveMember(memberData,mode);' +
     '}' +
 
     // Load grievances
     'function loadGrievances(){' +
-    '  google.script.run.withSuccessHandler(function(data){allGrievances=data;renderGrievances(data)}).getInteractiveGrievanceData();' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){allGrievances=data||[];renderGrievances(allGrievances)})'  +
+    '    .withFailureHandler(function(e){document.getElementById("grievances-list").innerHTML="<div class=\\"error-state\\">Failed to load grievances</div>"})' +
+    '    .getInteractiveGrievanceData();' +
     '}' +
 
-    // Render grievances
+    // Render grievances with clickable expandable details
     'function renderGrievances(data){' +
     '  var c=document.getElementById("grievances-list");' +
     '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">📋</div><p>No grievances found</p></div>";return}' +
-    '  c.innerHTML=data.slice(0,50).map(function(g){' +
-    '    var badgeClass=g.status==="Open"?"badge-open":(g.status==="Pending Info"?"badge-pending":"badge-closed");' +
-    '    return "<div class=\\"list-item\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+g.id+" - "+g.memberName+"</div><div class=\\"list-item-subtitle\\">"+g.issueType+" • Filed: "+g.filedDate+"</div></div><div><span class=\\"badge "+badgeClass+"\\">"+g.status+"</span></div></div>"' +
+    '  c.innerHTML=data.slice(0,50).map(function(g,i){' +
+    '    var badgeClass=g.isOverdue?"badge-overdue":(g.status==="Open"?"badge-open":(g.status==="Pending Info"?"badge-pending":"badge-closed"));' +
+    '    var statusText=g.isOverdue?"Overdue":g.status;' +
+    '    var daysInfo=g.isOverdue?"<span style=\\"color:#dc2626;font-weight:bold\\">⚠️ PAST DUE</span>":(typeof g.daysToDeadline==="number"?""+g.daysToDeadline+" days left":"");' +
+    '    return "<div class=\\"list-item\\" onclick=\\"toggleGrievanceDetail(this,"+i+")\\">' +
+    '      <div class=\\"list-item-header\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+g.id+" - "+g.memberName+"</div><div class=\\"list-item-subtitle\\">"+g.issueType+" • "+g.currentStep+"</div></div><div><span class=\\"badge "+badgeClass+"\\">"+statusText+"</span></div></div>' +
+    '      <div class=\\"list-item-details\\">' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📅 Filed:</span><span class=\\"detail-value\\">"+g.filedDate+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">🔔 Incident:</span><span class=\\"detail-value\\">"+g.incidentDate+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">⏰ Next Due:</span><span class=\\"detail-value\\">"+g.nextActionDue+" "+daysInfo+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">⏱️ Days Open:</span><span class=\\"detail-value\\">"+g.daysOpen+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📍 Location:</span><span class=\\"detail-value\\">"+g.location+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📜 Articles:</span><span class=\\"detail-value\\">"+g.articles+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">🛡️ Steward:</span><span class=\\"detail-value\\">"+g.steward+"</span></div>' +
+    '        "+(g.resolution?"<div class=\\"detail-row\\"><span class=\\"detail-label\\">✅ Resolution:</span><span class=\\"detail-value\\">"+g.resolution+"</span></div>":"")+"' +
+    '        <div class=\\"detail-actions\\">' +
+    '          <button class=\\"action-btn action-btn-primary\\" onclick=\\"event.stopPropagation();google.script.run.showGrievanceQuickActions(\'"+g.id+"\')\\">⚡ Quick Actions</button>' +
+    '          <button class=\\"action-btn action-btn-secondary\\" onclick=\\"event.stopPropagation();google.script.run.navigateToGrievanceInSheet(\'"+g.id+"\')\\">📄 View in Sheet</button>' +
+    '        </div>' +
+    '      </div>' +
+    '    </div>"' +
     '  }).join("");' +
-    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" grievances</p></div>";' +
+    '  if(data.length>50)c.innerHTML+="<div class=\\"empty-state\\"><p>Showing 50 of "+data.length+" grievances. Use search/filters to find specific cases.</p></div>";' +
+    '}' +
+
+    // Toggle grievance detail
+    'function toggleGrievanceDetail(el,idx){el.classList.toggle("expanded")}' +
+
+    // Show specific grievance detail
+    'function showGrievanceDetail(id){' +
+    '  var g=allGrievances.find(function(x){return x.id===id});' +
+    '  if(g){switchTab("grievances",document.getElementById("tab-grievances"));setTimeout(function(){' +
+    '    document.getElementById("grievance-search").value=id;filterGrievances();' +
+    '    var items=document.querySelectorAll("#grievances-list .list-item");if(items[0])items[0].classList.add("expanded");' +
+    '  },300)}' +
     '}' +
 
     // Filter grievances
-    'function filterGrievances(query){' +
-    '  if(!query||query.length<2){applyGrievanceFilters();return}' +
-    '  query=query.toLowerCase();' +
-    '  var filtered=allGrievances.filter(function(g){return g.id.toLowerCase().indexOf(query)>=0||g.memberName.toLowerCase().indexOf(query)>=0||(g.issueType||"").toLowerCase().indexOf(query)>=0});' +
-    '  if(currentGrievanceFilter!=="all")filtered=filtered.filter(function(g){return g.status===currentGrievanceFilter});' +
-    '  renderGrievances(filtered);' +
-    '}' +
-
-    // Filter by status
-    'function filterGrievanceStatus(status){' +
-    '  currentGrievanceFilter=status;' +
-    '  applyGrievanceFilters();' +
-    '}' +
-
-    // Apply filters
-    'function applyGrievanceFilters(){' +
-    '  var query=document.getElementById("grievance-search").value.toLowerCase();' +
+    'function filterGrievances(){' +
+    '  var query=(document.getElementById("grievance-search").value||"").toLowerCase();' +
     '  var filtered=allGrievances;' +
-    '  if(currentGrievanceFilter!=="all")filtered=filtered.filter(function(g){return g.status===currentGrievanceFilter});' +
-    '  if(query&&query.length>=2)filtered=filtered.filter(function(g){return g.id.toLowerCase().indexOf(query)>=0||g.memberName.toLowerCase().indexOf(query)>=0});' +
+    '  if(currentGrievanceFilter==="Overdue"){filtered=filtered.filter(function(g){return g.isOverdue})}' +
+    '  else if(currentGrievanceFilter!=="all"){filtered=filtered.filter(function(g){return g.status===currentGrievanceFilter})}' +
+    '  if(query&&query.length>=2){' +
+    '    filtered=filtered.filter(function(g){' +
+    '      return g.id.toLowerCase().indexOf(query)>=0||' +
+    '             g.memberName.toLowerCase().indexOf(query)>=0||' +
+    '             (g.issueType||"").toLowerCase().indexOf(query)>=0||' +
+    '             (g.steward||"").toLowerCase().indexOf(query)>=0;' +
+    '    });' +
+    '  }' +
     '  renderGrievances(filtered);' +
+    '}' +
+
+    // Filter by status with button highlighting
+    'function filterGrievanceStatus(status,btn){' +
+    '  currentGrievanceFilter=status;' +
+    '  document.querySelectorAll("#grievance-filter-bar .action-btn").forEach(function(b){' +
+    '    b.classList.remove("active","action-btn-primary");' +
+    '    if(b.dataset.filter!=="Overdue")b.classList.add("action-btn-secondary");' +
+    '  });' +
+    '  if(btn){btn.classList.add("active");if(status!=="Overdue")btn.classList.add("action-btn-primary");btn.classList.remove("action-btn-secondary")}' +
+    '  filterGrievances();' +
     '}' +
 
     // Load analytics
     'function loadAnalytics(){' +
-    '  google.script.run.withSuccessHandler(function(data){renderAnalytics(data)}).getInteractiveAnalyticsData();' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){safeRun(function(){renderAnalytics(data)})})'  +
+    '    .withFailureHandler(function(e){document.getElementById("analytics-charts").innerHTML="<div class=\\"error-state\\">Failed to load analytics</div>"})' +
+    '    .getInteractiveAnalyticsData();' +
     '}' +
 
     // Render analytics
@@ -12496,6 +12725,37 @@ function getInteractiveDashboardHtml() {
     '  c.innerHTML=html;' +
     '}' +
 
+    // Load resources/links
+    'function loadResources(){' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){resourceLinks=data||{};renderResources(data)})' +
+    '    .withFailureHandler(function(e){document.getElementById("resources-content").innerHTML="<div class=\\"error-state\\">Failed to load links</div>"})' +
+    '    .getInteractiveResourceLinks();' +
+    '}' +
+
+    // Render resources/links
+    'function renderResources(data){' +
+    '  var c=document.getElementById("resources-content");' +
+    '  var html="";' +
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📝 Forms & Submissions</div><div class=\\"link-grid\\">";' +
+    '  if(data.grievanceForm)html+="<a href=\\""+data.grievanceForm+"\\" target=\\"_blank\\" class=\\"resource-link\\">📋 Grievance Form</a>";' +
+    '  if(data.contactForm)html+="<a href=\\""+data.contactForm+"\\" target=\\"_blank\\" class=\\"resource-link\\">✉️ Contact Form</a>";' +
+    '  if(data.satisfactionForm)html+="<a href=\\""+data.satisfactionForm+"\\" target=\\"_blank\\" class=\\"resource-link\\">📊 Satisfaction Survey</a>";' +
+    '  if(!data.grievanceForm&&!data.contactForm&&!data.satisfactionForm)html+="<div class=\\"empty-state\\">No forms configured</div>";' +
+    '  html+="</div></div>";' +
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📂 Data & Documents</div><div class=\\"link-grid\\">";' +
+    '  html+="<a href=\\""+data.spreadsheetUrl+"\\" target=\\"_blank\\" class=\\"resource-link\\">📊 Open Spreadsheet</a>";' +
+    '  html+="<button class=\\"resource-link\\" onclick=\\"google.script.run.showMemberDirectory()\\">👥 Member Directory</button>";' +
+    '  html+="<button class=\\"resource-link\\" onclick=\\"google.script.run.showGrievanceLog()\\">📋 Grievance Log</button>";' +
+    '  html+="<button class=\\"resource-link\\" onclick=\\"google.script.run.showConfigSheet()\\">⚙️ Configuration</button>";' +
+    '  html+="</div></div>";' +
+    '  html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🌐 External Links</div><div class=\\"link-grid\\">";' +
+    '  if(data.orgWebsite)html+="<a href=\\""+data.orgWebsite+"\\" target=\\"_blank\\" class=\\"resource-link\\">🏛️ Organization Website</a>";' +
+    '  html+="<a href=\\"https://github.com/Woop91/509-dashboard-second\\" target=\\"_blank\\" class=\\"resource-link\\">📦 GitHub Repository</a>";' +
+    '  html+="</div></div>";' +
+    '  c.innerHTML=html;' +
+    '}' +
+
     // Initialize
     'loadOverview();' +
     '</script>' +
@@ -12551,44 +12811,82 @@ function getInteractiveOverviewData() {
 }
 
 /**
- * Get member data for interactive dashboard
+ * Get member data for interactive dashboard (full version with all fields)
  */
 function getInteractiveMemberData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
   if (!sheet || sheet.getLastRow() <= 1) return [];
 
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MEMBER_COLS.IS_STEWARD).getValues();
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MEMBER_COLS.QUICK_ACTIONS).getValues();
   return data.map(function(row) {
+    var memberId = row[MEMBER_COLS.MEMBER_ID - 1] || '';
+    // Skip blank rows - must have a valid member ID starting with M
+    if (!memberId || (typeof memberId === 'string' && !memberId.toString().match(/^M/i))) return null;
+
     return {
-      id: row[MEMBER_COLS.MEMBER_ID - 1] || '',
-      name: (row[MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (row[MEMBER_COLS.LAST_NAME - 1] || ''),
+      id: memberId,
+      firstName: row[MEMBER_COLS.FIRST_NAME - 1] || '',
+      lastName: row[MEMBER_COLS.LAST_NAME - 1] || '',
+      name: ((row[MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (row[MEMBER_COLS.LAST_NAME - 1] || '')).trim(),
       title: row[MEMBER_COLS.JOB_TITLE - 1] || 'N/A',
       location: row[MEMBER_COLS.WORK_LOCATION - 1] || 'N/A',
-      isSteward: row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes'
+      unit: row[MEMBER_COLS.UNIT - 1] || 'N/A',
+      officeDays: row[MEMBER_COLS.OFFICE_DAYS - 1] || 'N/A',
+      email: row[MEMBER_COLS.EMAIL - 1] || '',
+      phone: row[MEMBER_COLS.PHONE - 1] || '',
+      preferredComm: row[MEMBER_COLS.PREFERRED_COMM - 1] || 'N/A',
+      supervisor: row[MEMBER_COLS.SUPERVISOR - 1] || 'N/A',
+      isSteward: row[MEMBER_COLS.IS_STEWARD - 1] === 'Yes',
+      assignedSteward: row[MEMBER_COLS.ASSIGNED_STEWARD - 1] || 'N/A',
+      hasOpenGrievance: row[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1] === 'Yes',
+      grievanceStatus: row[MEMBER_COLS.GRIEVANCE_STATUS - 1] || ''
     };
-  }).filter(function(m) { return m.id; });
+  }).filter(function(m) { return m !== null; });
 }
 
 /**
- * Get grievance data for interactive dashboard
+ * Get grievance data for interactive dashboard (full version with overdue, deadline info)
  */
 function getInteractiveGrievanceData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
   if (!sheet || sheet.getLastRow() <= 1) return [];
 
-  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.RESOLUTION).getValues();
-  return data.map(function(row) {
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.QUICK_ACTIONS).getValues();
+  var tz = Session.getScriptTimeZone();
+
+  return data.map(function(row, idx) {
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
+    // Skip blank rows - must have a valid grievance ID starting with G
+    if (!grievanceId || (typeof grievanceId === 'string' && !grievanceId.toString().match(/^G/i))) return null;
+
     var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    var incident = row[GRIEVANCE_COLS.INCIDENT_DATE - 1];
+    var nextDue = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+    var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
     return {
-      id: row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '',
-      memberName: (row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || ''),
+      id: grievanceId,
+      rowNum: idx + 2, // For navigation back to sheet
+      memberId: row[GRIEVANCE_COLS.MEMBER_ID - 1] || '',
+      memberName: ((row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || '')).trim(),
       status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
+      currentStep: row[GRIEVANCE_COLS.CURRENT_STEP - 1] || 'Step I',
       issueType: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
-      filedDate: filed instanceof Date ? Utilities.formatDate(filed, Session.getScriptTimeZone(), 'MM/dd/yyyy') : (filed || 'N/A')
+      articles: row[GRIEVANCE_COLS.ARTICLES - 1] || 'N/A',
+      filedDate: filed instanceof Date ? Utilities.formatDate(filed, tz, 'MM/dd/yyyy') : (filed || 'N/A'),
+      incidentDate: incident instanceof Date ? Utilities.formatDate(incident, tz, 'MM/dd/yyyy') : (incident || 'N/A'),
+      nextActionDue: nextDue instanceof Date ? Utilities.formatDate(nextDue, tz, 'MM/dd/yyyy') : (nextDue || 'N/A'),
+      daysToDeadline: daysToDeadline,
+      isOverdue: daysToDeadline === 'Overdue' || (typeof daysToDeadline === 'number' && daysToDeadline < 0),
+      daysOpen: row[GRIEVANCE_COLS.DAYS_OPEN - 1] || 0,
+      location: row[GRIEVANCE_COLS.LOCATION - 1] || 'N/A',
+      unit: row[GRIEVANCE_COLS.UNIT - 1] || 'N/A',
+      steward: row[GRIEVANCE_COLS.STEWARD - 1] || 'N/A',
+      resolution: row[GRIEVANCE_COLS.RESOLUTION - 1] || ''
     };
-  }).filter(function(g) { return g.id; });
+  }).filter(function(g) { return g !== null; });
 }
 
 /**
@@ -12693,6 +12991,169 @@ function getInteractiveAnalyticsData() {
   }
 
   return data;
+}
+
+/**
+ * Get resource links from Config sheet for the dashboard
+ */
+function getInteractiveResourceLinks() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  var links = {
+    grievanceForm: '',
+    contactForm: '',
+    satisfactionForm: '',
+    spreadsheetUrl: ss.getUrl(),
+    orgWebsite: ''
+  };
+
+  if (configSheet && configSheet.getLastRow() > 1) {
+    try {
+      var row = configSheet.getRange(2, 1, 1, CONFIG_COLS.SATISFACTION_FORM_URL).getValues()[0];
+      links.grievanceForm = row[CONFIG_COLS.GRIEVANCE_FORM_URL - 1] || '';
+      links.contactForm = row[CONFIG_COLS.CONTACT_FORM_URL - 1] || '';
+      links.satisfactionForm = row[CONFIG_COLS.SATISFACTION_FORM_URL - 1] || '';
+      links.orgWebsite = row[CONFIG_COLS.ORG_WEBSITE - 1] || '';
+    } catch (e) {
+      Logger.log('Error getting resource links: ' + e.message);
+    }
+  }
+
+  return links;
+}
+
+/**
+ * Navigate to a specific member in the Member Directory sheet
+ */
+function navigateToMemberInSheet(memberId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet) return;
+
+  var data = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, sheet.getLastRow() - 1, 1).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] === memberId) {
+      sheet.activate();
+      var row = i + 2;
+      sheet.setActiveRange(sheet.getRange(row, 1));
+      ss.toast('Navigated to ' + memberId, 'Member Found', 3);
+      return;
+    }
+  }
+  ss.toast('Member not found: ' + memberId, 'Not Found', 3);
+}
+
+/**
+ * Navigate to a specific grievance in the Grievance Log sheet
+ */
+function navigateToGrievanceInSheet(grievanceId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet) return;
+
+  var data = sheet.getRange(2, GRIEVANCE_COLS.GRIEVANCE_ID, sheet.getLastRow() - 1, 1).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][0] === grievanceId) {
+      sheet.activate();
+      var row = i + 2;
+      sheet.setActiveRange(sheet.getRange(row, 1));
+      ss.toast('Navigated to ' + grievanceId, 'Grievance Found', 3);
+      return;
+    }
+  }
+  ss.toast('Grievance not found: ' + grievanceId, 'Not Found', 3);
+}
+
+/**
+ * Show the Member Directory sheet
+ */
+function showMemberDirectory() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (sheet) sheet.activate();
+}
+
+/**
+ * Show the Grievance Log sheet
+ */
+function showGrievanceLog() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (sheet) sheet.activate();
+}
+
+/**
+ * Show the Config sheet
+ */
+function showConfigSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.CONFIG);
+  if (sheet) sheet.activate();
+}
+
+/**
+ * Save a member from the interactive dashboard (add or edit)
+ */
+function saveInteractiveMember(memberData, mode) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet) throw new Error('Member Directory sheet not found');
+
+  if (mode === 'add') {
+    var existingIds = {};
+    var idData = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, Math.max(1, sheet.getLastRow() - 1), 1).getValues();
+    idData.forEach(function(row) { if (row[0]) existingIds[row[0]] = true; });
+
+    var newId = generateNameBasedId('M', memberData.firstName, memberData.lastName, existingIds);
+
+    var newRow = [];
+    for (var i = 0; i < MEMBER_COLS.QUICK_ACTIONS; i++) newRow.push('');
+
+    newRow[MEMBER_COLS.MEMBER_ID - 1] = newId;
+    newRow[MEMBER_COLS.FIRST_NAME - 1] = memberData.firstName;
+    newRow[MEMBER_COLS.LAST_NAME - 1] = memberData.lastName;
+    newRow[MEMBER_COLS.JOB_TITLE - 1] = memberData.jobTitle || '';
+    newRow[MEMBER_COLS.WORK_LOCATION - 1] = memberData.location || '';
+    newRow[MEMBER_COLS.UNIT - 1] = memberData.unit || '';
+    newRow[MEMBER_COLS.OFFICE_DAYS - 1] = memberData.officeDays || '';
+    newRow[MEMBER_COLS.EMAIL - 1] = memberData.email || '';
+    newRow[MEMBER_COLS.PHONE - 1] = memberData.phone || '';
+    newRow[MEMBER_COLS.SUPERVISOR - 1] = memberData.supervisor || '';
+    newRow[MEMBER_COLS.IS_STEWARD - 1] = memberData.isSteward || 'No';
+
+    sheet.appendRow(newRow);
+    ss.toast('New member added: ' + memberData.firstName + ' ' + memberData.lastName + ' (' + newId + ')', 'Member Added', 5);
+    return { success: true, memberId: newId, mode: 'add' };
+
+  } else if (mode === 'edit') {
+    var memberId = memberData.memberId;
+    if (!memberId) throw new Error('Member ID is required for editing');
+
+    var data = sheet.getRange(2, MEMBER_COLS.MEMBER_ID, sheet.getLastRow() - 1, 1).getValues();
+    var rowIndex = -1;
+    for (var j = 0; j < data.length; j++) {
+      if (data[j][0] === memberId) { rowIndex = j + 2; break; }
+    }
+
+    if (rowIndex === -1) throw new Error('Member not found: ' + memberId);
+
+    sheet.getRange(rowIndex, MEMBER_COLS.FIRST_NAME).setValue(memberData.firstName);
+    sheet.getRange(rowIndex, MEMBER_COLS.LAST_NAME).setValue(memberData.lastName);
+    sheet.getRange(rowIndex, MEMBER_COLS.JOB_TITLE).setValue(memberData.jobTitle || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.WORK_LOCATION).setValue(memberData.location || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.UNIT).setValue(memberData.unit || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.OFFICE_DAYS).setValue(memberData.officeDays || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.EMAIL).setValue(memberData.email || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.PHONE).setValue(memberData.phone || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.SUPERVISOR).setValue(memberData.supervisor || '');
+    sheet.getRange(rowIndex, MEMBER_COLS.IS_STEWARD).setValue(memberData.isSteward || 'No');
+
+    ss.toast('Member updated: ' + memberData.firstName + ' ' + memberData.lastName, 'Member Updated', 5);
+    return { success: true, memberId: memberId, mode: 'edit' };
+  }
+
+  throw new Error('Invalid mode: ' + mode);
 }
 
 // ╔═══════════════════════════════════════════════════════════════════════════╗
