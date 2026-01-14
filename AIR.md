@@ -173,8 +173,8 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
-- `setDropdownValidation()` - Helper: apply single-select dropdown
-- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
+- `setDropdownValidation()` - Helper: apply single-select dropdown (uses dynamic ranges with getLastRow())
+- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (uses dynamic ranges)
 - `showMultiSelectDialog()` - Opens multi-select checkbox dialog
 - `applyMultiSelectValue()` - Saves multi-select values to cell
 - `onSelectionChangeMultiSelect()` - Auto-opens dialog on cell selection
@@ -212,6 +212,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `setupSatisfactionFormTrigger()` - Menu-driven trigger setup for survey submissions
 - Form URL Configuration:
   - `saveFormUrlsToConfig()` - Saves all form URLs (Grievance, Contact, Survey) to Config tab columns P, Q, AR
+  - `getFormUrlFromConfig(formType)` - Retrieves form URL from Config, falls back to default (NEW v2.2.0)
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
