@@ -466,7 +466,7 @@
     </p>
     <div class="version">
       SEIU Local 509<br>
-      Version 2.0<br>
+      Version 2.1.0 / v3.47<br>
       January 2026
     </div>
   </div>
@@ -492,7 +492,8 @@
         <ol>
           <li>Member Directory</li>
           <li>Grievance Log</li>
-          <li>Member Satisfaction Dashboard</li>
+          <li>Dashboard Modal (with My Cases Tab)</li>
+          <li>Member Satisfaction Dashboard (with Trends Tab)</li>
         </ol>
       </li>
       <li>Grievance Features
@@ -913,7 +914,46 @@
     </tr>
   </table>
 
-  <h2>3.3 Member Satisfaction Dashboard</h2>
+  <h2>3.3 Dashboard Modal (with My Cases Tab)</h2>
+
+  <p>Accessed via menu: <strong>📊 509 Dashboard > 📊 Dashboard</strong></p>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <h4><span class="feature-icon">📈</span> Overview Tab</h4>
+      <ul>
+        <li>Total members and stewards</li>
+        <li>Grievance counts and win rate</li>
+        <li>Quick stats at a glance</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <h4><span class="feature-icon">📋</span> My Cases Tab (NEW)</h4>
+      <ul>
+        <li>Steward's assigned grievances</li>
+        <li>Stats: Total, Pending, In Progress</li>
+        <li>Status filtering</li>
+        <li>Expandable case details</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <h4><span class="feature-icon">📊</span> Grievances Tab</h4>
+      <ul>
+        <li>Status filter buttons</li>
+        <li>Searchable grievance list</li>
+        <li>Click for details</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <h4><span class="feature-icon">👥</span> Members Tab</h4>
+      <ul>
+        <li>Searchable member directory</li>
+        <li>Click to view details</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>3.4 Member Satisfaction Dashboard (Enhanced v2.0)</h2>
 
   <p>Accessed via menu: <strong>📊 509 Dashboard > 📊 Member Satisfaction</strong></p>
 
@@ -923,9 +963,18 @@
       <ul>
         <li>Total responses count</li>
         <li>Average satisfaction score</li>
-        <li>NPS (Net Promoter Score)</li>
+        <li>Member Advocacy Index (MAI)</li>
         <li>Response rate percentage</li>
         <li>Auto-generated insights</li>
+      </ul>
+    </div>
+    <div class="feature-card">
+      <h4><span class="feature-icon">📊</span> Trends Tab (NEW)</h4>
+      <ul>
+        <li>Line chart for satisfaction trends</li>
+        <li>Responses by month</li>
+        <li>Time period filters (All/Year/90d/30d)</li>
+        <li>Donut chart for top issues</li>
       </ul>
     </div>
     <div class="feature-card">
@@ -938,24 +987,31 @@
       </ul>
     </div>
     <div class="feature-card">
-      <h4><span class="feature-icon">📊</span> By Section Tab</h4>
+      <h4><span class="feature-icon">📊</span> Sections Tab</h4>
       <ul>
         <li>Bar chart of all 11 sections</li>
         <li>Ranked by average score</li>
         <li>Section detail cards</li>
-        <li>Trend indicators</li>
       </ul>
     </div>
     <div class="feature-card">
       <h4><span class="feature-icon">💡</span> Insights Tab</h4>
       <ul>
-        <li>Worksite breakdowns</li>
+        <li>Clickable worksite drill-down</li>
         <li>Role-based analysis</li>
         <li>Steward contact impact</li>
         <li>Top member priorities</li>
       </ul>
     </div>
   </div>
+
+  <h3>Member Advocacy Index (MAI)</h3>
+  <p>The Member Advocacy Index (formerly "Loyalty Score") ranges from -100 to +100 and measures member loyalty:</p>
+  <ul>
+    <li><strong style="color: #059669;">50+</strong> = Excellent (many advocates)</li>
+    <li><strong style="color: #2563eb;">0-49</strong> = Positive (opportunity to grow)</li>
+    <li><strong style="color: #dc2626;">Below 0</strong> = Needs attention (more critics than advocates)</li>
+  </ul>
 
   <!-- Section 4: Grievance Features -->
   <h1 class="page-break">4. Grievance Features</h1>
@@ -1422,17 +1478,17 @@
     <tr>
       <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSedX8nf_xXeLe2sCL9MpjkEEmSuSPbjn3fNxMaMNaPlD0H5lA/viewform" target="_blank">📋 Grievance Form ↗</a></td>
       <td>Grievance Log</td>
-      <td>Mobile App Cases, Interactive Dashboard</td>
+      <td>Mobile App Cases, Dashboard (with My Cases)</td>
     </tr>
     <tr>
       <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeOs6Kxqca85DYRF1wTP634gMNdEirZdi5mg7aUIY5q7dIfRg/viewform" target="_blank">📇 Contact Info Form ↗</a></td>
       <td>Member Directory</td>
-      <td>Mobile App Members, Interactive Dashboard</td>
+      <td>Mobile App Members, Dashboard</td>
     </tr>
     <tr>
       <td><a href="https://docs.google.com/forms/d/e/1FAIpQLSeR4VxrGTEvK-PaQP2S8JXn6xwTwp-vkR9tI5c3PRvfhr75nA/viewform" target="_blank">📊 Satisfaction Survey ↗</a></td>
       <td>Member Satisfaction Sheet</td>
-      <td>Satisfaction Dashboard (4 tabs)</td>
+      <td>Satisfaction Dashboard (5 tabs with Trends)</td>
     </tr>
   </table>
 
@@ -1481,8 +1537,8 @@
       <td>Data entry, detailed editing</td>
     </tr>
     <tr>
-      <td>Interactive Dashboard</td>
-      <td>Menu → 📊 509 Dashboard</td>
+      <td>Dashboard (with My Cases)</td>
+      <td>Menu → 📊 509 Dashboard → 📊 Dashboard</td>
       <td>Desktop overview and quick actions</td>
     </tr>
     <tr>
@@ -1553,7 +1609,7 @@
 
   <hr style="margin-top: 60px; border: none; border-top: 2px solid #e0e0e0;">
   <p style="text-align: center; color: #888; font-size: 0.9em;">
-    509 Dashboard Documentation • SEIU Local 509 • Version 2.0 • January 2026
+    509 Dashboard Documentation • SEIU Local 509 • Version 2.1.0 / v3.47 • January 2026
   </p>
 
 </body>
