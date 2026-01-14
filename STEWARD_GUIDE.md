@@ -3,6 +3,50 @@
 
 ---
 
+## 🆕 NEW in v3.48: Steward Workload Dashboard & Mobile Portal!
+
+### 📊 Steward Workload Dashboard
+
+**Access:** `🛡️ Data Integrity > 📊 Steward Workload Dashboard`
+
+The new **Steward Workload Dashboard** helps leadership balance case assignments across stewards:
+
+📊 **Workload Metrics:**
+- Total cases assigned to each steward
+- Active vs. closed case counts
+- Complexity score (weighted by case duration and step)
+- Overdue percentage per steward
+
+⚖️ **Load Balancing:**
+- Visual comparison of caseloads across all stewards
+- Identify stewards who are overloaded or have capacity
+- Use `getStewardWithLowestWorkload()` for smart case assignment
+
+📈 **Why This Matters:**
+- Prevents steward burnout from uneven case distribution
+- Ensures timely member support across all worksites
+- Helps leadership make data-driven assignment decisions
+
+### 📱 Mobile Steward Portal
+
+**Access:** `🛡️ Data Integrity > 📱 Create/Update Steward Portal`
+
+A mobile-optimized portal sheet for stewards in the field:
+
+🌐 **Features:**
+- Simplified view of your assigned cases
+- Quick access to member contact info
+- Works great on phone browsers
+- Updates when you refresh the sheet
+
+📲 **How to Use:**
+1. Run "Create/Update Steward Portal" from the menu
+2. A new "Steward Portal" sheet is created
+3. Bookmark the sheet URL on your phone
+4. Access your cases anywhere, anytime!
+
+---
+
 ## 🆕 NEW: My Cases Tab - Track Your Assigned Grievances!
 
 **Access:** `📊 509 Dashboard > 📊 Dashboard > My Cases tab`
@@ -507,7 +551,7 @@ Reach out to your fellow stewards or union leadership. We're all in this togethe
 ---
 
 **Last Updated**: January 2026
-**Version**: 3.47
+**Version**: 3.48
 **Created with**: Deep appreciation for steward dedication
 **Purpose**: Celebrating and supporting the backbone of Local 509 💙
 
