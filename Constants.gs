@@ -4,9 +4,25 @@
  * Single source of truth for all configuration constants.
  * This file must be loaded first in the build order.
  *
- * @version 1.0.0
+ * @version 2.2.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
+
+// ============================================================================
+// VERSION INFO
+// ============================================================================
+
+/**
+ * Version information for build system and display
+ * @const {Object}
+ */
+var VERSION_INFO = {
+  MAJOR: 2,
+  MINOR: 2,
+  PATCH: 0,
+  BUILD: 'v3.48',
+  CODENAME: 'Survey Verification & Data Integrity'
+};
 
 // ============================================================================
 // SHEET NAMES
