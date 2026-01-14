@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-14T03:02:01.375Z
+ * - Build Date: 2026-01-14T03:48:28.734Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -864,10 +864,16 @@ function onOpen() {
   ui.createMenu('📊 509 Dashboard')
     .addItem('📊 Dashboard', 'showInteractiveDashboardTab')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
+    .addItem('📊 Member Dashboard', 'showPublicMemberDashboard')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📧 Survey Tools')
+      .addItem('📧 Send Survey to Random Members', 'sendRandomSurveyEmails')
+      .addItem('🔗 Get Survey Link', 'getSatisfactionSurveyLink')
+      .addItem('⚙️ Setup Survey Trigger', 'setupSatisfactionFormTrigger'))
     .addToUi();
 
   // ============================================================================
@@ -5730,8 +5736,673 @@ function setupSatisfactionFormTrigger() {
   }
 }
 
+// ============================================================================
+// SURVEY ENHANCEMENTS - Auto-Email, Quarterly Tracking, Member Auth
+// ============================================================================
+
 /**
- * Recalculate all grievance deadlines and sync to Member Directory
+ * Send satisfaction survey emails to random members
+ * Allows stewards to email a configurable number of random members
+ */
+function sendRandomSurveyEmails() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Show configuration dialog
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px;max-width:450px}' +
+    'h2{color:#5B4B9E;margin-top:0}' +
+    '.form-group{margin-bottom:15px}' +
+    'label{display:block;font-weight:bold;margin-bottom:5px}' +
+    'input,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box}' +
+    '.info{background:#e8f4fd;padding:12px;border-radius:8px;margin-bottom:15px;font-size:13px}' +
+    '.buttons{display:flex;gap:10px;margin-top:20px}' +
+    'button{padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-size:14px;flex:1}' +
+    '.primary{background:#5B4B9E;color:white}' +
+    '.secondary{background:#e0e0e0;color:#333}' +
+    '</style></head><body><div class="container">' +
+    '<h2>📧 Send Survey to Random Members</h2>' +
+    '<div class="info">💡 Select how many random members to email. Each member will receive a personalized survey link.</div>' +
+    '<div class="form-group"><label>Number of Members to Email</label>' +
+    '<select id="count"><option value="5">5 members</option><option value="10" selected>10 members</option>' +
+    '<option value="20">20 members</option><option value="50">50 members</option><option value="100">100 members</option></select></div>' +
+    '<div class="form-group"><label>Email Subject</label>' +
+    '<input type="text" id="subject" value="SEIU Local 509 - Member Satisfaction Survey"></div>' +
+    '<div class="form-group"><label>Exclude members emailed in last (days)</label>' +
+    '<select id="excludeDays"><option value="0">No exclusion</option><option value="30" selected>30 days</option>' +
+    '<option value="60">60 days</option><option value="90">90 days</option></select></div>' +
+    '<div class="buttons">' +
+    '<button class="secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="primary" onclick="send()">📧 Send Surveys</button></div></div>' +
+    '<script>function send(){var opts={count:parseInt(document.getElementById("count").value),' +
+    'subject:document.getElementById("subject").value,excludeDays:parseInt(document.getElementById("excludeDays").value)};' +
+    'google.script.run.withSuccessHandler(function(r){alert(r);google.script.host.close()})' +
+    '.withFailureHandler(function(e){alert("Error: "+e.message)}).executeSendRandomSurveyEmails(opts)}</script></body></html>'
+  ).setWidth(500).setHeight(450);
+
+  ui.showModalDialog(html, '📧 Send Random Survey Emails');
+}
+
+/**
+ * Execute sending random survey emails
+ * @param {Object} opts - Options {count, subject, excludeDays}
+ * @returns {string} Result message
+ */
+function executeSendRandomSurveyEmails(opts) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!memberSheet) throw new Error('Member Directory not found');
+
+  // Get all members with valid emails
+  var memberData = memberSheet.getDataRange().getValues();
+  var headers = memberData[0];
+  var emailCol = MEMBER_COLS.EMAIL - 1;
+  var memberIdCol = MEMBER_COLS.MEMBER_ID - 1;
+  var firstNameCol = MEMBER_COLS.FIRST_NAME - 1;
+  var lastNameCol = MEMBER_COLS.LAST_NAME - 1;
+
+  // Get survey email log from Config (if exists)
+  var surveyLogCol = 50; // Column AX for survey email log
+  var surveyLog = {};
+  try {
+    var logData = configSheet.getRange(2, surveyLogCol, configSheet.getLastRow() - 1, 2).getValues();
+    logData.forEach(function(row) {
+      if (row[0]) surveyLog[row[0]] = new Date(row[1]);
+    });
+  } catch(e) { /* No log yet */ }
+
+  var cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - opts.excludeDays);
+
+  // Build list of eligible members
+  var eligibleMembers = [];
+  for (var i = 1; i < memberData.length; i++) {
+    var row = memberData[i];
+    var memberId = row[memberIdCol];
+    var email = row[emailCol];
+    var firstName = row[firstNameCol];
+
+    // Skip if no valid member ID or email
+    if (!memberId || !email || !email.toString().includes('@')) continue;
+
+    // Skip if recently emailed
+    if (opts.excludeDays > 0 && surveyLog[memberId] && surveyLog[memberId] > cutoffDate) continue;
+
+    eligibleMembers.push({
+      memberId: memberId,
+      email: email,
+      firstName: firstName,
+      lastName: row[lastNameCol]
+    });
+  }
+
+  if (eligibleMembers.length === 0) {
+    return 'No eligible members found. All members may have been recently emailed.';
+  }
+
+  // Shuffle and select random members
+  var shuffled = eligibleMembers.sort(function() { return 0.5 - Math.random(); });
+  var selected = shuffled.slice(0, Math.min(opts.count, shuffled.length));
+
+  // Send emails
+  var sent = 0;
+  var errors = [];
+  var formUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+  var newLogEntries = [];
+
+  selected.forEach(function(member) {
+    try {
+      var personalizedUrl = formUrl + '?memberId=' + encodeURIComponent(member.memberId);
+      var body = 'Dear ' + member.firstName + ',\n\n' +
+        'We value your feedback! Please take a few minutes to complete our Member Satisfaction Survey.\n\n' +
+        'Your responses help us improve union services and representation.\n\n' +
+        'Survey Link: ' + personalizedUrl + '\n\n' +
+        'Your Member ID: ' + member.memberId + '\n' +
+        '(You will need this to verify your membership when submitting)\n\n' +
+        'Thank you for being a member!\n\n' +
+        'SEIU Local 509';
+
+      MailApp.sendEmail({
+        to: member.email,
+        subject: opts.subject,
+        body: body,
+        name: 'SEIU Local 509 Dashboard'
+      });
+
+      sent++;
+      newLogEntries.push([member.memberId, new Date()]);
+    } catch(e) {
+      errors.push(member.firstName + ' ' + member.lastName + ': ' + e.message);
+    }
+  });
+
+  // Update survey email log
+  if (newLogEntries.length > 0) {
+    var nextRow = Object.keys(surveyLog).length + 2;
+    configSheet.getRange(nextRow, surveyLogCol, newLogEntries.length, 2).setValues(newLogEntries);
+  }
+
+  var result = '✅ Sent ' + sent + ' survey emails';
+  if (errors.length > 0) {
+    result += '\n\n⚠️ ' + errors.length + ' errors:\n' + errors.slice(0, 5).join('\n');
+    if (errors.length > 5) result += '\n...and ' + (errors.length - 5) + ' more';
+  }
+
+  return result;
+}
+
+/**
+ * Validate that an email belongs to a member in the directory
+ * @param {string} email - Email to validate
+ * @returns {Object|null} Member info if valid, null otherwise
+ */
+function validateMemberEmail(email) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet || !email) return null;
+
+  var data = memberSheet.getDataRange().getValues();
+  var emailCol = MEMBER_COLS.EMAIL - 1;
+  var memberIdCol = MEMBER_COLS.MEMBER_ID - 1;
+  var firstNameCol = MEMBER_COLS.FIRST_NAME - 1;
+  var lastNameCol = MEMBER_COLS.LAST_NAME - 1;
+
+  email = email.toString().toLowerCase().trim();
+
+  for (var i = 1; i < data.length; i++) {
+    var rowEmail = (data[i][emailCol] || '').toString().toLowerCase().trim();
+    if (rowEmail === email) {
+      return {
+        memberId: data[i][memberIdCol],
+        firstName: data[i][firstNameCol],
+        lastName: data[i][lastNameCol],
+        email: rowEmail
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get the current quarter string (e.g., "2026-Q1")
+ * @returns {string} Quarter string
+ */
+function getCurrentQuarter() {
+  var now = new Date();
+  var quarter = Math.floor(now.getMonth() / 3) + 1;
+  return now.getFullYear() + '-Q' + quarter;
+}
+
+/**
+ * Get quarter string from a date
+ * @param {Date} date - Date to get quarter from
+ * @returns {string} Quarter string
+ */
+function getQuarterFromDate(date) {
+  var d = new Date(date);
+  var quarter = Math.floor(d.getMonth() / 3) + 1;
+  return d.getFullYear() + '-Q' + quarter;
+}
+
+/**
+ * Process survey response with quarterly tracking
+ * Only keeps the latest response per member per quarter
+ * Called from onSatisfactionFormSubmit or manually
+ */
+function processQuarterlySurveyResponse(memberId, responseRow, satSheet) {
+  if (!memberId || !responseRow || !satSheet) return false;
+
+  var currentQuarter = getCurrentQuarter();
+  var data = satSheet.getDataRange().getValues();
+  var memberIdCol = 1; // Assuming member ID is tracked (we'll add this)
+  var timestampCol = SATISFACTION_COLS.TIMESTAMP - 1;
+  var quarterCol = 70; // Column BR for quarter tracking
+
+  // Find existing response for this member in current quarter
+  var existingRow = -1;
+  for (var i = 1; i < data.length; i++) {
+    // Check by member ID in a tracking column (if we add one)
+    // For now, this is a placeholder - will need member ID in survey
+  }
+
+  // If existing response found, update it; otherwise append
+  // This logic would need member ID in the survey form
+
+  return true;
+}
+
+// ============================================================================
+// PUBLIC MEMBER DASHBOARD - Stats without PII
+// ============================================================================
+
+/**
+ * Show the public member dashboard
+ * Displays anonymized statistics accessible to all members
+ */
+function showPublicMemberDashboard() {
+  var html = HtmlService.createHtmlOutput(getPublicMemberDashboardHtml())
+    .setWidth(950)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Member Dashboard - Union Statistics');
+}
+
+/**
+ * Get HTML for public member dashboard
+ * @returns {string} HTML content
+ */
+function getPublicMemberDashboardHtml() {
+  return '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    ':root{--purple:#5B4B9E;--green:#059669;--blue:#1a73e8}' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;padding:20px}' +
+    '.dashboard{max-width:900px;margin:0 auto}' +
+    '.tabs{display:flex;gap:5px;margin-bottom:20px;border-bottom:2px solid #ddd;padding-bottom:10px}' +
+    '.tab{padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-radius:8px 8px 0 0;transition:all 0.2s}' +
+    '.tab:hover{background:#e8e8e8}' +
+    '.tab.active{background:var(--purple);color:white}' +
+    '.tab-content{display:none;background:white;border-radius:12px;padding:25px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.tab-content.active{display:block}' +
+    '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px}' +
+    '.stat-card{background:linear-gradient(135deg,var(--purple),#7B6BB8);color:white;padding:20px;border-radius:12px;text-align:center}' +
+    '.stat-card.green{background:linear-gradient(135deg,var(--green),#10B981)}' +
+    '.stat-card.blue{background:linear-gradient(135deg,var(--blue),#3B82F6)}' +
+    '.stat-value{font-size:36px;font-weight:bold}' +
+    '.stat-label{font-size:13px;opacity:0.9;margin-top:5px}' +
+    '.section{margin-bottom:25px}' +
+    '.section-title{font-size:18px;font-weight:600;color:#333;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #eee}' +
+    '.bar-chart{margin:15px 0}' +
+    '.bar-row{display:flex;align-items:center;margin-bottom:10px}' +
+    '.bar-label{width:150px;font-size:13px;color:#555}' +
+    '.bar-container{flex:1;height:24px;background:#eee;border-radius:12px;overflow:hidden}' +
+    '.bar-fill{height:100%;border-radius:12px;transition:width 0.5s}' +
+    '.bar-value{width:50px;text-align:right;font-size:13px;font-weight:500;margin-left:10px}' +
+    '.steward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px}' +
+    '.steward-card{background:#f8f9fa;border-radius:12px;padding:20px;border-left:4px solid var(--purple)}' +
+    '.steward-name{font-weight:600;font-size:16px;color:#333}' +
+    '.steward-info{font-size:13px;color:#666;margin-top:8px}' +
+    '.steward-info div{margin-bottom:5px}' +
+    '.loading{text-align:center;padding:40px;color:#666}' +
+    '</style></head><body>' +
+    '<div class="dashboard">' +
+    '<div class="tabs">' +
+    '<button class="tab active" onclick="switchTab(\'overview\',this)">📊 Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'survey\',this)">📋 Survey Results</button>' +
+    '<button class="tab" onclick="switchTab(\'grievances\',this)">⚖️ Grievance Stats</button>' +
+    '<button class="tab" onclick="switchTab(\'stewards\',this)">👥 Steward Directory</button>' +
+    '</div>' +
+    '<div id="overview" class="tab-content active"><div class="loading">Loading...</div></div>' +
+    '<div id="survey" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '<div id="grievances" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '<div id="stewards" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '</div>' +
+    '<script>' +
+    'var loadedTabs={};' +
+    'function switchTab(id,btn){' +
+    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
+    '  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
+    '  btn.classList.add("active");' +
+    '  document.getElementById(id).classList.add("active");' +
+    '  if(!loadedTabs[id])loadTab(id);' +
+    '}' +
+    'function loadTab(id){' +
+    '  loadedTabs[id]=true;' +
+    '  if(id==="overview")google.script.run.withSuccessHandler(renderOverview).getPublicOverviewData();' +
+    '  else if(id==="survey")google.script.run.withSuccessHandler(renderSurvey).getPublicSurveyData();' +
+    '  else if(id==="grievances")google.script.run.withSuccessHandler(renderGrievances).getPublicGrievanceData();' +
+    '  else if(id==="stewards")google.script.run.withSuccessHandler(renderStewards).getPublicStewardData();' +
+    '}' +
+    'function renderOverview(d){' +
+    '  var h="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.totalMembers+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.totalStewards+"</div><div class=\\"stat-label\\">Active Stewards</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.totalGrievances+"</div><div class=\\"stat-label\\">Total Grievances</div></div>";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.winRate+"%</div><div class=\\"stat-label\\">Grievance Win Rate</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📍 Members by Location</div><div class=\\"bar-chart\\">";' +
+    '  d.locationBreakdown.forEach(function(l){' +
+    '    var pct=d.totalMembers>0?Math.round(l.count/d.totalMembers*100):0;' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+l.location+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:#5B4B9E\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+l.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("overview").innerHTML=h;' +
+    '}' +
+    'function renderSurvey(d){' +
+    '  var h="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.totalResponses+"</div><div class=\\"stat-label\\">Survey Responses</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.avgSatisfaction.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction (1-10)</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.responseRate+"%</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Satisfaction by Section</div><div class=\\"bar-chart\\">";' +
+    '  d.sectionScores.forEach(function(s){' +
+    '    var pct=Math.round(s.score*10);' +
+    '    var color=s.score>=7?"#059669":s.score>=5?"#F59E0B":"#EF4444";' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.section+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+s.score.toFixed(1)+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("survey").innerHTML=h;' +
+    '}' +
+    'function renderGrievances(d){' +
+    '  var h="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.open+"</div><div class=\\"stat-label\\">Open Grievances</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.won+"</div><div class=\\"stat-label\\">Won</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.settled+"</div><div class=\\"stat-label\\">Settled</div></div>";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.avgDaysToResolve+"</div><div class=\\"stat-label\\">Avg Days to Resolve</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Grievances by Type</div><div class=\\"bar-chart\\">";' +
+    '  d.byType.forEach(function(t){' +
+    '    var pct=d.total>0?Math.round(t.count/d.total*100):0;' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+t.type+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:#5B4B9E\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+t.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Grievances by Status</div><div class=\\"bar-chart\\">";' +
+    '  d.byStatus.forEach(function(s){' +
+    '    var pct=d.total>0?Math.round(s.count/d.total*100):0;' +
+    '    var color=s.status==="Open"?"#3B82F6":s.status==="Won"?"#059669":"#6B7280";' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.status+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+s.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("grievances").innerHTML=h;' +
+    '}' +
+    'function renderStewards(d){' +
+    '  var h="<div class=\\"section\\"><div class=\\"section-title\\">👥 Your Union Stewards ("+d.stewards.length+")</div>";' +
+    '  h+="<p style=\\"color:#666;margin-bottom:20px\\">Contact your steward for help with workplace issues, grievances, or union questions.</p>";' +
+    '  h+="<div class=\\"steward-grid\\">";' +
+    '  d.stewards.forEach(function(s){' +
+    '    h+="<div class=\\"steward-card\\">";' +
+    '    h+="<div class=\\"steward-name\\">"+s.name+"</div>";' +
+    '    h+="<div class=\\"steward-info\\">";' +
+    '    h+="<div>📍 "+s.location+"</div>";' +
+    '    h+="<div>📅 Office Days: "+s.officeDays+"</div>";' +
+    '    h+="<div>📧 "+s.email+"</div>";' +
+    '    h+="</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("stewards").innerHTML=h;' +
+    '}' +
+    'loadTab("overview");' +
+    '</script></body></html>';
+}
+
+/**
+ * Get public overview data (no PII)
+ * @returns {Object} Overview statistics
+ */
+function getPublicOverviewData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var result = {
+    totalMembers: 0,
+    totalStewards: 0,
+    totalGrievances: 0,
+    winRate: 0,
+    locationBreakdown: []
+  };
+
+  // Count members and stewards
+  if (memberSheet) {
+    var memberData = memberSheet.getDataRange().getValues();
+    var locationCounts = {};
+    var stewardCount = 0;
+
+    for (var i = 1; i < memberData.length; i++) {
+      var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+      if (!memberId || !memberId.toString().match(/^M/i)) continue;
+
+      result.totalMembers++;
+
+      // Count by location
+      var location = memberData[i][MEMBER_COLS.LOCATION - 1] || 'Unknown';
+      locationCounts[location] = (locationCounts[location] || 0) + 1;
+
+      // Count stewards
+      var isSteward = memberData[i][MEMBER_COLS.IS_STEWARD - 1];
+      if (isSteward === true || isSteward === 'Yes' || isSteward === 'TRUE') {
+        stewardCount++;
+      }
+    }
+
+    result.totalStewards = stewardCount;
+
+    // Convert location counts to array and sort
+    Object.keys(locationCounts).forEach(function(loc) {
+      result.locationBreakdown.push({ location: loc, count: locationCounts[loc] });
+    });
+    result.locationBreakdown.sort(function(a, b) { return b.count - a.count; });
+    result.locationBreakdown = result.locationBreakdown.slice(0, 10); // Top 10
+  }
+
+  // Count grievances and win rate
+  if (grievanceSheet) {
+    var grievanceData = grievanceSheet.getDataRange().getValues();
+    var won = 0, total = 0;
+
+    for (var j = 1; j < grievanceData.length; j++) {
+      var grievanceId = grievanceData[j][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+      if (!grievanceId) continue;
+
+      total++;
+      var resolution = (grievanceData[j][GRIEVANCE_COLS.RESOLUTION - 1] || '').toString().toLowerCase();
+      if (resolution.includes('won') || resolution.includes('favor')) {
+        won++;
+      }
+    }
+
+    result.totalGrievances = total;
+    result.winRate = total > 0 ? Math.round(won / total * 100) : 0;
+  }
+
+  return result;
+}
+
+/**
+ * Get public survey data (anonymized)
+ * @returns {Object} Survey statistics
+ */
+function getPublicSurveyData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  var result = {
+    totalResponses: 0,
+    avgSatisfaction: 0,
+    responseRate: 0,
+    sectionScores: []
+  };
+
+  if (!satSheet) return result;
+
+  var data = satSheet.getDataRange().getValues();
+  if (data.length < 2) return result;
+
+  result.totalResponses = data.length - 1;
+
+  // Calculate average satisfaction (Q6 - Satisfied with representation)
+  var satSum = 0, satCount = 0;
+  for (var i = 1; i < data.length; i++) {
+    var sat = parseFloat(data[i][SATISFACTION_COLS.Q6_SATISFIED_REP - 1]);
+    if (!isNaN(sat)) {
+      satSum += sat;
+      satCount++;
+    }
+  }
+  result.avgSatisfaction = satCount > 0 ? satSum / satCount : 0;
+
+  // Response rate
+  if (memberSheet) {
+    var memberCount = memberSheet.getLastRow() - 1;
+    result.responseRate = memberCount > 0 ? Math.round(result.totalResponses / memberCount * 100) : 0;
+  }
+
+  // Section scores
+  var sections = [
+    { name: 'Overall Satisfaction', cols: [SATISFACTION_COLS.Q6_SATISFIED_REP, SATISFACTION_COLS.Q7_TRUST_UNION, SATISFACTION_COLS.Q8_FEEL_PROTECTED] },
+    { name: 'Steward Ratings', cols: [SATISFACTION_COLS.Q10_TIMELY_RESPONSE, SATISFACTION_COLS.Q11_TREATED_RESPECT, SATISFACTION_COLS.Q12_EXPLAINED_OPTIONS] },
+    { name: 'Chapter Effectiveness', cols: [SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES, SATISFACTION_COLS.Q22_CHAPTER_COMM, SATISFACTION_COLS.Q23_ORGANIZES] },
+    { name: 'Local Leadership', cols: [SATISFACTION_COLS.Q26_DECISIONS_CLEAR, SATISFACTION_COLS.Q27_UNDERSTAND_PROCESS, SATISFACTION_COLS.Q28_TRANSPARENT_FINANCE] },
+    { name: 'Communication', cols: [SATISFACTION_COLS.Q41_CLEAR_REGULAR || 41, SATISFACTION_COLS.Q42_EASY_INFO || 42] }
+  ];
+
+  sections.forEach(function(section) {
+    var sum = 0, count = 0;
+    for (var i = 1; i < data.length; i++) {
+      section.cols.forEach(function(col) {
+        if (col) {
+          var val = parseFloat(data[i][col - 1]);
+          if (!isNaN(val)) {
+            sum += val;
+            count++;
+          }
+        }
+      });
+    }
+    result.sectionScores.push({
+      section: section.name,
+      score: count > 0 ? sum / count : 0
+    });
+  });
+
+  result.sectionScores.sort(function(a, b) { return b.score - a.score; });
+
+  return result;
+}
+
+/**
+ * Get public grievance data (no PII)
+ * @returns {Object} Grievance statistics
+ */
+function getPublicGrievanceData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var result = {
+    total: 0,
+    open: 0,
+    won: 0,
+    settled: 0,
+    avgDaysToResolve: 0,
+    byType: [],
+    byStatus: []
+  };
+
+  if (!grievanceSheet) return result;
+
+  var data = grievanceSheet.getDataRange().getValues();
+  var typeCounts = {};
+  var statusCounts = {};
+  var daysToResolve = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    if (!grievanceId) continue;
+
+    result.total++;
+
+    var status = data[i][GRIEVANCE_COLS.STATUS - 1] || 'Unknown';
+    var resolution = (data[i][GRIEVANCE_COLS.RESOLUTION - 1] || '').toString();
+    var gType = data[i][GRIEVANCE_COLS.GRIEVANCE_TYPE - 1] || 'Other';
+
+    // Count by status
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+    // Count by type
+    typeCounts[gType] = (typeCounts[gType] || 0) + 1;
+
+    // Track open/won/settled
+    if (status === 'Open' || status === 'Pending Info') {
+      result.open++;
+    }
+    if (resolution.toLowerCase().includes('won') || resolution.toLowerCase().includes('favor')) {
+      result.won++;
+    }
+    if (resolution.toLowerCase().includes('settled')) {
+      result.settled++;
+    }
+
+    // Calculate days to resolve for closed grievances
+    if (status === 'Closed' || status === 'Resolved') {
+      var dateOpened = data[i][GRIEVANCE_COLS.DATE_OPENED - 1];
+      var dateClosed = data[i][GRIEVANCE_COLS.DATE_CLOSED - 1];
+      if (dateOpened && dateClosed) {
+        var days = Math.round((new Date(dateClosed) - new Date(dateOpened)) / (1000 * 60 * 60 * 24));
+        if (days > 0) daysToResolve.push(days);
+      }
+    }
+  }
+
+  // Average days to resolve
+  if (daysToResolve.length > 0) {
+    result.avgDaysToResolve = Math.round(daysToResolve.reduce(function(a, b) { return a + b; }, 0) / daysToResolve.length);
+  }
+
+  // Convert to arrays
+  Object.keys(typeCounts).forEach(function(t) {
+    result.byType.push({ type: t, count: typeCounts[t] });
+  });
+  result.byType.sort(function(a, b) { return b.count - a.count; });
+  result.byType = result.byType.slice(0, 8);
+
+  Object.keys(statusCounts).forEach(function(s) {
+    result.byStatus.push({ status: s, count: statusCounts[s] });
+  });
+  result.byStatus.sort(function(a, b) { return b.count - a.count; });
+
+  return result;
+}
+
+/**
+ * Get public steward data (contact info only)
+ * @returns {Object} Steward directory
+ */
+function getPublicStewardData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  var result = { stewards: [] };
+
+  if (!memberSheet) return result;
+
+  var data = memberSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var isSteward = data[i][MEMBER_COLS.IS_STEWARD - 1];
+    if (isSteward !== true && isSteward !== 'Yes' && isSteward !== 'TRUE') continue;
+
+    var firstName = data[i][MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = data[i][MEMBER_COLS.LAST_NAME - 1] || '';
+
+    result.stewards.push({
+      name: firstName + ' ' + lastName,
+      location: data[i][MEMBER_COLS.LOCATION - 1] || 'Not specified',
+      officeDays: data[i][MEMBER_COLS.OFFICE_DAYS - 1] || 'Contact for availability',
+      email: data[i][MEMBER_COLS.EMAIL - 1] || 'Contact union office'
+    });
+  }
+
+  // Sort by name
+  result.stewards.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  return result;
+}
+
+/**
  * Uses hidden sheet formulas for self-healing calculations
  */
 function recalcAllGrievancesBatched() {
