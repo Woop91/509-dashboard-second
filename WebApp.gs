@@ -144,8 +144,8 @@ function getWebAppDashboardHtml() {
     '<div class="stat-card"><div class="stat-value success">' + stats.winRate + '</div><div class="stat-label">Win Rate</div></div>' +
     '</div>' +
 
-    // Overdue preview section (loaded dynamically)
-    '<div id="overdue-preview"></div>' +
+    // Overdue preview section (loaded dynamically with initial loading state)
+    '<div id="overdue-preview"><div class="loading" style="padding:15px;"><div class="spinner"></div><div style="margin-top:10px;font-size:13px;">Loading overdue cases...</div></div></div>' +
 
     // Quick Actions
     '<div class="section-title">⚡ Quick Actions</div>' +
@@ -188,20 +188,26 @@ function getWebAppDashboardHtml() {
     '<span class="nav-icon">🔗</span>Links</a>' +
     '</nav>' +
 
-    // Script to load overdue preview
+    // Script to load overdue preview with retry logic
     '<script>' +
     'var baseUrl="' + baseUrl + '";' +
-    'function loadOverdue(){' +
+    'function loadOverdue(retries){' +
+    '  retries=retries||3;' +
     '  google.script.run.withSuccessHandler(function(data){' +
-    '    var overdue=data.filter(function(g){return g.isOverdue});' +
-    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ All cases on track!</div>";return}' +
+    '    var overdue=data.filter(function(g){return g&&g.isOverdue});' +
+    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ No overdue cases - great job!</div>";return}' +
     '    var html="<div class=\\"overdue-section\\"><div class=\\"overdue-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
     '    overdue.slice(0,3).forEach(function(g){' +
-    '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+g.id+"</div><div class=\\"overdue-name\\">"+g.name+"</div><div class=\\"overdue-detail\\">"+g.category+" • "+g.step+"</div></div>";' +
+    '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+(g.id||"")+"</div><div class=\\"overdue-name\\">"+(g.name||"")+"</div><div class=\\"overdue-detail\\">"+(g.category||"")+" • "+(g.step||"")+"</div></div>";' +
     '    });' +
     '    if(overdue.length>3)html+="<button class=\\"view-all-btn\\" onclick=\\"location.href=baseUrl+\'?page=grievances&filter=overdue\'\\">View All "+overdue.length+" Overdue Cases</button>";' +
     '    html+="</div>";' +
     '    document.getElementById("overdue-preview").innerHTML=html;' +
+    '  }).withFailureHandler(function(err){' +
+    '    console.error("Failed to load overdue cases:",err);' +
+    '    if(retries>1){setTimeout(function(){loadOverdue(retries-1)},1000*(4-retries));return}' +
+    '    document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#DC2626;font-size:13px\\">⚠️ Could not load overdue cases. <button onclick=\\"loadOverdue(3)\\" style=\\"color:#7C3AED;background:none;border:none;text-decoration:underline;cursor:pointer\\">Retry</button></div>";' +
     '  }).getWebAppGrievanceList();' +
     '}' +
     'loadOverdue();' +
@@ -438,6 +444,10 @@ function getWebAppGrievanceListHtml() {
     // Count badge
     '.count-badge{background:rgba(255,255,255,0.2);padding:4px 12px;border-radius:20px;font-size:12px;display:inline-block;margin-top:8px}' +
 
+    // Load more button
+    '.load-more-btn{background:#7C3AED;color:white;border:none;padding:14px;border-radius:12px;font-size:14px;font-weight:500;width:100%;margin:15px 0;cursor:pointer}' +
+    '.load-more-btn:active{background:#5B21B6}' +
+
     // Bottom nav - 5 items
     '.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:0 -2px 10px rgba(0,0,0,0.1);z-index:100}' +
     '.nav-item{display:flex;flex-direction:column;align-items:center;padding:6px 10px;text-decoration:none;color:#666;font-size:10px;min-width:60px}' +
@@ -479,6 +489,17 @@ function getWebAppGrievanceListHtml() {
     '<script>' +
     'var allData=[];' +
     'var currentFilter="all";' +
+    'var PAGE_SIZE=20;' +
+    'var displayLimit=PAGE_SIZE;' +
+
+    // Offline detection
+    'function isOnline(){return navigator.onLine!==false}' +
+    'function showOfflineWarning(){' +
+    '  document.getElementById("grievanceList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">📶</div><div>You appear to be offline</div><div style=\\"font-size:12px;color:#666;margin-top:8px\\">Check your connection and try again</div><button class=\\"load-more-btn\\" style=\\"margin-top:15px;max-width:200px\\" onclick=\\"loadData()\\">Retry</button></div>";' +
+    '}' +
+
+    // Memory cleanup on page unload
+    'window.addEventListener("pagehide",function(){allData=[];});' +
 
     // Check URL for filter parameter
     'var urlParams=new URLSearchParams(window.location.search);' +
@@ -486,8 +507,14 @@ function getWebAppGrievanceListHtml() {
 
     'function setFilter(filter,btn){' +
     '  currentFilter=filter;' +
+    '  displayLimit=PAGE_SIZE;' +
     '  document.querySelectorAll(".filter-pill").forEach(function(p){p.classList.remove("active")});' +
     '  if(btn)btn.classList.add("active");' +
+    '  renderList();' +
+    '}' +
+
+    'function loadMore(){' +
+    '  displayLimit+=PAGE_SIZE;' +
     '  renderList();' +
     '}' +
 
@@ -520,34 +547,61 @@ function getWebAppGrievanceListHtml() {
 
     'function renderList(){' +
     '  var filtered=allData.filter(function(g){return matchesFilter(g)});' +
-    '  document.getElementById("countBadge").textContent="Showing "+filtered.length+" of "+allData.length;' +
+    '  var showing=Math.min(displayLimit,filtered.length);' +
+    '  document.getElementById("countBadge").textContent="Showing "+showing+" of "+filtered.length+(filtered.length<allData.length?" (filtered)":"");' +
     '  var c=document.getElementById("grievanceList");' +
     '  if(filtered.length===0){' +
     '    c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">📋</div><div>No grievances found</div></div>";' +
     '    return;' +
     '  }' +
-    '  c.innerHTML=filtered.map(function(g){' +
+    '  var html=filtered.slice(0,displayLimit).map(function(g){' +
     '    var cardClass="grievance-card"+(g.isOverdue?" overdue":"");' +
     '    var daysInfo=g.isOverdue?"<span class=\\"detail-value danger\\">⚠️ PAST DUE</span>":(typeof g.daysToDeadline==="number"?"<span class=\\"detail-value\\">"+g.daysToDeadline+" days</span>":"<span class=\\"detail-value\\">N/A</span>");' +
     '    return"<div class=\\""+cardClass+"\\" onclick=\\"toggleCard(this)\\">"+"<div class=\\"grievance-header\\">"+"<span class=\\"grievance-id\\">"+g.id+"</span>"+"<span class=\\"grievance-status "+getStatusClass(g)+"\\">"+getStatusText(g)+"</span>"+"</div>"+"<div class=\\"grievance-name\\">"+g.name+"</div>"+(g.category?"<div class=\\"grievance-detail\\">"+g.category+"</div>":"")+(g.step?"<span class=\\"grievance-step\\">"+g.step+"</span>":"")+"<div class=\\"grievance-details\\">"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">📅 Filed:</span><span class=\\"detail-value\\">"+g.filedDate+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">🔔 Incident:</span><span class=\\"detail-value\\">"+g.incidentDate+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">⏰ Next Due:</span>"+daysInfo+"</div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">⏱️ Days Open:</span><span class=\\"detail-value\\">"+g.daysOpen+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">📍 Location:</span><span class=\\"detail-value\\">"+g.location+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">📜 Articles:</span><span class=\\"detail-value\\">"+g.articles+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">🛡️ Steward:</span><span class=\\"detail-value\\">"+g.steward+"</span></div>"+(g.resolution?"<div class=\\"detail-row\\"><span class=\\"detail-label\\">✅ Resolution:</span><span class=\\"detail-value\\">"+g.resolution+"</span></div>":"")+"</div>"+"</div>";' +
     '  }).join("");' +
+    '  if(filtered.length>displayLimit){' +
+    '    html+="<button class=\\"load-more-btn\\" onclick=\\"loadMore()\\">Load More ("+(filtered.length-displayLimit)+" remaining)</button>";' +
+    '  }' +
+    '  c.innerHTML=html;' +
     '}' +
+
+    'var CACHE_KEY="grievance_data";' +
+    'var CACHE_DURATION=300000;' +  // 5 minutes
 
     'function loadData(){' +
     '  console.log("Loading grievance data...");' +
+    '  try{' +
+    '    var cached=sessionStorage.getItem(CACHE_KEY);' +
+    '    if(cached){' +
+    '      var parsed=JSON.parse(cached);' +
+    '      if(Date.now()-parsed.time<CACHE_DURATION){' +
+    '        console.log("Using cached data");' +
+    '        allData=parsed.data||[];' +
+    '        applyInitialFilter();' +
+    '        renderList();' +
+    '        return;' +
+    '      }' +
+    '    }' +
+    '  }catch(e){console.log("Cache read error:",e)}' +
+    '  if(!isOnline()){showOfflineWarning();return}' +
     '  google.script.run.withSuccessHandler(function(data){' +
     '    console.log("Data received:",data?data.length:0,"items");' +
     '    allData=data||[];' +
-    '    if(initialFilter){' +
-    '      currentFilter=initialFilter;' +
-    '      var btn=document.querySelector("[data-filter=\\""+initialFilter+"\\"]");' +
-    '      if(btn){document.querySelectorAll(".filter-pill").forEach(function(p){p.classList.remove("active")});btn.classList.add("active")}' +
-    '    }' +
+    '    try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({data:allData,time:Date.now()}))}catch(e){}' +
+    '    applyInitialFilter();' +
     '    renderList();' +
     '  }).withFailureHandler(function(err){' +
     '    console.error("Failed to load data:",err);' +
     '    document.getElementById("grievanceList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">⚠️</div><div>Error loading data</div><div style=\\"font-size:11px;color:#999;margin-top:8px\\">"+String(err||"Unknown error")+"</div></div>";' +
     '  }).getWebAppGrievanceList();' +
+    '}' +
+
+    'function applyInitialFilter(){' +
+    '  if(initialFilter){' +
+    '    currentFilter=initialFilter;' +
+    '    var btn=document.querySelector("[data-filter=\\""+initialFilter+"\\"]");' +
+    '    if(btn){document.querySelectorAll(".filter-pill").forEach(function(p){p.classList.remove("active")});btn.classList.add("active")}' +
+    '  }' +
     '}' +
 
     'loadData();' +
@@ -618,6 +672,10 @@ function getWebAppMemberListHtml() {
     '@keyframes spin{to{transform:rotate(360deg)}}' +
     '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e0e0e0;border-top-color:#7C3AED;border-radius:50%;animation:spin 0.8s linear infinite}' +
 
+    // Load more button
+    '.load-more-btn{background:#7C3AED;color:white;border:none;padding:14px;border-radius:12px;font-size:14px;font-weight:500;width:100%;margin:15px 0;cursor:pointer}' +
+    '.load-more-btn:active{background:#5B21B6}' +
+
     // Bottom nav - 5 items
     '.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:white;display:flex;justify-content:space-around;padding:8px 0 max(8px,env(safe-area-inset-bottom));box-shadow:0 -2px 10px rgba(0,0,0,0.1);z-index:100}' +
     '.nav-item{display:flex;flex-direction:column;align-items:center;padding:6px 10px;text-decoration:none;color:#666;font-size:10px;min-width:60px}' +
@@ -630,7 +688,7 @@ function getWebAppMemberListHtml() {
     '<h2>👥 Members</h2>' +
     '<div class="search-container">' +
     '<span class="search-icon">🔍</span>' +
-    '<input type="text" class="search-input" id="searchInput" placeholder="Search by name, ID, title..." oninput="filterMembers()">' +
+    '<input type="text" class="search-input" id="searchInput" placeholder="Search by name, ID, title..." oninput="handleSearch()">' +
     '</div>' +
     '<div class="filters">' +
     '<button class="filter-pill active" data-filter="all" onclick="setFilter(\'all\',this)">All</button>' +
@@ -661,15 +719,41 @@ function getWebAppMemberListHtml() {
     '<script>' +
     'var allData=[];' +
     'var currentFilter="all";' +
+    'var PAGE_SIZE=25;' +
+    'var displayLimit=PAGE_SIZE;' +
+    'var searchTimeout=null;' +
+
+    // Offline detection
+    'function isOnline(){return navigator.onLine!==false}' +
+    'function showOfflineWarning(){' +
+    '  document.getElementById("memberList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">📶</div><div>You appear to be offline</div><div style=\\"font-size:12px;color:#666;margin-top:8px\\">Check your connection and try again</div><button class=\\"load-more-btn\\" style=\\"margin-top:15px;max-width:200px\\" onclick=\\"loadData()\\">Retry</button></div>";' +
+    '}' +
+
+    // Memory cleanup on page unload
+    'window.addEventListener("pagehide",function(){allData=[];});' +
 
     'function setFilter(filter,btn){' +
     '  currentFilter=filter;' +
+    '  displayLimit=PAGE_SIZE;' +
     '  document.querySelectorAll(".filter-pill").forEach(function(p){p.classList.remove("active")});' +
     '  btn.classList.add("active");' +
     '  filterMembers();' +
     '}' +
 
+    'function loadMore(){' +
+    '  displayLimit+=PAGE_SIZE;' +
+    '  filterMembers();' +
+    '}' +
+
     'function toggleCard(el){el.classList.toggle("expanded")}' +
+
+    'function handleSearch(){' +
+    '  clearTimeout(searchTimeout);' +
+    '  searchTimeout=setTimeout(function(){' +
+    '    displayLimit=PAGE_SIZE;' +
+    '    filterMembers();' +
+    '  },300);' +
+    '}' +
 
     'function filterMembers(){' +
     '  var query=(document.getElementById("searchInput").value||"").toLowerCase();' +
@@ -678,7 +762,8 @@ function getWebAppMemberListHtml() {
     '    var matchesFilter=currentFilter==="all"||(currentFilter==="steward"&&m.isSteward)||(currentFilter==="grievance"&&m.hasOpenGrievance);' +
     '    return matchesQuery&&matchesFilter;' +
     '  });' +
-    '  document.getElementById("countBadge").textContent="Showing "+filtered.length+" of "+allData.length;' +
+    '  var showing=Math.min(displayLimit,filtered.length);' +
+    '  document.getElementById("countBadge").textContent="Showing "+showing+" of "+filtered.length+(filtered.length<allData.length?" (filtered)":"");' +
     '  renderList(filtered);' +
     '}' +
 
@@ -688,18 +773,39 @@ function getWebAppMemberListHtml() {
     '    c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">👥</div><div>No members found</div></div>";' +
     '    return;' +
     '  }' +
-    '  c.innerHTML=data.map(function(m){' +
+    '  var html=data.slice(0,displayLimit).map(function(m){' +
     '    var cardClass="member-card"+(m.hasOpenGrievance?" has-grievance":"");' +
     '    var badges="";' +
     '    if(m.isSteward)badges+="<span class=\\"badge badge-steward\\">🛡️ Steward</span>";' +
     '    if(m.hasOpenGrievance)badges+="<span class=\\"badge badge-grievance\\">⚠️ Open Grievance</span>";' +
     '    return"<div class=\\""+cardClass+"\\" onclick=\\"toggleCard(this)\\">"+"<div class=\\"member-header\\"><span class=\\"member-name\\">"+m.name+"</span><span class=\\"member-id\\">"+m.id+"</span></div>"+"<div class=\\"member-title\\">"+m.title+"</div>"+"<div class=\\"member-location\\">📍 "+m.location+"</div>"+(badges?"<div class=\\"member-badges\\">"+badges+"</div>":"")+"<div class=\\"member-details\\">"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">📧 Email:</span><span class=\\"detail-value\\">"+(m.email||"N/A")+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">📞 Phone:</span><span class=\\"detail-value\\">"+(m.phone||"N/A")+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">🏢 Unit:</span><span class=\\"detail-value\\">"+m.unit+"</span></div>"+"<div class=\\"detail-row\\"><span class=\\"detail-label\\">👔 Supervisor:</span><span class=\\"detail-value\\">"+m.supervisor+"</span></div>"+"</div>"+"</div>";' +
     '  }).join("");' +
+    '  if(data.length>displayLimit){' +
+    '    html+="<button class=\\"load-more-btn\\" onclick=\\"loadMore()\\">Load More ("+(data.length-displayLimit)+" remaining)</button>";' +
+    '  }' +
+    '  c.innerHTML=html;' +
     '}' +
 
+    'var CACHE_KEY="member_data";' +
+    'var CACHE_DURATION=300000;' +  // 5 minutes
+
     'function loadData(){' +
+    '  try{' +
+    '    var cached=sessionStorage.getItem(CACHE_KEY);' +
+    '    if(cached){' +
+    '      var parsed=JSON.parse(cached);' +
+    '      if(Date.now()-parsed.time<CACHE_DURATION){' +
+    '        console.log("Using cached member data");' +
+    '        allData=parsed.data||[];' +
+    '        filterMembers();' +
+    '        return;' +
+    '      }' +
+    '    }' +
+    '  }catch(e){console.log("Cache read error:",e)}' +
+    '  if(!isOnline()){showOfflineWarning();return}' +
     '  google.script.run.withSuccessHandler(function(data){' +
     '    allData=data||[];' +
+    '    try{sessionStorage.setItem(CACHE_KEY,JSON.stringify({data:allData,time:Date.now()}))}catch(e){}' +
     '    filterMembers();' +
     '  }).withFailureHandler(function(err){' +
     '    document.getElementById("memberList").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-icon\\">⚠️</div><div>Error loading data</div></div>";' +

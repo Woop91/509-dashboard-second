@@ -1047,6 +1047,35 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
+### Version 2.2.1 / v3.49 (2026-01-14) - Reliability & Performance Improvements
+
+**Error Handling Improvements:**
+- Added `withFailureHandler` to all async `google.script.run` calls across dashboards
+- Desktop Search: `loadLocations()`, `navigateToResult()` now have error handlers
+- Satisfaction Dashboard: `loadOverview()`, `loadResponses()`, `loadSections()`, `loadAnalytics()` now have error handlers
+- Mobile Quick Actions: `loadOverduePreview()`, grievance list loader, mobile search, and status update now have error handlers
+- All handlers log errors to console and display user-friendly error messages
+
+**Performance Optimizations (Code.gs):**
+- `getSheetLastRow()`: Now uses `sheet.getLastRow()` instead of loading entire A:A column
+- `getSatisfactionOverviewData()`: Uses `getLastRow()` instead of A:A column iteration
+- `getSatisfactionResponseData()`: Single batch read of all 17 columns instead of 8 separate `getRange()` calls
+- `getSatisfactionSectionData()`: Uses `getLastRow()` instead of A:A column iteration
+- `getSatisfactionAnalyticsData()`: Uses `getLastRow()` instead of A:A column iteration
+
+**Null Safety Improvements:**
+- `loadOverduePreview()`: Added null checks for data array and individual grievance fields
+- Added fallback values for `g.id`, `g.memberName`, `g.issueType`, `g.currentStep`
+- Empty state shows "All cases on track!" message instead of blank when no overdue cases
+
+**WebApp.gs Improvements (from previous session):**
+- Added retry logic with exponential backoff to `loadOverdue()`
+- Added client-side caching using `sessionStorage` (5-minute TTL)
+- Added pagination with "Load More" for grievance list (20 items) and member list (25 items)
+- Added offline detection with `navigator.onLine`
+- Added debounced search for member list
+- Added memory cleanup on `pagehide` event
+
 ### Version 2.2.0 / v3.48 (2026-01-14) - Survey Verification, Data Integrity & Steward Workload
 
 **New Survey Verification System:**
