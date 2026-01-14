@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-14T03:50:17.674Z
+ * - Build Date: 2026-01-14T04:00:20.950Z
  * - Build Type: DEVELOPMENT
  * - Modules: 10 files
  * - Tests Included: Yes
@@ -13883,9 +13883,55 @@ function showMemberQuickActions(row) {
   var name = data[MEMBER_COLS.FIRST_NAME - 1] + ' ' + data[MEMBER_COLS.LAST_NAME - 1];
   var email = data[MEMBER_COLS.EMAIL - 1];
   var hasOpen = data[MEMBER_COLS.HAS_OPEN_GRIEVANCE - 1];
+
+  // Build email section buttons (only if email exists)
+  var emailButtons = '';
+  if (email) {
+    emailButtons =
+      '<div class="section-header">📨 Email Options</div>' +
+      '<button class="action-btn" onclick="google.script.run.composeEmailForMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📧</span><span><div class="title">Send Custom Email</div><div class="desc">Compose email to ' + email + '</div></span></button>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailSurveyToMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📊</span><span><div class="title">Send Satisfaction Survey</div><div class="desc">Email survey link to member</div></span></button>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailContactFormToMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📝</span><span><div class="title">Send Contact Update Form</div><div class="desc">Request info update from member</div></span></button>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailDashboardLinkToMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">🔗</span><span><div class="title">Send Dashboard Link</div><div class="desc">Share dashboard access with member</div></span></button>';
+  }
+
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;display:flex;align-items:center;gap:10px}.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}.name{font-size:18px;font-weight:bold}.id{color:#666;font-size:14px}.status{margin-top:10px}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}.open{background:#ffebee;color:#c62828}.none{background:#e8f5e9;color:#2e7d32}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#e8f4fd}.icon{font-size:24px}.title{font-weight:bold}.desc{font-size:12px;color:#666;margin-top:2px}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>⚡ Quick Actions</h2><div class="info"><div class="name">' + name + '</div><div class="id">' + memberId + ' | ' + (email || 'No email') + '</div><div class="status">' + (hasOpen === 'Yes' ? '<span class="badge open">🔴 Has Open Grievance</span>' : '<span class="badge none">🟢 No Open Grievances</span>') + '</div></div><div class="actions"><button class="action-btn" onclick="google.script.run.openGrievanceFormForMember(' + row + ');google.script.host.close()"><span class="icon">📋</span><span><div class="title">Start New Grievance</div><div class="desc">Create a grievance for this member</div></span></button>' + (email ? '<button class="action-btn" onclick="google.script.run.composeEmailForMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📧</span><span><div class="title">Send Email</div><div class="desc">Compose email to ' + email + '</div></span></button>' : '') + '<button class="action-btn" onclick="google.script.run.showMemberGrievanceHistory(\'' + memberId + '\');google.script.host.close()"><span class="icon">📁</span><span><div class="title">View Grievance History</div><div class="desc">See all grievances for this member</div></span></button><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + memberId + '\');alert(\'Copied!\')"><span class="icon">📋</span><span><div class="title">Copy Member ID</div><div class="desc">' + memberId + '</div></span></button></div><button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
-  ).setWidth(400).setHeight(500);
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px}' +
+    'h2{color:#1a73e8;display:flex;align-items:center;gap:10px}' +
+    '.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:20px}' +
+    '.name{font-size:18px;font-weight:bold}' +
+    '.id{color:#666;font-size:14px}' +
+    '.status{margin-top:10px}' +
+    '.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}' +
+    '.open{background:#ffebee;color:#c62828}' +
+    '.none{background:#e8f5e9;color:#2e7d32}' +
+    '.actions{display:flex;flex-direction:column;gap:10px}' +
+    '.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}' +
+    '.action-btn:hover{background:#e8f4fd}' +
+    '.icon{font-size:24px}' +
+    '.title{font-weight:bold}' +
+    '.desc{font-size:12px;color:#666;margin-top:2px}' +
+    '.section-header{font-weight:bold;color:#1a73e8;margin:15px 0 10px;padding-top:10px;border-top:1px solid #e0e0e0}' +
+    '.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}' +
+    '</style></head><body><div class="container">' +
+    '<h2>⚡ Quick Actions</h2>' +
+    '<div class="info">' +
+    '<div class="name">' + name + '</div>' +
+    '<div class="id">' + memberId + ' | ' + (email || 'No email') + '</div>' +
+    '<div class="status">' + (hasOpen === 'Yes' ? '<span class="badge open">🔴 Has Open Grievance</span>' : '<span class="badge none">🟢 No Open Grievances</span>') + '</div>' +
+    '</div>' +
+    '<div class="actions">' +
+    '<div class="section-header">📋 Member Actions</div>' +
+    '<button class="action-btn" onclick="google.script.run.openGrievanceFormForMember(' + row + ');google.script.host.close()"><span class="icon">📋</span><span><div class="title">Start New Grievance</div><div class="desc">Create a grievance for this member</div></span></button>' +
+    '<button class="action-btn" onclick="google.script.run.showMemberGrievanceHistory(\'' + memberId + '\');google.script.host.close()"><span class="icon">📁</span><span><div class="title">View Grievance History</div><div class="desc">See all grievances for this member</div></span></button>' +
+    '<button class="action-btn" onclick="navigator.clipboard.writeText(\'' + memberId + '\');alert(\'Copied!\')"><span class="icon">📋</span><span><div class="title">Copy Member ID</div><div class="desc">' + memberId + '</div></span></button>' +
+    emailButtons +
+    '</div>' +
+    '<button class="close" onclick="google.script.host.close()">Close</button>' +
+    '</div></body></html>'
+  ).setWidth(400).setHeight(email ? 650 : 400);
   SpreadsheetApp.getUi().showModalDialog(html, 'Member Quick Actions');
 }
 
@@ -13899,10 +13945,62 @@ function showGrievanceQuickActions(row) {
   var status = data[GRIEVANCE_COLS.STATUS - 1];
   var step = data[GRIEVANCE_COLS.CURRENT_STEP - 1];
   var daysTo = data[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
-  var isOpen = status === 'Open';
+  var memberEmail = data[GRIEVANCE_COLS.MEMBER_EMAIL - 1];
+  var isOpen = status === 'Open' || status === 'Pending Info' || status === 'In Arbitration' || status === 'Appealed';
+
+  // Build email button (only if member has email)
+  var emailStatusBtn = '';
+  if (memberEmail) {
+    emailStatusBtn =
+      '<div class="section-header">📨 Communication</div>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailGrievanceStatusToMember(\'' + grievanceId + '\');google.script.host.close()"><span class="icon">📧</span><span><div class="title">Email Status to Member</div><div class="desc">Send grievance status update to ' + memberEmail + '</div></span></button>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailSurveyToMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📊</span><span><div class="title">Send Satisfaction Survey</div><div class="desc">Email survey link to member</div></span></button>' +
+      '<button class="action-btn" onclick="google.script.run.withSuccessHandler(function(){}).withFailureHandler(function(e){alert(e.message)}).emailContactFormToMember(\'' + memberId + '\');google.script.host.close()"><span class="icon">📝</span><span><div class="title">Send Contact Update Form</div><div class="desc">Request info update from member</div></span></button>';
+  }
+
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#DC2626}.info{background:#fff5f5;padding:15px;border-radius:8px;margin-bottom:20px;border-left:4px solid #DC2626}.gid{font-size:18px;font-weight:bold}.gmem{color:#666;font-size:14px}.gstatus{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}.actions{display:flex;flex-direction:column;gap:10px}.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}.action-btn:hover{background:#fff5f5}.icon{font-size:24px}.title{font-weight:bold}.desc{font-size:12px;color:#666;margin-top:2px}.divider{height:1px;background:#e0e0e0;margin:10px 0}.status-section{margin-top:15px;padding:15px;background:#f8f9fa;border-radius:8px}.status-section h4{margin:0 0 10px}select{width:100%;padding:10px;border:2px solid #ddd;border-radius:4px;font-size:14px}.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}</style></head><body><div class="container"><h2>⚡ Grievance Actions</h2><div class="info"><div class="gid">' + grievanceId + '</div><div class="gmem">' + name + ' (' + memberId + ')</div><div class="gstatus"><span class="badge">' + status + '</span><span class="badge">' + step + '</span>' + (daysTo !== null && daysTo !== '' ? '<span class="badge" style="background:' + (daysTo < 0 ? '#ffebee;color:#c62828' : '#e3f2fd;color:#1565c0') + '">' + (daysTo < 0 ? '⚠️ Overdue' : '📅 ' + daysTo + ' days') + '</span>' : '') + '</div></div><div class="actions"><button class="action-btn" onclick="google.script.run.syncSingleGrievanceToCalendar(\'' + grievanceId + '\');google.script.host.close()"><span class="icon">📅</span><span><div class="title">Sync to Calendar</div><div class="desc">Add deadlines to Google Calendar</div></span></button><button class="action-btn" onclick="google.script.run.setupDriveFolderForGrievance();google.script.host.close()"><span class="icon">📁</span><span><div class="title">Setup Drive Folder</div><div class="desc">Create document folder</div></span></button><button class="action-btn" onclick="navigator.clipboard.writeText(\'' + grievanceId + '\');alert(\'Copied!\')"><span class="icon">📋</span><span><div class="title">Copy Grievance ID</div><div class="desc">' + grievanceId + '</div></span></button></div>' + (isOpen ? '<div class="status-section"><h4>Quick Status Update</h4><select id="statusSelect"><option value="">-- Select --</option><option value="Open">Open</option><option value="Pending Info">Pending Info</option><option value="Settled">Settled</option><option value="Withdrawn">Withdrawn</option><option value="Closed">Closed</option></select><button class="action-btn" style="margin-top:10px" onclick="var s=document.getElementById(\'statusSelect\').value;if(!s){alert(\'Select status\');return}google.script.run.withSuccessHandler(function(){alert(\'Updated!\');google.script.host.close()}).quickUpdateGrievanceStatus(' + row + ',s)"><span class="icon">✓</span><span><div class="title">Update Status</div></span></button></div>' : '') + '<button class="close" onclick="google.script.host.close()">Close</button></div></body></html>'
-  ).setWidth(400).setHeight(600);
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px}' +
+    'h2{color:#DC2626}' +
+    '.info{background:#fff5f5;padding:15px;border-radius:8px;margin-bottom:20px;border-left:4px solid #DC2626}' +
+    '.gid{font-size:18px;font-weight:bold}' +
+    '.gmem{color:#666;font-size:14px}' +
+    '.gstatus{margin-top:10px;display:flex;gap:10px;flex-wrap:wrap}' +
+    '.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:bold}' +
+    '.actions{display:flex;flex-direction:column;gap:10px}' +
+    '.action-btn{display:flex;align-items:center;gap:12px;padding:15px;border:none;border-radius:8px;cursor:pointer;font-size:14px;text-align:left;background:#f8f9fa}' +
+    '.action-btn:hover{background:#fff5f5}' +
+    '.icon{font-size:24px}' +
+    '.title{font-weight:bold}' +
+    '.desc{font-size:12px;color:#666;margin-top:2px}' +
+    '.section-header{font-weight:bold;color:#DC2626;margin:15px 0 10px;padding-top:10px;border-top:1px solid #e0e0e0}' +
+    '.divider{height:1px;background:#e0e0e0;margin:10px 0}' +
+    '.status-section{margin-top:15px;padding:15px;background:#f8f9fa;border-radius:8px}' +
+    '.status-section h4{margin:0 0 10px}' +
+    'select{width:100%;padding:10px;border:2px solid #ddd;border-radius:4px;font-size:14px}' +
+    '.close{width:100%;margin-top:15px;padding:12px;background:#6c757d;color:white;border:none;border-radius:8px;cursor:pointer}' +
+    '</style></head><body><div class="container">' +
+    '<h2>⚡ Grievance Actions</h2>' +
+    '<div class="info">' +
+    '<div class="gid">' + grievanceId + '</div>' +
+    '<div class="gmem">' + name + ' (' + memberId + ')' + (memberEmail ? ' - ' + memberEmail : '') + '</div>' +
+    '<div class="gstatus">' +
+    '<span class="badge">' + status + '</span>' +
+    '<span class="badge">' + step + '</span>' +
+    (daysTo !== null && daysTo !== '' ? '<span class="badge" style="background:' + (daysTo < 0 ? '#ffebee;color:#c62828' : '#e3f2fd;color:#1565c0') + '">' + (daysTo < 0 ? '⚠️ Overdue' : '📅 ' + daysTo + ' days') + '</span>' : '') +
+    '</div></div>' +
+    '<div class="actions">' +
+    '<div class="section-header">📋 Case Management</div>' +
+    '<button class="action-btn" onclick="google.script.run.syncSingleGrievanceToCalendar(\'' + grievanceId + '\');google.script.host.close()"><span class="icon">📅</span><span><div class="title">Sync to Calendar</div><div class="desc">Add deadlines to Google Calendar</div></span></button>' +
+    '<button class="action-btn" onclick="google.script.run.setupDriveFolderForGrievance();google.script.host.close()"><span class="icon">📁</span><span><div class="title">Setup Drive Folder</div><div class="desc">Create document folder</div></span></button>' +
+    '<button class="action-btn" onclick="navigator.clipboard.writeText(\'' + grievanceId + '\');alert(\'Copied!\')"><span class="icon">📋</span><span><div class="title">Copy Grievance ID</div><div class="desc">' + grievanceId + '</div></span></button>' +
+    emailStatusBtn +
+    '</div>' +
+    (isOpen ? '<div class="status-section"><h4>Quick Status Update</h4><select id="statusSelect"><option value="">-- Select --</option><option value="Open">Open</option><option value="Pending Info">Pending Info</option><option value="Settled">Settled</option><option value="Withdrawn">Withdrawn</option><option value="Won">Won</option><option value="Denied">Denied</option><option value="Closed">Closed</option></select><button class="action-btn" style="margin-top:10px" onclick="var s=document.getElementById(\'statusSelect\').value;if(!s){alert(\'Select status\');return}google.script.run.withSuccessHandler(function(){alert(\'Updated!\');google.script.host.close()}).quickUpdateGrievanceStatus(' + row + ',s)"><span class="icon">✓</span><span><div class="title">Update Status</div></span></button></div>' : '') +
+    '<button class="close" onclick="google.script.host.close()">Close</button>' +
+    '</div></body></html>'
+  ).setWidth(400).setHeight(memberEmail ? 750 : 550);
   SpreadsheetApp.getUi().showModalDialog(html, 'Grievance Quick Actions');
 }
 
@@ -13942,6 +14040,253 @@ function sendQuickEmail(to, subject, body, memberId) {
     MailApp.sendEmail({ to: to, subject: subject, body: body, name: 'SEIU Local 509 Dashboard' });
     return { success: true };
   } catch (e) { throw new Error('Failed to send: ' + e.message); }
+}
+
+// ============================================================================
+// QUICK ACTION EMAIL FUNCTIONS - Send Forms, Surveys, and Status Updates
+// ============================================================================
+
+/**
+ * Email the satisfaction survey link to a member
+ * @param {string} memberId - Member ID to look up email
+ */
+function emailSurveyToMember(memberId) {
+  var memberData = getMemberDataById_(memberId);
+  if (!memberData || !memberData.email) {
+    SpreadsheetApp.getUi().alert('No email address on file for this member.');
+    return;
+  }
+
+  var surveyUrl = getFormUrlFromConfig('satisfaction');
+  var orgName = getOrgNameFromConfig_();
+
+  var subject = orgName + ' - Member Satisfaction Survey';
+  var body = 'Dear ' + memberData.firstName + ',\n\n' +
+    'We value your feedback! Please take a few minutes to complete our Member Satisfaction Survey.\n\n' +
+    'Survey Link: ' + surveyUrl + '\n\n' +
+    'Your responses help us improve our representation and services.\n\n' +
+    'In Solidarity,\n' +
+    orgName;
+
+  try {
+    MailApp.sendEmail({
+      to: memberData.email,
+      subject: subject,
+      body: body,
+      name: orgName + ' Dashboard'
+    });
+    SpreadsheetApp.getActiveSpreadsheet().toast('Survey sent to ' + memberData.email, 'Email Sent', 3);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to send survey: ' + e.message);
+  }
+}
+
+/**
+ * Email the contact info update form link to a member
+ * @param {string} memberId - Member ID to look up email
+ */
+function emailContactFormToMember(memberId) {
+  var memberData = getMemberDataById_(memberId);
+  if (!memberData || !memberData.email) {
+    SpreadsheetApp.getUi().alert('No email address on file for this member.');
+    return;
+  }
+
+  var formUrl = getFormUrlFromConfig('contact');
+  var orgName = getOrgNameFromConfig_();
+
+  var subject = orgName + ' - Update Your Contact Information';
+  var body = 'Dear ' + memberData.firstName + ',\n\n' +
+    'Please take a moment to verify and update your contact information. ' +
+    'Keeping your information current helps us serve you better.\n\n' +
+    'Update Form: ' + formUrl + '\n\n' +
+    'This only takes a minute and helps ensure you receive important updates.\n\n' +
+    'In Solidarity,\n' +
+    orgName;
+
+  try {
+    MailApp.sendEmail({
+      to: memberData.email,
+      subject: subject,
+      body: body,
+      name: orgName + ' Dashboard'
+    });
+    SpreadsheetApp.getActiveSpreadsheet().toast('Contact form sent to ' + memberData.email, 'Email Sent', 3);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to send contact form: ' + e.message);
+  }
+}
+
+/**
+ * Email the member dashboard/portal link to a member
+ * @param {string} memberId - Member ID to look up email
+ */
+function emailDashboardLinkToMember(memberId) {
+  var memberData = getMemberDataById_(memberId);
+  if (!memberData || !memberData.email) {
+    SpreadsheetApp.getUi().alert('No email address on file for this member.');
+    return;
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var dashboardUrl = ss.getUrl();
+  var orgName = getOrgNameFromConfig_();
+
+  var subject = orgName + ' - Member Dashboard Access';
+  var body = 'Dear ' + memberData.firstName + ',\n\n' +
+    'You can access your union member dashboard and track your information at:\n\n' +
+    'Dashboard Link: ' + dashboardUrl + '\n\n' +
+    'From the dashboard you can:\n' +
+    '- View your member profile\n' +
+    '- Track grievance status (if applicable)\n' +
+    '- Stay updated on union activities\n\n' +
+    'If you have any questions, please contact your steward.\n\n' +
+    'In Solidarity,\n' +
+    orgName;
+
+  try {
+    MailApp.sendEmail({
+      to: memberData.email,
+      subject: subject,
+      body: body,
+      name: orgName + ' Dashboard'
+    });
+    SpreadsheetApp.getActiveSpreadsheet().toast('Dashboard link sent to ' + memberData.email, 'Email Sent', 3);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to send dashboard link: ' + e.message);
+  }
+}
+
+/**
+ * Email grievance status update to the member
+ * @param {string} grievanceId - Grievance ID to look up details
+ */
+function emailGrievanceStatusToMember(grievanceId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  if (!grievanceSheet) {
+    SpreadsheetApp.getUi().alert('Grievance Log not found.');
+    return;
+  }
+
+  // Find the grievance
+  var data = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, GRIEVANCE_COLS.STEWARD).getValues();
+  var grievance = null;
+
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1] === grievanceId) {
+      grievance = {
+        id: data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1],
+        memberId: data[i][GRIEVANCE_COLS.MEMBER_ID - 1],
+        firstName: data[i][GRIEVANCE_COLS.FIRST_NAME - 1],
+        lastName: data[i][GRIEVANCE_COLS.LAST_NAME - 1],
+        status: data[i][GRIEVANCE_COLS.STATUS - 1],
+        step: data[i][GRIEVANCE_COLS.CURRENT_STEP - 1],
+        dateFiled: data[i][GRIEVANCE_COLS.DATE_FILED - 1],
+        nextAction: data[i][GRIEVANCE_COLS.NEXT_ACTION_DUE - 1],
+        daysToDeadline: data[i][GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1],
+        issueCategory: data[i][GRIEVANCE_COLS.ISSUE_CATEGORY - 1],
+        steward: data[i][GRIEVANCE_COLS.STEWARD - 1],
+        email: data[i][GRIEVANCE_COLS.MEMBER_EMAIL - 1]
+      };
+      break;
+    }
+  }
+
+  if (!grievance) {
+    SpreadsheetApp.getUi().alert('Grievance not found: ' + grievanceId);
+    return;
+  }
+
+  if (!grievance.email) {
+    SpreadsheetApp.getUi().alert('No email address on file for this member.');
+    return;
+  }
+
+  var orgName = getOrgNameFromConfig_();
+
+  var subject = orgName + ' - Grievance Status Update (' + grievance.id + ')';
+  var body = 'Dear ' + grievance.firstName + ',\n\n' +
+    'Here is the current status of your grievance:\n\n' +
+    '================================\n' +
+    'GRIEVANCE STATUS UPDATE\n' +
+    '================================\n\n' +
+    'Grievance ID: ' + grievance.id + '\n' +
+    'Issue Category: ' + (grievance.issueCategory || 'Not specified') + '\n' +
+    'Current Status: ' + grievance.status + '\n' +
+    'Current Step: ' + grievance.step + '\n' +
+    'Date Filed: ' + (grievance.dateFiled ? new Date(grievance.dateFiled).toLocaleDateString() : 'N/A') + '\n';
+
+  if (grievance.daysToDeadline !== null && grievance.daysToDeadline !== '') {
+    if (grievance.daysToDeadline < 0) {
+      body += 'Next Deadline: OVERDUE\n';
+    } else {
+      body += 'Days Until Next Deadline: ' + grievance.daysToDeadline + '\n';
+    }
+  }
+
+  if (grievance.steward) {
+    body += 'Assigned Steward: ' + grievance.steward + '\n';
+  }
+
+  body += '\n================================\n\n' +
+    'If you have any questions about your grievance, please contact your steward.\n\n' +
+    'In Solidarity,\n' +
+    orgName;
+
+  try {
+    MailApp.sendEmail({
+      to: grievance.email,
+      subject: subject,
+      body: body,
+      name: orgName + ' Dashboard'
+    });
+    SpreadsheetApp.getActiveSpreadsheet().toast('Status update sent to ' + grievance.email, 'Email Sent', 3);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to send status update: ' + e.message);
+  }
+}
+
+/**
+ * Helper: Get member data by Member ID
+ * @private
+ */
+function getMemberDataById_(memberId) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  if (!sheet) return null;
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, MEMBER_COLS.EMAIL).getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (data[i][MEMBER_COLS.MEMBER_ID - 1] === memberId) {
+      return {
+        memberId: memberId,
+        firstName: data[i][MEMBER_COLS.FIRST_NAME - 1],
+        lastName: data[i][MEMBER_COLS.LAST_NAME - 1],
+        email: data[i][MEMBER_COLS.EMAIL - 1]
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Helper: Get organization name from Config
+ * @private
+ */
+function getOrgNameFromConfig_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+  if (configSheet) {
+    var orgName = configSheet.getRange(3, CONFIG_COLS.ORG_NAME).getValue();
+    if (orgName) return orgName;
+  }
+  return 'SEIU Local 509';
 }
 
 function showMemberGrievanceHistory(memberId) {
