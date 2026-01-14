@@ -1422,8 +1422,8 @@ The error occurred because `SEED_GRIEVANCES` and `SEED_MEMBERS` functions tried 
 
 **CRITICAL FIX: ConsolidatedDashboard.gs fully synced with MobileQuickActions.gs**
 
-> **Note:** Per the deployment model, only `ConsolidatedDashboard.gs` is deployed.
-> All feature development occurs in `MobileQuickActions.gs` and must be synced to `ConsolidatedDashboard.gs`.
+> **Note:** Per the deployment model, `ConsolidatedDashboard.gs` and `ConsolidatedDeveloperTools.gs` are deployed.
+> All feature development occurs in source `.gs` files and must be synced via `node build.js`.
 > This version includes a complete sync of all Interactive Dashboard features.
 
 ---
@@ -1907,7 +1907,7 @@ Grievance Log entries automatically sort by status priority (active cases first)
   - "📊 Get Satisfaction Survey Link"
   - "⚙️ Setup Survey Form Trigger"
 
-**Build Process:** Run `node build.js` to regenerate ConsolidatedDashboard.gs
+**Build Process:** Run `node build.js` to regenerate both consolidated files
 
 ---
 
