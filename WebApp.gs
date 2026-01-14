@@ -144,8 +144,8 @@ function getWebAppDashboardHtml() {
     '<div class="stat-card"><div class="stat-value success">' + stats.winRate + '</div><div class="stat-label">Win Rate</div></div>' +
     '</div>' +
 
-    // Overdue preview section (loaded dynamically)
-    '<div id="overdue-preview"></div>' +
+    // Overdue preview section (loaded dynamically with initial loading state)
+    '<div id="overdue-preview"><div class="loading" style="padding:15px;"><div class="spinner"></div><div style="margin-top:10px;font-size:13px;">Loading overdue cases...</div></div></div>' +
 
     // Quick Actions
     '<div class="section-title">⚡ Quick Actions</div>' +
@@ -188,14 +188,15 @@ function getWebAppDashboardHtml() {
     '<span class="nav-icon">🔗</span>Links</a>' +
     '</nav>' +
 
-    // Script to load overdue preview
+    // Script to load overdue preview with retry logic
     '<script>' +
     'var baseUrl="' + baseUrl + '";' +
-    'function loadOverdue(){' +
+    'function loadOverdue(retries){' +
+    '  retries=retries||3;' +
     '  google.script.run.withSuccessHandler(function(data){' +
-    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ All cases on track!</div>";return}' +
     '    var overdue=data.filter(function(g){return g&&g.isOverdue});' +
-    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ No overdue cases - great job!</div>";return}' +
     '    var html="<div class=\\"overdue-section\\"><div class=\\"overdue-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
     '    overdue.slice(0,3).forEach(function(g){' +
     '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+(g.id||"")+"</div><div class=\\"overdue-name\\">"+(g.name||"")+"</div><div class=\\"overdue-detail\\">"+(g.category||"")+" • "+(g.step||"")+"</div></div>";' +
@@ -205,7 +206,8 @@ function getWebAppDashboardHtml() {
     '    document.getElementById("overdue-preview").innerHTML=html;' +
     '  }).withFailureHandler(function(err){' +
     '    console.error("Failed to load overdue cases:",err);' +
-    '    document.getElementById("overdue-preview").innerHTML="";' +
+    '    if(retries>1){setTimeout(function(){loadOverdue(retries-1)},1000*(4-retries));return}' +
+    '    document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#DC2626;font-size:13px\\">⚠️ Could not load overdue cases. <button onclick=\\"loadOverdue(3)\\" style=\\"color:#7C3AED;background:none;border:none;text-decoration:underline;cursor:pointer\\">Retry</button></div>";' +
     '  }).getWebAppGrievanceList();' +
     '}' +
     'loadOverdue();' +

@@ -4328,6 +4328,8 @@ function showDesktopSearch() {
     '        select.appendChild(opt);' +
     '      }' +
     '    });' +
+    '  }).withFailureHandler(function(err) {' +
+    '    console.error("Failed to load locations:", err);' +
     '  }).getDesktopSearchLocations();' +
     '}' +
 
@@ -4465,6 +4467,8 @@ function showDesktopSearch() {
     '  if (!r) return;' +
     '  google.script.run.withSuccessHandler(function() {' +
     '    google.script.host.close();' +
+    '  }).withFailureHandler(function(err) {' +
+    '    alert("Navigation failed: " + (err.message || err));' +
     '  }).navigateToSearchResult(r.type, r.id, r.row);' +
     '}' +
     '</script></body></html>'
@@ -8648,7 +8652,10 @@ function getSatisfactionDashboardHtml() {
 
     // Load overview data
     'function loadOverview(){' +
-    '  google.script.run.withSuccessHandler(function(data){renderOverview(data)}).getSatisfactionOverviewData();' +
+    '  google.script.run.withSuccessHandler(function(data){renderOverview(data)}).withFailureHandler(function(err){' +
+    '    console.error("Failed to load overview:",err);' +
+    '    document.getElementById("overview-stats").innerHTML="<div class=\\"error-state\\">Failed to load overview data</div>";' +
+    '  }).getSatisfactionOverviewData();' +
     '}' +
 
     // Render overview
@@ -8689,7 +8696,10 @@ function getSatisfactionDashboardHtml() {
 
     // Load responses
     'function loadResponses(){' +
-    '  google.script.run.withSuccessHandler(function(data){allResponses=data;renderResponses(data)}).getSatisfactionResponseData();' +
+    '  google.script.run.withSuccessHandler(function(data){allResponses=data;renderResponses(data)}).withFailureHandler(function(err){' +
+    '    console.error("Failed to load responses:",err);' +
+    '    document.getElementById("responses-list").innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">⚠️</div><p>Failed to load responses</p></div>";' +
+    '  }).getSatisfactionResponseData();' +
     '}' +
 
     // Render responses with clickable details
@@ -8756,7 +8766,10 @@ function getSatisfactionDashboardHtml() {
     // Load sections data
     'function loadSections(){' +
     '  sectionsLoaded=true;' +
-    '  google.script.run.withSuccessHandler(function(data){renderSections(data)}).getSatisfactionSectionData();' +
+    '  google.script.run.withSuccessHandler(function(data){renderSections(data)}).withFailureHandler(function(err){' +
+    '    console.error("Failed to load sections:",err);' +
+    '    document.getElementById("sections-charts").innerHTML="<div class=\\"empty-state\\">Failed to load section data</div>";' +
+    '  }).getSatisfactionSectionData();' +
     '}' +
 
     // Render sections
@@ -8802,7 +8815,10 @@ function getSatisfactionDashboardHtml() {
     // Load analytics
     'function loadAnalytics(){' +
     '  analyticsLoaded=true;' +
-    '  google.script.run.withSuccessHandler(function(data){renderAnalytics(data)}).getSatisfactionAnalyticsData();' +
+    '  google.script.run.withSuccessHandler(function(data){renderAnalytics(data)}).withFailureHandler(function(err){' +
+    '    console.error("Failed to load analytics:",err);' +
+    '    document.getElementById("analytics-content").innerHTML="<div class=\\"empty-state\\">Failed to load analytics data</div>";' +
+    '  }).getSatisfactionAnalyticsData();' +
     '}' +
 
     // Render analytics/insights
@@ -8893,16 +8909,8 @@ function getSatisfactionOverviewData() {
 
   if (!sheet) return data;
 
-  // Check if there's data by looking at column A (Timestamp)
-  var lastRow = 1;
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      lastRow = i;
-      break;
-    }
-    lastRow = i + 1;
-  }
+  // Use efficient built-in method to find last row with data
+  var lastRow = sheet.getLastRow();
 
   if (lastRow <= 1) return data;
 
@@ -9063,16 +9071,8 @@ function getSatisfactionResponseData() {
   var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
   if (!sheet) return [];
 
-  // Check if there's data
-  var lastRow = 1;
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      lastRow = i;
-      break;
-    }
-    lastRow = i + 1;
-  }
+  // Use efficient built-in method to find last row
+  var lastRow = sheet.getLastRow();
 
   if (lastRow <= 1) return [];
 
@@ -9150,16 +9150,8 @@ function getSatisfactionSectionData() {
   var result = { sections: [] };
   if (!sheet) return result;
 
-  // Check if there's data
-  var lastRow = 1;
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      lastRow = i;
-      break;
-    }
-    lastRow = i + 1;
-  }
+  // Use efficient built-in method to find last row
+  var lastRow = sheet.getLastRow();
 
   if (lastRow <= 1) return result;
 
@@ -9462,13 +9454,8 @@ function getSatisfactionLocationDrill(location) {
  * Helper function to get last row with data
  */
 function getSheetLastRow(sheet) {
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      return i;
-    }
-  }
-  return timestamps.length;
+  // Use efficient built-in method instead of loading entire column
+  return sheet.getLastRow();
 }
 
 /**
@@ -9488,16 +9475,8 @@ function getSatisfactionAnalyticsData() {
 
   if (!sheet) return result;
 
-  // Check if there's data
-  var lastRow = 1;
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      lastRow = i;
-      break;
-    }
-    lastRow = i + 1;
-  }
+  // Use efficient built-in method to find last row
+  var lastRow = sheet.getLastRow();
 
   if (lastRow <= 1) return result;
 
@@ -15595,12 +15574,13 @@ function getInteractiveDashboardHtml() {
     // Show open cases - switch to grievances tab with Open filter
     'function showOpenCases(){switchTab("grievances",document.getElementById("tab-grievances"));setTimeout(function(){filterGrievanceStatus("Open",document.querySelector("[data-filter=\\"Open\\"]"))},300)}' +
 
-    // Load overdue preview on overview
-    'function loadOverduePreview(){' +
+    // Load overdue preview on overview with retry logic
+    'function loadOverduePreview(retries){' +
+    '  retries=retries||3;' +
     '  google.script.run.withSuccessHandler(function(data){' +
-    '    if(!data||!Array.isArray(data)){document.getElementById("overview-overdue").innerHTML="";return}' +
+    '    if(!data||!Array.isArray(data)){document.getElementById("overview-overdue").innerHTML="<div class=\\"chart-container\\" style=\\"border-left:4px solid #059669\\"><div class=\\"chart-title\\" style=\\"color:#059669\\">✅ All Cases On Track</div><p style=\\"color:#666;font-size:13px\\">No overdue cases to display.</p></div>";return}' +
     '    var overdue=data.filter(function(g){return g&&g.isOverdue});' +
-    '    if(overdue.length===0){document.getElementById("overview-overdue").innerHTML="";return}' +
+    '    if(overdue.length===0){document.getElementById("overview-overdue").innerHTML="<div class=\\"chart-container\\" style=\\"border-left:4px solid #059669\\"><div class=\\"chart-title\\" style=\\"color:#059669\\">✅ All Cases On Track</div><p style=\\"color:#666;font-size:13px\\">No overdue cases - great job!</p></div>";return}' +
     '    var html="<div class=\\"chart-container\\" style=\\"border-left:4px solid #dc2626\\"><div class=\\"chart-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
     '    html+="<div class=\\"list-container\\">";' +
     '    overdue.slice(0,3).forEach(function(g){html+="<div class=\\"list-item\\" onclick=\\"showGrievanceDetail(\'"+(g.id||"")+"\')\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+(g.id||"")+" - "+(g.memberName||"")+"</div><div class=\\"list-item-subtitle\\">"+(g.issueType||"")+" • "+(g.currentStep||"")+"</div></div><span class=\\"badge badge-overdue\\">Overdue</span></div>"});' +
@@ -15609,7 +15589,8 @@ function getInteractiveDashboardHtml() {
     '    document.getElementById("overview-overdue").innerHTML=html;' +
     '  }).withFailureHandler(function(err){' +
     '    console.error("Failed to load overdue preview:",err);' +
-    '    document.getElementById("overview-overdue").innerHTML="";' +
+    '    if(retries>1){setTimeout(function(){loadOverduePreview(retries-1)},1000*(4-retries));return}' +
+    '    document.getElementById("overview-overdue").innerHTML="<div class=\\"chart-container\\"><div class=\\"chart-title\\">⚠️ Error</div><p style=\\"color:#666\\">Could not load overdue cases. <a href=\\"#\\" onclick=\\"loadOverduePreview(3);return false\\">Retry</a></p></div>";' +
     '  }).getInteractiveGrievanceData();' +
     '}' +
 
@@ -17223,16 +17204,9 @@ function seedFeedbackData() {
     }
   }
 
-  // Check if column A (data area) already has data beyond header
-  var dataCol = sheet.getRange('A:A').getValues();
-  var dataRowCount = 0;
-  for (var i = 1; i < dataCol.length; i++) {
-    if (dataCol[i][0] !== '') {
-      dataRowCount++;
-      break;
-    }
-  }
-  if (dataRowCount > 0) {
+  // Check if sheet already has data beyond header (efficient check)
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
     Logger.log('Feedback sheet already has data. Skipping seed.');
     return;
   }
@@ -18688,8 +18662,8 @@ function getWebAppDashboardHtml() {
     '<div class="stat-card"><div class="stat-value success">' + stats.winRate + '</div><div class="stat-label">Win Rate</div></div>' +
     '</div>' +
 
-    // Overdue preview section (loaded dynamically)
-    '<div id="overdue-preview"></div>' +
+    // Overdue preview section (loaded dynamically with initial loading state)
+    '<div id="overdue-preview"><div class="loading" style="padding:15px;"><div class="spinner"></div><div style="margin-top:10px;font-size:13px;">Loading overdue cases...</div></div></div>' +
 
     // Quick Actions
     '<div class="section-title">⚡ Quick Actions</div>' +
@@ -18732,14 +18706,15 @@ function getWebAppDashboardHtml() {
     '<span class="nav-icon">🔗</span>Links</a>' +
     '</nav>' +
 
-    // Script to load overdue preview
+    // Script to load overdue preview with retry logic
     '<script>' +
     'var baseUrl="' + baseUrl + '";' +
-    'function loadOverdue(){' +
+    'function loadOverdue(retries){' +
+    '  retries=retries||3;' +
     '  google.script.run.withSuccessHandler(function(data){' +
-    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ All cases on track!</div>";return}' +
     '    var overdue=data.filter(function(g){return g&&g.isOverdue});' +
-    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#059669;font-size:13px\\">✅ No overdue cases - great job!</div>";return}' +
     '    var html="<div class=\\"overdue-section\\"><div class=\\"overdue-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
     '    overdue.slice(0,3).forEach(function(g){' +
     '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+(g.id||"")+"</div><div class=\\"overdue-name\\">"+(g.name||"")+"</div><div class=\\"overdue-detail\\">"+(g.category||"")+" • "+(g.step||"")+"</div></div>";' +
@@ -18749,7 +18724,8 @@ function getWebAppDashboardHtml() {
     '    document.getElementById("overdue-preview").innerHTML=html;' +
     '  }).withFailureHandler(function(err){' +
     '    console.error("Failed to load overdue cases:",err);' +
-    '    document.getElementById("overdue-preview").innerHTML="";' +
+    '    if(retries>1){setTimeout(function(){loadOverdue(retries-1)},1000*(4-retries));return}' +
+    '    document.getElementById("overdue-preview").innerHTML="<div style=\\"text-align:center;padding:15px;color:#DC2626;font-size:13px\\">⚠️ Could not load overdue cases. <button onclick=\\"loadOverdue(3)\\" style=\\"color:#7C3AED;background:none;border:none;text-decoration:underline;cursor:pointer\\">Retry</button></div>";' +
     '  }).getWebAppGrievanceList();' +
     '}' +
     'loadOverdue();' +
