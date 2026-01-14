@@ -336,19 +336,21 @@ Dashboard (Real-time metrics and visualizations)
 
 1. Create a new Google Sheet
 2. Go to **Extensions > Apps Script**
-3. Delete any existing code
-4. Copy and paste the entire contents of `Code.gs`
-5. Save the project
-6. Refresh your Google Sheet
-7. Six menus will appear: **"📊 509 Dashboard"**, **"📋 Grievances"**, **"👁️ View"**, **"⚙️ Settings"**, **"🔧 Admin"**, and **"🛡️ Data Integrity"**
-8. Click **🔧 Admin > 🎭 Demo Data > 🚀 Seed All Sample Data** to generate test data
+3. Delete any existing code in `Code.gs`
+4. Copy and paste the entire contents of `ConsolidatedDashboard.gs`
+5. Create a new script file (click **+** next to Files), name it `DeveloperTools`
+6. Paste the contents of `ConsolidatedDeveloperTools.gs`
+7. Save the project and refresh your Google Sheet
+8. Six menus will appear: **"📊 509 Dashboard"**, **"📋 Grievances"**, **"👁️ View"**, **"⚙️ Settings"**, **"🔧 Admin"**, and **"🛡️ Data Integrity"**
+9. Click **🔧 Admin > 🎭 Demo Data > 🚀 Seed All Sample Data** to generate test data
+10. **Before production:** Delete the `DeveloperTools` file from Apps Script
 
 ## 🏗️ Architecture
 
 ### File Structure
 
 ```
-Project Files (10 source files → 1 consolidated deployment)
+Project Files (10 source files → 2 consolidated deployment files)
 ├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS, SATISFACTION_COLS, FEEDBACK_COLS
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── DeveloperTools.gs      # Demo data seeding and clearing - DELETE BEFORE PRODUCTION
@@ -359,7 +361,8 @@ Project Files (10 source files → 1 consolidated deployment)
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
 ├── WebApp.gs              # Standalone web app for mobile phone access
-└── ConsolidatedDashboard.gs  # AUTO-GENERATED - Deploy this file only!
+├── ConsolidatedDashboard.gs      # AUTO-GENERATED - Main code (deploy this)
+└── ConsolidatedDeveloperTools.gs # AUTO-GENERATED - Demo tools (delete before production)
 
 Key Functions:
 ├── CREATE_509_DASHBOARD() - Main setup function
