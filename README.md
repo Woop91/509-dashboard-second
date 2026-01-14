@@ -1,18 +1,42 @@
-# 509 Dashboard - Google Apps Script v3.46
+# 509 Dashboard - Google Apps Script v3.47
 
 Complete union member database and grievance tracking system for Local 509.
+
+## 🆕 What's New in v3.47
+
+### Dashboard Renaming & My Cases Tab (January 2026)
+
+**Dashboard Name Changes:**
+- "Custom View Dashboard" renamed to **"Dashboard"**
+- "Smart Dashboard" renamed to **"Dashboard Pend"**
+- Removed "Quick Actions" menu item (Quick Actions checkboxes in sheets still work)
+
+**New My Cases Tab for Stewards:**
+- Added "My Cases" tab to the Dashboard modal
+- Stewards can view their assigned grievances with stats
+- Status filtering and expandable case details
+
+**Enhanced Member Satisfaction Dashboard:**
+- New **Trends Tab** with time period filtering (All Time/Year/90 Days/30 Days)
+- **Line charts** for satisfaction trends over time
+- **Donut charts** for issues distribution
+- Renamed "Loyalty Score" to **"Member Advocacy Index"** for clarity
+- **Clickable worksite drill-down** - click any worksite bar for details
+- Diverse color palette (teal, indigo, pink, amber)
+
+---
 
 ## 🆕 What's New in v3.46
 
 ### Bug Fix: Dashboard Bar Charts (January 2026)
 
-**Fixed:** All bar charts in Member Satisfaction Dashboard and Smart Dashboard were showing at 100% width regardless of actual data values.
+**Fixed:** All bar charts in Member Satisfaction Dashboard and Dashboard Pend (formerly Smart Dashboard) were showing at 100% width regardless of actual data values.
 
 **Cause:** CSS width property was using `%25` (URL-encoded) instead of `%`. CSS doesn't URL-decode inline styles.
 
 **Affected Areas:**
 - Member Satisfaction Dashboard (By Section, By Worksite, By Role, Priorities)
-- Smart Dashboard / Mobile Quick Actions (Location, Unit, Status, Categories)
+- Dashboard Pend / Mobile Quick Actions (Location, Unit, Status, Categories)
 
 **Also Improved:**
 - Mobile Web App error handling with detailed error messages

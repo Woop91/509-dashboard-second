@@ -1,7 +1,7 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.0.6 (No Formulas in Visible Sheets - Full JavaScript Computation)
-**Last Updated:** 2026-01-13
+**Version:** 2.1.0 (Dashboard Renaming, My Cases Tab & Member Satisfaction Enhancements)
+**Last Updated:** 2026-01-14
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
 ---
@@ -33,42 +33,58 @@
 
 The following code sections are **USER APPROVED** and should **NOT be modified or removed**:
 
-### Custom View Modal Popup
+### Dashboard Modal Popup (formerly Custom View)
 
-**Location:** `ConsolidatedDashboard.gs` (lines 7536-8160) and `MobileQuickActions.gs` (lines 540-1164)
+**Location:** `ConsolidatedDashboard.gs` and `MobileQuickActions.gs`
 
 **Protected Functions:**
 | Function | Purpose |
 |----------|---------|
-| `showInteractiveDashboardTab()` | Opens the modal dialog popup |
+| `showInteractiveDashboardTab()` | Opens the modal dialog popup (titled "📊 Dashboard") |
 | `getInteractiveDashboardHtml()` | Returns the HTML/CSS/JS for the tabbed UI |
 | `getInteractiveOverviewData()` | Fetches overview statistics |
 | `getInteractiveGrievanceData()` | Fetches grievance list data |
 | `getInteractiveMemberData()` | Fetches member list data |
+| `getMyStewardCases()` | Fetches steward's assigned grievances for My Cases tab |
+
+**Features:**
+- **My Cases Tab** (NEW) - Stewards can view their assigned grievances with stats and filtering
+- Overview, Grievances, Members, Analytics tabs
 
 **Why Protected:** This modal provides essential dashboard functionality that users rely on for quick access to data.
 
-### Member Satisfaction Dashboard Modal
+### Member Satisfaction Dashboard Modal (Enhanced v2.0)
 
-**Location:** `Code.gs` (lines 4740-5668)
+**Location:** `ConsolidatedDashboard.gs`
 
 **Functions:**
 | Function | Purpose |
 |----------|---------|
 | `showSatisfactionDashboard()` | Opens the 900x750 modal dialog |
-| `getSatisfactionDashboardHtml()` | Returns HTML with 4-tab interface |
-| `getSatisfactionOverviewData()` | Fetches overview stats, NPS score, insights |
+| `getSatisfactionDashboardHtml()` | Returns HTML with 5-tab interface |
+| `getSatisfactionOverviewData()` | Fetches overview stats, Member Advocacy Index, insights |
 | `getSatisfactionResponseData()` | Fetches individual survey responses |
 | `getSatisfactionSectionData()` | Fetches scores by survey section |
 | `getSatisfactionAnalyticsData()` | Fetches worksite/role analysis, priorities |
+| `getSatisfactionTrendData()` | NEW: Fetches trend data by time period |
+| `getSatisfactionLocationDrill()` | NEW: Fetches drill-down data for specific worksites |
 
 **Tabs:**
-1. **Overview** - Key metrics (total responses, avg satisfaction, NPS, response rate), gauge charts, auto-generated insights
-2. **Responses** - Searchable list with satisfaction level filtering (High/Medium/Needs Attention)
-3. **By Section** - Bar chart of all 11 survey sections ranked by score, section detail cards
-4. **Insights** - Worksite/role breakdowns, steward contact impact analysis, top member priorities
+1. **Overview** - Key metrics (total responses, avg satisfaction, Member Advocacy Index, response rate), gauge charts, auto-generated insights
+2. **Trends** (NEW) - Line chart for satisfaction trends over time, responses by month, time period filters (All Time/Year/90 Days/30 Days), donut chart for top issues
+3. **Responses** - Searchable list with satisfaction level filtering (High/Medium/Needs Attention)
+4. **Sections** - Bar chart of all 11 survey sections ranked by score
+5. **Insights** - Clickable worksite breakdowns with drill-down modals, steward contact impact analysis, top member priorities
 
-**Why Added:** Provides interactive survey analysis without leaving the spreadsheet, matching the Custom View pattern.
+**Enhancements (v2.0):**
+- **Renamed "Loyalty Score" to "Member Advocacy Index"** for clearer understanding
+- **Added Trends tab** with line charts and time period filtering
+- **Added donut charts** for issue distribution visualization
+- **Added clickable worksite drill-down** - click any worksite bar to see detailed responses
+- **Enhanced color palette** - teal, indigo, pink, amber accent colors
+- **Clickable stats** - response count navigates to Responses tab
+
+**Why Added:** Provides interactive survey analysis without leaving the spreadsheet, matching the Dashboard modal pattern.
 
 ---
 
@@ -593,7 +609,7 @@ var FEEDBACK_COLS = {
 | # | Sheet Name | Type | Purpose |
 |---|------------|------|---------|
 | 4 | 💼 Dashboard | View | Executive metrics dashboard with 12 analytics sections |
-| 5 | 🎯 Custom View | View | Customizable metrics with dropdowns |
+| 5 | 📊 Dashboard | View | Customizable metrics with dropdowns, My Cases tab for stewards |
 
 ### Tracking Sheets
 
@@ -724,12 +740,11 @@ The menu system has been reorganized from 9 menus to 5 logical groups:
 
 ```
 📊 509 Dashboard
-├── 📊 Smart Dashboard (Auto-Detect)
-├── 🎯 Custom View
-├── 📊 Member Satisfaction
+├── 📊 Dashboard (with My Cases tab for stewards)
+├── 📋 Dashboard Pend
+├── 📊 Member Satisfaction (enhanced with trends & drill-down)
 ├── 📱 Mobile Dashboard
 ├── 🔍 Search Members
-├── ⚡ Quick Actions
 └── 📱 Get Mobile App URL
 
 📋 Grievances
@@ -977,6 +992,40 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.1.0 (2026-01-14) - Dashboard Renaming, My Cases Tab & Member Satisfaction Enhancements
+
+**Dashboard Naming Changes:**
+- Renamed "Custom View Dashboard" to **"Dashboard"**
+- Renamed "Smart Dashboard" to **"Dashboard Pend"**
+- Updated menu items, dialog titles, and HTML headers across ConsolidatedDashboard.gs
+
+**Removed Quick Actions Menu:**
+- Removed "Quick Actions" menu item from 509 Dashboard menu (Quick Actions checkboxes in sheets still work)
+
+**New My Cases Tab (for Stewards):**
+- Added "My Cases" tab to the Dashboard modal popup
+- Shows grievances assigned to the current steward
+- Displays stats: Total Cases, Pending, In Progress
+- Includes status filtering and expandable case details
+- New backend function: `getMyStewardCases()`
+
+**Enhanced Member Satisfaction Dashboard:**
+- **New Trends Tab** with time period filtering (All Time, Year, 90 Days, 30 Days)
+- **Line Chart** showing satisfaction score trends over time
+- **Donut Chart** for visualizing top issues distribution
+- **Renamed "Loyalty Score" to "Member Advocacy Index (MAI)"** with clearer explanation
+- **Clickable Worksite Drill-down** - click any worksite bar to see detailed responses in a modal
+- **Diverse Color Palette** - added teal, indigo, pink, amber accent colors
+- **Clickable Response Count** - navigates to Responses tab
+- **Response Count by Month** with rainbow-colored bars
+- New backend functions: `getSatisfactionTrendData()`, `getSatisfactionLocationDrill()`, `getSheetLastRow()`
+
+**Files Modified:**
+- `ConsolidatedDashboard.gs` - All dashboard changes applied to deployment file
+- `Code.gs`, `MobileQuickActions.gs` - Source file updates
+
+---
 
 ### Version 2.0.6 (2026-01-13) - Fix Dashboard Bar Charts and Mobile WebApp
 
@@ -1329,13 +1378,13 @@ The error occurred because `SEED_GRIEVANCES` and `SEED_MEMBERS` functions tried 
 #### 2. Member Satisfaction Dashboard Improvements
 
 **NPS Terminology Changed to Intuitive Language:**
-- "NPS Score" → "Loyalty Score"
+- "NPS Score" → "Member Advocacy Index" (formerly "Loyalty Score")
 - "Strong NPS Score" → "Members Highly Recommend"
 - "NPS Needs Improvement" → "Member Loyalty Needs Attention"
 - Added "Moderate Member Loyalty" insight for scores 0-49
 
-**Loyalty Score Explanation:**
-- Added info card explaining Loyalty Score meaning
+**Member Advocacy Index Explanation:**
+- Added info card explaining Member Advocacy Index (MAI) meaning and score ranges
 - Shows score ranges: 50+ = Excellent, 0-49 = Good, Below 0 = Needs work
 - Explains it's based on "Would Recommend" question
 
