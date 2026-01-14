@@ -982,7 +982,7 @@ function onOpen() {
   // ============================================================================
   // MENU 5: Admin - Power user and diagnostic tools
   // ============================================================================
-  ui.createMenu('🔧 Admin')
+  var adminMenu = ui.createMenu('🔧 Admin')
     .addItem('🔍 DIAGNOSE SETUP', 'DIAGNOSE_SETUP')
     .addItem('🔍 Verify Hidden Sheets', 'verifyHiddenSheets')
     .addSeparator()
@@ -1009,14 +1009,22 @@ function onOpen() {
       .addItem('🗄️ Cache Status', 'showCacheStatusDashboard')
       .addItem('🔥 Warm Up Caches', 'warmUpCaches')
       .addItem('🗑️ Clear All Caches', 'invalidateAllCaches'))
-    .addSeparator()
-    .addSubMenu(ui.createMenu('🎭 Demo Data')
+    .addSeparator();
+
+  // Only show Demo Data menu if demo mode hasn't been disabled (after nuke)
+  // Once NUKE_SEEDED_DATA is run, this menu disappears permanently
+  // To fully remove demo tools, delete DeveloperTools.gs from the script editor
+  var isDemoDisabled = PropertiesService.getScriptProperties().getProperty('DEMO_MODE_DISABLED');
+  if (isDemoDisabled !== 'true') {
+    adminMenu.addSubMenu(ui.createMenu('🎭 Demo Data')
       .addItem('🚀 Seed All Sample Data', 'SEED_SAMPLE_DATA')
       .addSeparator()
       .addItem('☢️ NUKE SEEDED DATA', 'NUKE_SEEDED_DATA')
       .addItem('🧹 Clear Config Dropdowns Only', 'NUKE_CONFIG_DROPDOWNS')
-      .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'))
-    .addSubMenu(ui.createMenu('🧪 Testing')
+      .addItem('🔄 Restore Config & Dropdowns', 'restoreConfigAndDropdowns'));
+  }
+
+  adminMenu.addSubMenu(ui.createMenu('🧪 Testing')
       .addItem('🧪 Run All Tests', 'runAllTests')
       .addItem('⚡ Run Quick Tests', 'runQuickTests')
       .addItem('📊 View Test Results', 'viewTestResults'))

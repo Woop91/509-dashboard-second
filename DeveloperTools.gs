@@ -1,15 +1,20 @@
 /**
- * 509 Dashboard - Seed and Nuke Functions
+ * ============================================================================
+ * DEVELOPER TOOLS - DELETE THIS FILE BEFORE PRODUCTION
+ * ============================================================================
  *
- * Functions for seeding sample data and clearing data.
- * Seeded data is tracked separately from manually entered data.
- * NUKE only removes seeded data, preserving manual entries.
+ * This file contains demo data seeding and nuclear cleanup functions.
+ * These are for DEVELOPMENT AND TESTING ONLY.
  *
- * ⚠️ WARNING: DO NOT DEPLOY THIS FILE DIRECTLY
- * This is a source file used to generate ConsolidatedDashboard.gs.
- * Deploy ONLY ConsolidatedDashboard.gs to avoid function conflicts.
+ * BEFORE GOING LIVE:
+ * 1. Run NUKE_SEEDED_DATA() to clear all test data
+ * 2. Delete this entire file from the Apps Script editor
+ * 3. The Demo menu will automatically disappear on next refresh
  *
- * @version 1.0.0
+ * Once deleted, all seed/nuke functions will be gone and stewards
+ * cannot accidentally trigger a data wipe.
+ *
+ * @version 2.0.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
 
@@ -925,25 +930,6 @@ function SEED_MEMBERS_ONLY(count) {
 
 /**
  * Generate a single member row with all 31 columns
- * @param {string} memberId - Member ID
- * @param {string} firstName - First name
- * @param {string} lastName - Last name
- * @param {string} jobTitle - Job title
- * @param {string} location - Work location
- * @param {string} unit - Unit
- * @param {string} officeDays - Office days
- * @param {string} email - Email
- * @param {string} phone - Phone
- * @param {string} prefComm - Preferred communication
- * @param {string} bestTime - Best time to contact
- * @param {string} supervisor - Supervisor
- * @param {string} manager - Manager
- * @param {string} isSteward - Is steward (Yes/No)
- * @param {string} committees - Committees
- * @param {string} assignedSteward - Assigned steward
- * @param {string} homeTown - Home town
- * @param {Date|string} recentContactDate - Recent contact date
- * @param {string} contactSteward - Steward who made contact
  */
 function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, location, unit, officeDays, email, phone, prefComm, bestTime, supervisor, manager, isSteward, committees, assignedSteward, homeTown, recentContactDate, contactSteward, contactNotes) {
   var today = new Date();
@@ -976,18 +962,16 @@ function generateSingleMemberRow(memberId, firstName, lastName, jobTitle, locati
     homeTown || '',                              // 24: Home Town (X)
     recentContactDate || '',                     // 25: Recent Contact Date (Y)
     contactSteward || '',                        // 26: Contact Steward (Z)
-    contactNotes || '',                          // 27: Contact Notes (AA) - seeded if contacted
-    '',                                          // 28: Has Open Grievance (AB) - auto-calculated from Grievance Log
-    '',                                          // 29: Grievance Status (AC) - auto-calculated from Grievance Log
-    '',                                          // 30: Next Deadline (AD) - auto-calculated from Grievance Log
-    false                                        // 31: Start Grievance (AE) - checkbox (re-applied after setValues)
+    contactNotes || '',                          // 27: Contact Notes (AA)
+    '',                                          // 28: Has Open Grievance (AB)
+    '',                                          // 29: Grievance Status (AC)
+    '',                                          // 30: Next Deadline (AD)
+    false                                        // 31: Start Grievance (AE)
   ];
 }
 
 /**
  * Ensure a sheet has at least the minimum required columns
- * @param {Sheet} sheet - The sheet to check
- * @param {number} requiredColumns - Minimum number of columns needed
  */
 function ensureMinimumColumns(sheet, requiredColumns) {
   var currentColumns = sheet.getMaxColumns();
@@ -1053,15 +1037,13 @@ function SEED_GRIEVANCES(count) {
   var today = new Date();
 
   // Create shuffled list of member indices (excluding header row)
-  // This ensures each member is used before repeating
   var memberIndices = [];
   for (var m = 1; m < memberData.length; m++) {
-    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) { // Only include rows with valid member ID
+    if (memberData[m][MEMBER_COLS.MEMBER_ID - 1]) {
       memberIndices.push(m);
     }
   }
 
-  // Check if we found any valid members
   if (memberIndices.length === 0) {
     SpreadsheetApp.getUi().alert('Error: No members with valid Member IDs found. Please seed members first.');
     return;
@@ -1070,25 +1052,21 @@ function SEED_GRIEVANCES(count) {
   var shuffledMembers = shuffleArray(memberIndices);
   var memberIndex = 0;
 
-  // Distribute incident dates across the 90-day range to avoid clustering
+  // Distribute incident dates across the 90-day range
   var dateRangeStart = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
-  var dateSpread = 90 / count; // Days between each grievance's base date
+  var dateSpread = 90 / count;
 
   for (var i = 0; i < count; i++) {
-    // Use shuffled members - cycle through if more grievances than members
     if (memberIndex >= shuffledMembers.length) {
-      shuffledMembers = shuffleArray(memberIndices); // Reshuffle for next cycle
+      shuffledMembers = shuffleArray(memberIndices);
       memberIndex = 0;
     }
     var memberRow = memberData[shuffledMembers[memberIndex]];
     memberIndex++;
 
     var memberId = memberRow[MEMBER_COLS.MEMBER_ID - 1];
-
-    // Skip if no member ID (shouldn't happen due to filtering above, but just in case)
     if (!memberId) continue;
 
-    // Get member data directly from member row
     var firstName = memberRow[MEMBER_COLS.FIRST_NAME - 1] || '';
     var lastName = memberRow[MEMBER_COLS.LAST_NAME - 1] || '';
     var memberEmail = memberRow[MEMBER_COLS.EMAIL - 1] || '';
@@ -1096,21 +1074,17 @@ function SEED_GRIEVANCES(count) {
     var memberLocation = memberRow[MEMBER_COLS.WORK_LOCATION - 1] || '';
     var memberSteward = memberRow[MEMBER_COLS.ASSIGNED_STEWARD - 1] || randomChoice(stewards);
 
-    // Generate grievance ID using member's name with G prefix
     var grievanceId = generateNameBasedId('G', firstName, lastName, existingGrievanceIds);
-    existingGrievanceIds[grievanceId] = true; // Track to prevent duplicates in same batch
-    seededIds.push(grievanceId); // Track for persistence
+    existingGrievanceIds[grievanceId] = true;
+    seededIds.push(grievanceId);
 
-    // Distribute incident dates across the 90-day range with some randomness
-    // Each grievance gets a "slot" in the timeline, with +/- 2 days variation
     var baseDate = new Date(dateRangeStart.getTime() + (i * dateSpread * 24 * 60 * 60 * 1000));
-    var variation = (Math.random() - 0.5) * 4 * 24 * 60 * 60 * 1000; // +/- 2 days
+    var variation = (Math.random() - 0.5) * 4 * 24 * 60 * 60 * 1000;
     var incidentDate = new Date(Math.min(baseDate.getTime() + variation, today.getTime()));
 
     var status = randomChoice(statuses);
     var step = randomChoice(steps);
 
-    // Generate grievance row with all data populated directly
     var row = generateSingleGrievanceRow(
       grievanceId,
       memberId,
@@ -1129,7 +1103,6 @@ function SEED_GRIEVANCES(count) {
 
     rows.push(row);
 
-    // Write in batches
     if (rows.length >= batchSize || i === count - 1) {
       grievanceSheet.getRange(startRow, 1, rows.length, 34).setValues(rows);
       startRow += rows.length;
@@ -1138,134 +1111,32 @@ function SEED_GRIEVANCES(count) {
     }
   }
 
-  // Re-apply checkboxes to Message Alert column (AC) - setValues overwrites them
+  // Re-apply checkboxes to Message Alert column (AC)
   var lastRow = grievanceSheet.getLastRow();
   if (lastRow >= 2) {
     grievanceSheet.getRange(2, GRIEVANCE_COLS.MESSAGE_ALERT, lastRow - 1, 1).insertCheckboxes();
   }
 
-  // Sync data from hidden formulas sheet (self-healing - keeps data updated on edits)
+  // Sync data
   syncGrievanceFormulasToLog();
-
-  // Sync grievance data to Member Directory (populates Has Open Grievance?, Status, Days to Deadline)
   syncGrievanceToMemberDirectory();
 
-  // Track seeded IDs for later cleanup (nuke only removes seeded data)
+  // Track seeded IDs
   trackSeededGrievanceIdsBatch(seededIds);
 
   SpreadsheetApp.getActiveSpreadsheet().toast(count + ' grievances seeded!', '✅ Success', 3);
 }
 
 /**
- * Generate a grievance row for seeding - leaves formula columns empty
- * Formula columns (C, D, H, J, L, N, P, S, T, U, X, Y, Z, AA) will be auto-populated
- */
-function generateSingleGrievanceRowForSeed(grievanceId, memberId, status, step, incidentDate, articles, category) {
-  var today = new Date();
-
-  // Calculate dates for manual entry columns only
-  // Date Filed - always set if status is not brand new
-  var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
-
-  // Initialize timeline variables for manual entry columns
-  var step1Rcvd = '';
-  var step2AppealFiled = '';
-  var step2Rcvd = '';
-  var step3AppealFiled = '';
-  var dateClosed = '';
-
-  // Determine if case is closed
-  var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
-
-  // Populate timeline based on current step
-  var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
-
-  // Step I Due calculated by formula, but Step I Rcvd is manual
-  var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
-
-  // If Step I or beyond, Step I has been completed
-  if (stepIndex >= 1 || isClosed) {
-    step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
-    if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
-  }
-
-  // If Step II or beyond
-  if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
-    step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
-    var step2Due = addDays(step2AppealFiled, 30);
-    step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
-    if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
-  }
-
-  // If Step III or beyond
-  if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
-    step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
-  }
-
-  // Set date closed for resolved cases
-  if (isClosed) {
-    var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
-    dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
-  }
-
-  var resolutions = ['Won - Full remedy', 'Won - Partial remedy', 'Settled - Compromise', 'Denied', 'Withdrawn', 'Pending'];
-  var resolution = dateClosed ? randomChoice(resolutions) : '';
-
-  // Return row with empty strings for formula columns
-  // Formula columns: C, D (names), H, J, L, N, P (deadlines), S, T, U (metrics), X, Y, Z, AA (member info)
-  return [
-    grievanceId,              // 1: Grievance ID (A)
-    memberId,                 // 2: Member ID (B)
-    '',                       // 3: First Name (C) - FORMULA
-    '',                       // 4: Last Name (D) - FORMULA
-    status,                   // 5: Status (E)
-    step,                     // 6: Current Step (F)
-    incidentDate,             // 7: Incident Date (G)
-    '',                       // 8: Filing Deadline (H) - FORMULA
-    dateFiled,                // 9: Date Filed (I)
-    '',                       // 10: Step I Due (J) - FORMULA
-    step1Rcvd,                // 11: Step I Rcvd (K)
-    '',                       // 12: Step II Appeal Due (L) - FORMULA
-    step2AppealFiled,         // 13: Step II Appeal Filed (M)
-    '',                       // 14: Step II Due (N) - FORMULA
-    step2Rcvd,                // 15: Step II Rcvd (O)
-    '',                       // 16: Step III Appeal Due (P) - FORMULA
-    step3AppealFiled,         // 17: Step III Appeal Filed (Q)
-    dateClosed,               // 18: Date Closed (R)
-    '',                       // 19: Days Open (S) - FORMULA
-    '',                       // 20: Next Action Due (T) - FORMULA
-    '',                       // 21: Days to Deadline (U) - FORMULA
-    articles,                 // 22: Articles Violated (V)
-    category,                 // 23: Issue Category (W)
-    '',                       // 24: Member Email (X) - FORMULA
-    '',                       // 25: Unit (Y) - FORMULA
-    '',                       // 26: Location (Z) - FORMULA
-    '',                       // 27: Steward (AA) - FORMULA
-    resolution,               // 28: Resolution (AB)
-    false,                    // 29: Message Alert (AC) - checkbox
-    '',                       // 30: Coordinator Message (AD)
-    '',                       // 31: Acknowledged By (AE)
-    '',                       // 32: Acknowledged Date (AF)
-    '',                       // 33: Drive Folder ID (AG)
-    ''                        // 34: Drive Folder URL (AH)
-  ];
-}
-
-/**
  * Generate a single grievance row with all 34 columns
- * Properly calculates all timeline fields based on grievance step progression
  */
 function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, status, step, incidentDate, articles, category, email, unit, location, steward) {
   var today = new Date();
   var filingDeadline = addDays(incidentDate, 21);
 
-  // Date Filed - always set if status is not brand new
   var dateFiled = addDays(incidentDate, Math.floor(Math.random() * 14) + 1);
-
-  // Step I Due (30 days after filing)
   var step1Due = dateFiled ? addDays(dateFiled, 30) : '';
 
-  // Initialize timeline variables
   var step1Rcvd = '';
   var step2AppealDue = '';
   var step2AppealFiled = '';
@@ -1275,58 +1146,38 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
   var step3AppealFiled = '';
   var dateClosed = '';
 
-  // Determine if case is closed
   var isClosed = (status === 'Settled' || status === 'Withdrawn' || status === 'Denied' || status === 'Won' || status === 'Closed');
-
-  // Populate timeline based on current step
   var stepIndex = ['Informal', 'Step I', 'Step II', 'Step III', 'Mediation', 'Arbitration'].indexOf(step);
 
-  // If Step I or beyond, Step I has been completed
   if (stepIndex >= 1 || isClosed) {
-    // Step I Decision Received (sometime after Step I Due or earlier)
     step1Rcvd = addDays(step1Due, Math.floor(Math.random() * 10) - 5);
     if (step1Rcvd < dateFiled) step1Rcvd = addDays(dateFiled, 15);
-
-    // Step II Appeal Due (10 days after Step I Decision Received)
     step2AppealDue = addDays(step1Rcvd, 10);
   }
 
-  // If Step II or beyond
   if (stepIndex >= 2 || (isClosed && stepIndex >= 1)) {
-    // Step II Appeal Filed (within appeal window)
     step2AppealFiled = addDays(step1Rcvd, Math.floor(Math.random() * 8) + 1);
-
-    // Step II Decision Due (30 days after appeal filed)
     step2Due = addDays(step2AppealFiled, 30);
-
-    // Step II Decision Received
     step2Rcvd = addDays(step2Due, Math.floor(Math.random() * 10) - 5);
     if (step2Rcvd < step2AppealFiled) step2Rcvd = addDays(step2AppealFiled, 15);
-
-    // Step III Appeal Due (30 days after Step II Decision Received)
     step3AppealDue = addDays(step2Rcvd, 30);
   }
 
-  // If Step III or beyond
   if (stepIndex >= 3 || (isClosed && stepIndex >= 2)) {
-    // Step III Appeal Filed
     step3AppealFiled = addDays(step2Rcvd, Math.floor(Math.random() * 20) + 1);
   }
 
-  // Set date closed for resolved cases
   if (isClosed) {
     var lastDate = step3AppealFiled || step2Rcvd || step1Rcvd || dateFiled;
     dateClosed = addDays(lastDate, Math.floor(Math.random() * 30) + 5);
   }
 
-  // Calculate Days Open
   var daysOpen = '';
   if (dateFiled) {
     var endDate = dateClosed || today;
     daysOpen = Math.floor((endDate - dateFiled) / (1000 * 60 * 60 * 24));
   }
 
-  // Calculate Next Action Due based on current step
   var nextActionDue = '';
   if (!isClosed) {
     switch (step) {
@@ -1347,7 +1198,6 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
     }
   }
 
-  // Calculate Days to Deadline
   var daysToDeadline = '';
   if (nextActionDue && !isClosed) {
     daysToDeadline = Math.floor((nextActionDue - today) / (1000 * 60 * 60 * 24));
@@ -1385,7 +1235,7 @@ function generateSingleGrievanceRow(grievanceId, memberId, firstName, lastName, 
     location,                 // 26: Location (Z)
     steward,                  // 27: Steward (AA)
     resolution,               // 28: Resolution (AB)
-    false,                    // 29: Message Alert (AC) - checkbox
+    false,                    // 29: Message Alert (AC)
     '',                       // 30: Coordinator Message (AD)
     '',                       // 31: Acknowledged By (AE)
     '',                       // 32: Acknowledged Date (AF)
@@ -1503,7 +1353,6 @@ function seed25Grievances() {
 /**
  * Delete all seeded data from Member Directory and Grievance Log
  * Uses pattern matching (M/G + 4 letters + 3 digits) to identify seeded IDs
- * This is more reliable than Script Properties tracking which has size limits
  */
 function NUKE_SEEDED_DATA() {
   var ui = SpreadsheetApp.getUi();
@@ -1515,7 +1364,7 @@ function NUKE_SEEDED_DATA() {
     return;
   }
 
-  // Pattern for seeded IDs: M/G + 4 uppercase letters + 3 digits (e.g., MJOSM123, GJOSM456)
+  // Pattern for seeded IDs: M/G + 4 uppercase letters + 3 digits
   var seededIdPattern = /^[MG][A-Z]{4}\d{3}$/;
 
   // Count seeded data by pattern
@@ -1539,10 +1388,6 @@ function NUKE_SEEDED_DATA() {
     });
   }
 
-  // Check for Feedback sheet
-  var feedbackSheet = ss.getSheetByName(SHEETS.FEEDBACK);
-  var hasFeedback = feedbackSheet && feedbackSheet.getLastRow() > 1;
-
   var response = ui.alert(
     '☢️ NUKE SEEDED DATA',
     '⚠️ This will permanently delete seeded/demo data:\n\n' +
@@ -1551,9 +1396,10 @@ function NUKE_SEEDED_DATA() {
     '• Config dropdown values\n' +
     '• Survey responses (Member Satisfaction data cleared)\n' +
     '• Feedback & Development sheet (entire sheet deleted)\n' +
-    '• Menu Checklist sheet (entire sheet deleted)\n\n' +
+    '• Function Checklist sheet (entire sheet deleted)\n\n' +
     '✅ Manually entered data with different ID formats will be PRESERVED.\n\n' +
-    '⚠️ After nuke, the Demo menu will be permanently disabled.\n\n' +
+    '⚠️ After nuke, the Demo menu will be permanently disabled.\n' +
+    '⚠️ To fully remove demo tools, delete DeveloperTools.gs from the script editor.\n\n' +
     'Continue?',
     ui.ButtonSet.YES_NO
   );
@@ -1570,7 +1416,7 @@ function NUKE_SEEDED_DATA() {
     '2. Delete ' + grievanceCount + ' seeded grievances\n' +
     '3. Clear survey responses from Member Satisfaction\n' +
     '4. Delete Feedback & Development sheet\n' +
-    '5. Delete Menu Checklist sheet\n' +
+    '5. Delete Function Checklist sheet\n' +
     '6. Permanently disable the Demo menu\n\n' +
     'Are you sure?',
     ui.ButtonSet.YES_NO
@@ -1589,7 +1435,6 @@ function NUKE_SEEDED_DATA() {
     // Delete seeded grievances first (they reference members)
     if (grievanceSheet && grievanceSheet.getLastRow() > 1) {
       var grievanceData = grievanceSheet.getRange(2, 1, grievanceSheet.getLastRow() - 1, 1).getValues();
-      // Delete from bottom up to preserve row indices
       for (var g = grievanceData.length - 1; g >= 0; g--) {
         var gId = String(grievanceData[g][0] || '');
         if (seededIdPattern.test(gId)) {
@@ -1602,7 +1447,6 @@ function NUKE_SEEDED_DATA() {
     // Delete seeded members
     if (memberSheet && memberSheet.getLastRow() > 1) {
       var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, 1).getValues();
-      // Delete from bottom up to preserve row indices
       for (var m = memberData.length - 1; m >= 0; m--) {
         var mId = String(memberData[m][0] || '');
         if (seededIdPattern.test(mId)) {
@@ -1612,16 +1456,14 @@ function NUKE_SEEDED_DATA() {
       }
     }
 
-    // Clear Config dropdowns (keep headers and default values)
+    // Clear Config dropdowns
     NUKE_CONFIG_DROPDOWNS();
 
-    // Clear Member Satisfaction survey data (keep headers and formulas)
+    // Clear Member Satisfaction survey data
     var satisfactionSheet = ss.getSheetByName(SHEETS.SATISFACTION);
     var surveyCleared = false;
     if (satisfactionSheet && satisfactionSheet.getLastRow() > 1) {
       try {
-        // Clear only the response data rows (row 2 onwards), keep header row 1
-        // Clear columns A-BP (form responses) but preserve BT-CD (section average formulas)
         var lastDataRow = satisfactionSheet.getLastRow();
         satisfactionSheet.getRange(2, 1, lastDataRow - 1, 68).clearContent();
         surveyCleared = true;
@@ -1672,9 +1514,10 @@ function NUKE_SEEDED_DATA() {
       '• ' + deletedGrievances + ' grievances removed\n' +
       (surveyCleared ? '• Survey responses cleared from Member Satisfaction\n' : '') +
       (feedbackDeleted ? '• Feedback & Development sheet deleted\n' : '') +
-      (menuChecklistDeleted ? '• Menu Checklist sheet deleted\n' : '') +
+      (functionChecklistDeleted ? '• Function Checklist sheet deleted\n' : '') +
       '\nDemo mode has been permanently disabled.\n' +
-      'Refresh the page to remove the Demo menu.',
+      'Refresh the page to remove the Demo menu.\n\n' +
+      '📌 NEXT STEP: Delete the "DeveloperTools.gs" file from the script editor.',
       ui.ButtonSet.OK);
 
   } catch (error) {
@@ -1730,10 +1573,9 @@ function randomChoice(arr) {
 
 /**
  * Shuffle array using Fisher-Yates algorithm
- * Returns a new shuffled array (does not modify original)
  */
 function shuffleArray(arr) {
-  var shuffled = arr.slice(); // Create a copy
+  var shuffled = arr.slice();
   for (var i = shuffled.length - 1; i > 0; i--) {
     var j = Math.floor(Math.random() * (i + 1));
     var temp = shuffled[i];
