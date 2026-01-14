@@ -1,6 +1,35 @@
-# 509 Dashboard - Google Apps Script v3.47
+# 509 Dashboard - Google Apps Script v3.48
 
 Complete union member database and grievance tracking system for Local 509.
+
+## 🆕 What's New in v3.48
+
+### Survey Verification & Quarterly Tracking (January 2026)
+
+**New Survey Verification System:**
+- Survey responses now verified against Member Directory by email
+- Unmatched emails flagged as "Pending Review" for admin review
+- Only verified responses count in statistics
+- New menu: **509 Dashboard → Survey Tools → 🔍 Review Flagged Submissions**
+
+**Quarterly Tracking with History:**
+- Each survey response assigned a quarter (e.g., "2026-Q1")
+- Members can update responses anytime - only latest per quarter counts
+- Historical responses preserved (not deleted) for audit trail
+- New toggle in Member Dashboard: "Include historical responses"
+
+**Public Member Dashboard Updates:**
+- Statistics now filter to only verified responses
+- Response rate based on unique verified member IDs
+- Toggle to include/exclude historical (superseded) responses
+
+**New Columns in Member Satisfaction Sheet (CE-CK):**
+- EMAIL, VERIFIED, MATCHED_MEMBER_ID, QUARTER, IS_LATEST, SUPERSEDED_BY, REVIEWER_NOTES
+
+**⚠️ Email Configuration Required:**
+For verification to work, enable "Collect email addresses" in your Google Form settings, or add an "Email Address" question. Without email collection, all submissions will be marked "Pending Review".
+
+---
 
 ## 🆕 What's New in v3.47
 

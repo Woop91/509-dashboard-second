@@ -1034,6 +1034,13 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 | CJ (88) | SUPERSEDED_BY | Row number of newer response (if superseded) |
 | CK (89) | REVIEWER_NOTES | Notes from reviewer |
 
+**Email Collection Configuration:**
+For verification to work, the Google Form must collect respondent emails. Two options:
+1. **Enable "Collect email addresses"** in Google Form settings (recommended)
+2. **Add an "Email Address" question** to the form
+
+If neither is configured, all submissions will be marked as "Pending Review" and require manual approval.
+
 **Updated Functions:**
 - `onSatisfactionFormSubmit(e)` - Now includes email verification and quarterly tracking
 - `validateMemberEmail(email)` - Validates email against Member Directory
