@@ -10,7 +10,7 @@ This document describes the comprehensive test suite for the 509 Dashboard Googl
 |-----------|-----------|-------|----------|---------------|
 | Core formulas & validations | Code.test.gs | 21+ | P0 (Critical) | 100% |
 | Grievance workflow | GrievanceWorkflow.test.gs | 11+ | P1 (High) | 70% |
-| Data clearing | SeedNuke.test.gs | 10+ | P1 (High) | 70% |
+| Data clearing | DeveloperTools.test.gs | 10+ | P1 (High) | 70% |
 | Integration workflows | Integration.test.gs | 9+ | P1 (High) | 80% |
 | **TOTAL** | **4 test files** | **51+ tests** | | **~70%** |
 
@@ -149,7 +149,7 @@ Tests member selection and grievance creation workflow.
 
 ---
 
-### 5. Data Clearing Tests (SeedNuke.test.gs)
+### 5. Data Clearing Tests (DeveloperTools.test.gs)
 
 **Priority: 🟡 P1 (High)**
 

@@ -70,7 +70,7 @@ Download `ConsolidatedDashboard.gs` from the repository.
 
 ### **Step 7: Seed Test Data (Optional)**
 
-1. Click **🎭 Demo → 🚀 Seed All Sample Data**
+1. Click **🔧 Admin → 🎭 Demo Data → 🚀 Seed All Sample Data**
 2. Wait for seeding to complete
 
 ---
@@ -105,7 +105,7 @@ Your dashboard is fully operational with:
 | ComfortViewFeatures.gs | Comfort View accessibility (themes, focus mode, pomodoro) |
 | MobileQuickActions.gs | Mobile UI, quick actions, modal popup |
 | PerformanceUndo.gs | Caching layer, undo/redo system |
-| SeedNuke.gs | Demo data seeding and clearing |
+| DeveloperTools.gs | Demo data seeding and clearing (DELETE BEFORE PRODUCTION) |
 | WebApp.gs | Standalone web app for mobile access |
 | TestingValidation.gs | Test framework and data validation |
 

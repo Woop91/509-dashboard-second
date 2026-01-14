@@ -284,13 +284,14 @@ After entering, these columns auto-populate:
 
 ### Seed All Sample Data
 
-1. Click **🎭 Demo** → **🚀 Seed All Sample Data**
+1. Click **🔧 Admin** → **🎭 Demo Data** → **🚀 Seed All Sample Data**
 2. Confirm when prompted
 3. Wait for seeding to complete
 
 This seeds:
 - 1,000 sample members with complete data
 - 300 grievances (randomly distributed - some members may have multiple)
+- 50 sample survey responses
 - Auto-sync trigger for live updates
 
 ### Live Wiring
@@ -312,7 +313,7 @@ After seeding, Member Directory columns auto-update when you edit Grievance Log:
 
 ### Nuke Process
 
-1. Click **🎭 Demo** → **🗑️ Nuke Data** → **☢️ NUKE SEEDED DATA**
+1. Click **🔧 Admin** → **🎭 Demo Data** → **☢️ NUKE SEEDED DATA**
 2. Read the warning carefully
 3. Click "Yes" on first confirmation
 4. Click "Yes" on second confirmation
@@ -320,11 +321,10 @@ After seeding, Member Directory columns auto-update when you edit Grievance Log:
 
 ### What Gets Removed
 
-- ❌ All test members
-- ❌ All test grievances
-- ❌ Steward workload data
-- ❌ Seed menu items
-- ❌ Seed functions (permanently deleted)
+- ❌ All test members (pattern-matched IDs only)
+- ❌ All test grievances (pattern-matched IDs only)
+- ❌ Survey response data
+- ❌ Demo menu (hidden after nuke)
 
 ### What's Preserved
 
@@ -332,7 +332,14 @@ After seeding, Member Directory columns auto-update when you edit Grievance Log:
 - ✅ Config dropdown lists
 - ✅ Dashboard layouts
 - ✅ All formulas
-- ✅ Menu system (except seed options)
+- ✅ Manually entered data with different ID formats
+
+### Final Cleanup (Recommended)
+
+After nuking, delete `DeveloperTools.gs` from the Apps Script editor:
+1. Go to **Extensions** → **Apps Script**
+2. Right-click `DeveloperTools.gs` → **Delete**
+3. This permanently removes all demo functions
 
 ### After Nuking
 
@@ -480,8 +487,8 @@ If something goes wrong, use these repair functions:
 | Refresh dashboard | 👤 Dashboard → 🔄 Refresh All |
 | View operations monitor | 👤 Dashboard → 📊 Dashboards → 🎯 Unified Operations Monitor |
 | Check system health | ⚙️ Administrator → System Health → 🔧 Diagnose Setup |
-| Seed test data | 🎭 Demo → 🚀 Seed All Sample Data |
-| Exit demo mode | 🎭 Demo → 🗑️ Nuke Data → ☢️ NUKE SEEDED DATA |
+| Seed test data | 🔧 Admin → 🎭 Demo Data → 🚀 Seed All Sample Data |
+| Exit demo mode | 🔧 Admin → 🎭 Demo Data → ☢️ NUKE SEEDED DATA |
 
 ### Column Reference
 

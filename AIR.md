@@ -24,7 +24,7 @@
 
 1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
 2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
-3. Use `Demo > Seed All Sample Data` to populate test data
+3. Use `🔧 Admin > 🎭 Demo Data > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
 
 ---
@@ -132,7 +132,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 509-dashboard/
 ├── Constants.gs           # Configuration constants (SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS)
 ├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
-├── SeedNuke.gs            # Demo data seeding and clearing functions
+├── DeveloperTools.gs      # Demo data seeding and clearing - DELETE BEFORE PRODUCTION
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
 ├── DataIntegrity.gs       # Data integrity, batch operations, validation, audit logging (NEW v2.2.0)
 ├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
@@ -238,7 +238,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `getSatisfactionSectionData()` - Fetches scores for all 11 survey sections
   - `getSatisfactionAnalyticsData()` - Fetches worksite/role analysis, steward impact, priorities
 
-**SeedNuke.gs** (~1400 lines)
+**DeveloperTools.gs** (~1400 lines) - DELETE THIS FILE BEFORE PRODUCTION
 - `SEED_SAMPLE_DATA()` - Seeds Config + 1,000 members + 300 grievances (30%) + 50 survey responses + 3 feedback entries
 - `seedConfigData()` - Populate Config dropdowns
 - `seedSatisfactionData()` - Seed 50 sample survey responses with realistic branching logic
@@ -877,12 +877,13 @@ The menu system has been reorganized from 9 menus to 5 logical groups:
 │   ├── 🗄️ Cache Status
 │   ├── 🔥 Warm Caches
 │   └── 🗑️ Clear Caches
-├── 🎭 Demo (submenu)
-│   ├── 🚀 Seed All Sample Data
-│   └── ☢️ NUKE SEEDED DATA
-└── ⚡ Quick Seed (submenu)
-    ├── 🌱 Seed 50 Members
-    └── 🌱 Seed 100 Members
+└── 🎭 Demo Data (submenu) - Only visible if DEMO_MODE_DISABLED != 'true'
+    ├── 🚀 Seed All Sample Data
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
+
+    NOTE: Delete DeveloperTools.gs before production to remove all demo functions
 ```
 
 ---
@@ -1276,7 +1277,7 @@ The error occurred because `SEED_GRIEVANCES` and `SEED_MEMBERS` functions tried 
 - Automatically expands sheet columns if needed before writing data
 
 **Files Updated:**
-- `SeedNuke.gs` - Added helper function and column checks
+- `DeveloperTools.gs` - Added helper function and column checks
 - `ConsolidatedDashboard.gs` - Same updates for deployed version
 
 ---
@@ -2001,7 +2002,7 @@ Added a new modal popup dashboard for analyzing member satisfaction survey data,
    - Fixed to seed 1,000 members + 300 grievances (was incorrectly 50/25)
    - Uses merged approach: `SEED_MEMBERS(1000, 30)` for linked data
    - Automatically installs auto-sync trigger for live updates
-   - Matches specification from SeedNuke.gs
+   - Matches specification from DeveloperTools.gs
 
 **New Functions:**
 - `showDesktopSearch()` - Main desktop search dialog (~300 lines HTML/JS)
@@ -2017,7 +2018,7 @@ Added a new modal popup dashboard for analyzing member satisfaction survey data,
 - `ConsolidatedDashboard.gs`: Fixed `SEED_SAMPLE_DATA()` to seed 1000 members + 300 grievances
 - `Constants.gs`: Updated `GRIEVANCE_STATUS` comment for clarity
 - `HiddenSheets.gs`: Fixed Dashboard formulas to use STATUS column for outcome counts
-- `SeedNuke.gs`: Merged grievance seeding into SEED_MEMBERS function
+- `DeveloperTools.gs`: Merged grievance seeding into SEED_MEMBERS function
 
 **Desktop vs Mobile Search Comparison:**
 | Aspect | Mobile | Desktop |
@@ -2135,7 +2136,7 @@ Grievance Log ──────────────┘
 - `HiddenSheets.gs`: Added `sortGrievanceLogByStatus()` function
 - `HiddenSheets.gs`: Hooked sort into `onEditAutoSync()` trigger
 - `ConsolidatedDashboard.gs`: Added duplicate `sortGrievanceLogByStatus()` function and trigger hook
-- `SeedNuke.gs`: Expanded `firstNames` and `lastNames` arrays (20 → 120 each)
+- `DeveloperTools.gs`: Expanded `firstNames` and `lastNames` arrays (20 → 120 each)
 - `ConsolidatedDashboard.gs`: Expanded name arrays in `SEED_MEMBERS()` function
 
 ---
@@ -2282,5 +2283,5 @@ Complete rebuild from AIR.md specification.
 - Created 3 clean files (~1,500 lines)
 - Constants.gs: Column mappings and helper functions
 - Code.gs: Setup, menus, and sheet creation
-- SeedNuke.gs: Demo data management
+- DeveloperTools.gs: Demo data management (DELETE BEFORE PRODUCTION)
 - 98.8% code reduction while maintaining core functionality
