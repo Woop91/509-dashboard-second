@@ -2,7 +2,7 @@
   "source": {
     "include": ["."],
     "includePattern": ".+\\.gs$",
-    "excludePattern": "(node_modules|ConsolidatedDashboard\\.gs|Complete509Dashboard\\.gs)"
+    "excludePattern": "(node_modules|ConsolidatedDashboard\\.gs)"
   },
   "opts": {
     "destination": "./docs",

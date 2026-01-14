@@ -102,7 +102,7 @@ Your dashboard is fully operational with:
 | Constants.gs | SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS |
 | Code.gs | Main setup, menus, sheet creation, Dashboard |
 | HiddenSheets.gs | 6 self-healing calculation sheets |
-| ADHDFeatures.gs | Comfort View accessibility (themes, focus mode, pomodoro) |
+| ComfortViewFeatures.gs | Comfort View accessibility (themes, focus mode, pomodoro) |
 | MobileQuickActions.gs | Mobile UI, quick actions, modal popup |
 | PerformanceUndo.gs | Caching layer, undo/redo system |
 | SeedNuke.gs | Demo data seeding and clearing |

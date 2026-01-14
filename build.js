@@ -47,7 +47,7 @@ const path = require('path');
  * Level 1 (Depends on Constants only):
  *   - Code.gs
  *   - HiddenSheets.gs
- *   - ADHDFeatures.gs
+ *   - ComfortViewFeatures.gs
  *   - PerformanceUndo.gs
  *   - SeedNuke.gs
  *   - WebApp.gs
@@ -68,7 +68,7 @@ const CORE_MODULES = [
 
   // ===== LEVEL 2: FEATURE MODULES =====
   'HiddenSheets.gs',       // Hidden sheet architecture for self-healing calculations
-  'ADHDFeatures.gs',       // ADHD accessibility and theming features
+  'ComfortViewFeatures.gs',  // Comfort View accessibility and theming features
   'MobileQuickActions.gs', // Mobile-optimized interface with device detection
   'PerformanceUndo.gs',    // Performance caching and undo/redo system
   'SeedNuke.gs',           // Demo mode seeding and clearing
@@ -96,7 +96,7 @@ function validateModuleDependencies() {
   const dependencies = {
     'Code.gs': ['Constants.gs'],
     'HiddenSheets.gs': ['Constants.gs'],
-    'ADHDFeatures.gs': ['Constants.gs'],
+    'ComfortViewFeatures.gs': ['Constants.gs'],
     'MobileQuickActions.gs': ['Constants.gs', 'Code.gs'],
     'PerformanceUndo.gs': ['Constants.gs'],
     'SeedNuke.gs': ['Constants.gs'],
@@ -133,9 +133,7 @@ function validateModuleDependencies() {
 // Files to exclude from build
 const EXCLUDED_FILES = [
   'ConsolidatedDashboard.gs',  // Output file
-  'Complete509Dashboard.gs',   // Old version
-  'build.js',                  // This script
-  'fix_destructuring.js'       // Utility script
+  'build.js'                   // This script
 ];
 
 /**

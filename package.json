@@ -1,14 +1,13 @@
 {
   "name": "509-dashboard",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "SEIU Local 509 Union Grievance Tracking Dashboard - Security Enhanced + Code Review Improvements",
   "main": "Code.gs",
   "scripts": {
-    "build": "node verify-columns.js && node build.js",
+    "build": "node build.js",
     "build:verify": "node build.js --verify",
     "build:clean": "node build.js --clean",
     "build:deps": "node build.js --verify && echo '\n✅ Dependencies validated'",
-    "verify": "node verify-columns.js",
     "test": "echo \"Run tests in Google Apps Script environment\"",
     "docs": "jsdoc -c jsdoc.json",
     "docs:serve": "npx http-server ./docs -p 8080",

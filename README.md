@@ -1,6 +1,35 @@
-# 509 Dashboard - Google Apps Script v3.47
+# 509 Dashboard - Google Apps Script v3.48
 
 Complete union member database and grievance tracking system for Local 509.
+
+## 🆕 What's New in v3.48
+
+### Survey Verification & Quarterly Tracking (January 2026)
+
+**New Survey Verification System:**
+- Survey responses now verified against Member Directory by email
+- Unmatched emails flagged as "Pending Review" for admin review
+- Only verified responses count in statistics
+- New menu: **509 Dashboard → Survey Tools → 🔍 Review Flagged Submissions**
+
+**Quarterly Tracking with History:**
+- Each survey response assigned a quarter (e.g., "2026-Q1")
+- Members can update responses anytime - only latest per quarter counts
+- Historical responses preserved (not deleted) for audit trail
+- New toggle in Member Dashboard: "Include historical responses"
+
+**Public Member Dashboard Updates:**
+- Statistics now filter to only verified responses
+- Response rate based on unique verified member IDs
+- Toggle to include/exclude historical (superseded) responses
+
+**New Columns in Member Satisfaction Sheet (CE-CK):**
+- EMAIL, VERIFIED, MATCHED_MEMBER_ID, QUARTER, IS_LATEST, SUPERSEDED_BY, REVIEWER_NOTES
+
+**⚠️ Email Configuration Required:**
+For verification to work, enable "Collect email addresses" in your Google Form settings, or add an "Email Address" question. Without email collection, all submissions will be marked "Pending Review".
+
+---
 
 ## 🆕 What's New in v3.47
 
@@ -294,7 +323,7 @@ Project Files (9 source files → 1 consolidated deployment)
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
+├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu

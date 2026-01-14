@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-13T22:00:16.669Z
+ * - Build Date: 2026-01-14T04:07:09.844Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -445,7 +445,16 @@ var SATISFACTION_COLS = {
   AVG_COMMUNICATION: 79,          // CA - Avg of Q41-Q45
   AVG_MEMBER_VOICE: 80,           // CB - Avg of Q46-Q50
   AVG_VALUE_ACTION: 81,           // CC - Avg of Q51-Q55
-  AVG_SCHEDULING: 82              // CD - Avg of Q56-Q62
+  AVG_SCHEDULING: 82,             // CD - Avg of Q56-Q62
+
+  // ── VERIFICATION & TRACKING COLUMNS (CE onwards) ──
+  EMAIL: 83,                      // CE - Email address from form submission
+  VERIFIED: 84,                   // CF - Yes / Pending Review / Rejected
+  MATCHED_MEMBER_ID: 85,          // CG - Member ID if email matched
+  QUARTER: 86,                    // CH - Quarter string (e.g., "2026-Q1")
+  IS_LATEST: 87,                  // CI - Yes/No - Is this the latest for this member this quarter?
+  SUPERSEDED_BY: 88,              // CJ - Row number of newer response (if superseded)
+  REVIEWER_NOTES: 89              // CK - Notes from reviewer
 };
 
 /**
@@ -863,12 +872,19 @@ function onOpen() {
   // ============================================================================
   ui.createMenu('📊 509 Dashboard')
     .addItem('📊 Dashboard', 'showInteractiveDashboardTab')
-    .addItem('📋 Dashboard Pend', 'showSmartDashboard')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
+    .addItem('📊 Member Dashboard', 'showPublicMemberDashboard')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📧 Survey Tools')
+      .addItem('📧 Send Survey to Random Members', 'sendRandomSurveyEmails')
+      .addItem('🔗 Get Survey Link', 'getSatisfactionSurveyLink')
+      .addItem('⚙️ Setup Survey Trigger', 'setupSatisfactionFormTrigger')
+      .addSeparator()
+      .addItem('🔍 Review Flagged Submissions', 'showFlaggedSubmissionsReview'))
     .addToUi();
 
   // ============================================================================
@@ -3467,7 +3483,7 @@ function createFunctionChecklistSheet_() {
     ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Setup All Hidden Sheets', 'setupAllHiddenSheets', 'Creates/recreates all hidden sheets with self-healing formulas'],
     ['1️⃣ Foundation', '⚙️ Admin > Setup', '🔧 Repair All Hidden Sheets', 'repairAllHiddenSheets', 'Fixes broken formulas in hidden sheets without recreating them'],
     ['1️⃣ Foundation', '🏗️ Setup', '⚙️ Setup Data Validations', 'setupDataValidations', 'Applies dropdown validations to Member Directory and Grievance Log'],
-    ['1️⃣ Foundation', '🏗️ Setup', '🎨 Setup ADHD Defaults', 'setupADHDDefaults', 'Configures default ADHD-friendly visual settings'],
+    ['1️⃣ Foundation', '🏗️ Setup', '🎨 Setup Comfort View', 'setupADHDDefaults', 'Configures default accessibility-friendly visual settings'],
 
     // ═══ PHASE 2: Triggers & Data Sync ═══
     ['2️⃣ Sync', '⚙️ Admin > Setup', '⚡ Install Auto-Sync Trigger', 'installAutoSyncTrigger', 'Creates edit trigger to auto-sync data between sheets'],
@@ -3477,7 +3493,6 @@ function createFunctionChecklistSheet_() {
     ['2️⃣ Sync', '⚙️ Admin > Setup', '🚫 Remove Auto-Sync Trigger', 'removeAutoSyncTrigger', 'Removes the automatic sync trigger (manual sync still works)'],
 
     // ═══ PHASE 3: Core Dashboards ═══
-    ['3️⃣ Dashboards', '👤 Dashboard', '📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard', 'Shows dashboard optimized for current device (desktop/mobile)'],
     ['3️⃣ Dashboards', '👤 Dashboard', '🎯 Custom View', 'showInteractiveDashboardTab', 'Opens the Custom View sheet with configurable metrics'],
     ['3️⃣ Dashboards', '👤 Dashboard', '📋 View Active Grievances', 'viewActiveGrievances', 'Shows filtered list of all open/pending grievances'],
     ['3️⃣ Dashboards', '👤 Dashboard', '📱 Mobile Dashboard', 'showMobileDashboard', 'Touch-friendly dashboard for phones and tablets'],
@@ -3513,11 +3528,11 @@ function createFunctionChecklistSheet_() {
     ['8️⃣ Notify', '📊 Notifications', '🧪 Test Notifications', 'testDeadlineNotifications', 'Sends test email to verify notification setup'],
 
     // ═══ PHASE 9: Accessibility & Theming ═══
-    ['9️⃣ Access', '🔧 ADHD', '♿ ADHD Control Panel', 'showADHDControlPanel', 'Central hub for all ADHD-friendly features and settings'],
-    ['9️⃣ Access', '🔧 ADHD', '🎯 Focus Mode', 'activateFocusMode', 'Highlights current row, dims distractions, reduces visual noise'],
-    ['9️⃣ Access', '🔧 ADHD', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes', 'Alternating row colors for easier row tracking'],
-    ['9️⃣ Access', '🔧 ADHD', '📝 Quick Capture', 'showQuickCaptureNotepad', 'Fast notepad for capturing thoughts without losing focus'],
-    ['9️⃣ Access', '🔧 ADHD', '🍅 Pomodoro Timer', 'startPomodoroTimer', '25-minute focus timer with break reminders'],
+    ['9️⃣ Access', '♿ Comfort View', '♿ Comfort View Panel', 'showADHDControlPanel', 'Central hub for all accessibility-friendly features and settings'],
+    ['9️⃣ Access', '♿ Comfort View', '🎯 Focus Mode', 'activateFocusMode', 'Highlights current row, dims distractions, reduces visual noise'],
+    ['9️⃣ Access', '♿ Comfort View', '🔲 Toggle Zebra Stripes', 'toggleZebraStripes', 'Alternating row colors for easier row tracking'],
+    ['9️⃣ Access', '♿ Comfort View', '📝 Quick Capture', 'showQuickCaptureNotepad', 'Fast notepad for capturing thoughts without losing focus'],
+    ['9️⃣ Access', '♿ Comfort View', '🍅 Pomodoro Timer', 'startPomodoroTimer', '25-minute focus timer with break reminders'],
     ['9️⃣ Access', '🔧 Theming', '🎨 Theme Manager', 'showThemeManager', 'Choose from preset themes or customize colors'],
     ['9️⃣ Access', '🔧 Theming', '🌙 Toggle Dark Mode', 'quickToggleDarkMode', 'Switch between light and dark color schemes'],
     ['9️⃣ Access', '🔧 Theming', '🔄 Reset Theme', 'resetToDefaultTheme', 'Restores default purple/green color scheme'],
@@ -5635,6 +5650,57 @@ function onSatisfactionFormSubmit(e) {
     newRow[SATISFACTION_COLS.Q66_KEEP_DOING - 1] = getFormValue_(responses, 'One thing union should keep doing');
     newRow[SATISFACTION_COLS.Q67_ADDITIONAL - 1] = getFormValue_(responses, 'Additional comments (no names)');
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // EMAIL VERIFICATION & QUARTERLY TRACKING
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // Get email from form (try multiple common field names)
+    var email = getFormValue_(responses, 'Email Address') ||
+                getFormValue_(responses, 'Email') ||
+                getFormValue_(responses, 'email') ||
+                (e.response ? e.response.getRespondentEmail() : '') || '';
+    email = email.toString().toLowerCase().trim();
+
+    newRow[SATISFACTION_COLS.EMAIL - 1] = email;
+
+    // Get current quarter
+    var currentQuarter = getCurrentQuarter();
+    newRow[SATISFACTION_COLS.QUARTER - 1] = currentQuarter;
+
+    // Validate email against Member Directory
+    var memberMatch = validateMemberEmail(email);
+
+    if (memberMatch) {
+      // Email matches a member - mark as verified
+      newRow[SATISFACTION_COLS.VERIFIED - 1] = 'Yes';
+      newRow[SATISFACTION_COLS.MATCHED_MEMBER_ID - 1] = memberMatch.memberId;
+      newRow[SATISFACTION_COLS.IS_LATEST - 1] = 'Yes';
+
+      // Check for existing responses from this member in same quarter
+      var existingData = satSheet.getDataRange().getValues();
+      for (var i = 1; i < existingData.length; i++) {
+        var rowEmail = (existingData[i][SATISFACTION_COLS.EMAIL - 1] || '').toString().toLowerCase().trim();
+        var rowQuarter = existingData[i][SATISFACTION_COLS.QUARTER - 1];
+        var rowIsLatest = existingData[i][SATISFACTION_COLS.IS_LATEST - 1];
+
+        // If same email, same quarter, and currently marked as latest
+        if (rowEmail === email && rowQuarter === currentQuarter && rowIsLatest === 'Yes') {
+          // Mark the old row as superseded (row index is i+1 because of 0-indexing and header)
+          var oldRowNum = i + 1;
+          satSheet.getRange(oldRowNum, SATISFACTION_COLS.IS_LATEST).setValue('No');
+          satSheet.getRange(oldRowNum, SATISFACTION_COLS.SUPERSEDED_BY).setValue(satSheet.getLastRow() + 1);
+          Logger.log('Marked row ' + oldRowNum + ' as superseded by new submission');
+        }
+      }
+    } else {
+      // Email doesn't match - flag for review
+      newRow[SATISFACTION_COLS.VERIFIED - 1] = 'Pending Review';
+      newRow[SATISFACTION_COLS.MATCHED_MEMBER_ID - 1] = '';
+      newRow[SATISFACTION_COLS.IS_LATEST - 1] = 'Yes';
+    }
+
+    newRow[SATISFACTION_COLS.REVIEWER_NOTES - 1] = '';
+
     // Append row to satisfaction sheet
     satSheet.appendRow(newRow);
 
@@ -5645,7 +5711,7 @@ function onSatisfactionFormSubmit(e) {
     // Update dashboard summary values
     syncSatisfactionValues();
 
-    Logger.log('Satisfaction survey response recorded at ' + new Date());
+    Logger.log('Satisfaction survey response recorded at ' + new Date() + ' | Verified: ' + newRow[SATISFACTION_COLS.VERIFIED - 1]);
 
   } catch (error) {
     Logger.log('Error processing satisfaction survey submission: ' + error.message);
@@ -5732,8 +5798,848 @@ function setupSatisfactionFormTrigger() {
   }
 }
 
+// ============================================================================
+// SURVEY ENHANCEMENTS - Auto-Email, Quarterly Tracking, Member Auth
+// ============================================================================
+
 /**
- * Recalculate all grievance deadlines and sync to Member Directory
+ * Send satisfaction survey emails to random members
+ * Allows stewards to email a configurable number of random members
+ */
+function sendRandomSurveyEmails() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Show configuration dialog
+  var html = HtmlService.createHtmlOutput(
+    '<!DOCTYPE html><html><head><base target="_top"><style>' +
+    'body{font-family:Arial;padding:20px;background:#f5f5f5}' +
+    '.container{background:white;padding:25px;border-radius:8px;max-width:450px}' +
+    'h2{color:#5B4B9E;margin-top:0}' +
+    '.form-group{margin-bottom:15px}' +
+    'label{display:block;font-weight:bold;margin-bottom:5px}' +
+    'input,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box}' +
+    '.info{background:#e8f4fd;padding:12px;border-radius:8px;margin-bottom:15px;font-size:13px}' +
+    '.buttons{display:flex;gap:10px;margin-top:20px}' +
+    'button{padding:12px 24px;border:none;border-radius:4px;cursor:pointer;font-size:14px;flex:1}' +
+    '.primary{background:#5B4B9E;color:white}' +
+    '.secondary{background:#e0e0e0;color:#333}' +
+    '</style></head><body><div class="container">' +
+    '<h2>📧 Send Survey to Random Members</h2>' +
+    '<div class="info">💡 Select how many random members to email. Each member will receive a personalized survey link.</div>' +
+    '<div class="form-group"><label>Number of Members to Email</label>' +
+    '<select id="count"><option value="5">5 members</option><option value="10" selected>10 members</option>' +
+    '<option value="20">20 members</option><option value="50">50 members</option><option value="100">100 members</option></select></div>' +
+    '<div class="form-group"><label>Email Subject</label>' +
+    '<input type="text" id="subject" value="SEIU Local 509 - Member Satisfaction Survey"></div>' +
+    '<div class="form-group"><label>Exclude members emailed in last (days)</label>' +
+    '<select id="excludeDays"><option value="0">No exclusion</option><option value="30" selected>30 days</option>' +
+    '<option value="60">60 days</option><option value="90">90 days</option></select></div>' +
+    '<div class="buttons">' +
+    '<button class="secondary" onclick="google.script.host.close()">Cancel</button>' +
+    '<button class="primary" onclick="send()">📧 Send Surveys</button></div></div>' +
+    '<script>function send(){var opts={count:parseInt(document.getElementById("count").value),' +
+    'subject:document.getElementById("subject").value,excludeDays:parseInt(document.getElementById("excludeDays").value)};' +
+    'google.script.run.withSuccessHandler(function(r){alert(r);google.script.host.close()})' +
+    '.withFailureHandler(function(e){alert("Error: "+e.message)}).executeSendRandomSurveyEmails(opts)}</script></body></html>'
+  ).setWidth(500).setHeight(450);
+
+  ui.showModalDialog(html, '📧 Send Random Survey Emails');
+}
+
+/**
+ * Execute sending random survey emails
+ * @param {Object} opts - Options {count, subject, excludeDays}
+ * @returns {string} Result message
+ */
+function executeSendRandomSurveyEmails(opts) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  if (!memberSheet) throw new Error('Member Directory not found');
+
+  // Get all members with valid emails
+  var memberData = memberSheet.getDataRange().getValues();
+  var headers = memberData[0];
+  var emailCol = MEMBER_COLS.EMAIL - 1;
+  var memberIdCol = MEMBER_COLS.MEMBER_ID - 1;
+  var firstNameCol = MEMBER_COLS.FIRST_NAME - 1;
+  var lastNameCol = MEMBER_COLS.LAST_NAME - 1;
+
+  // Get survey email log from Config (if exists)
+  var surveyLogCol = 50; // Column AX for survey email log
+  var surveyLog = {};
+  try {
+    var logData = configSheet.getRange(2, surveyLogCol, configSheet.getLastRow() - 1, 2).getValues();
+    logData.forEach(function(row) {
+      if (row[0]) surveyLog[row[0]] = new Date(row[1]);
+    });
+  } catch(e) { /* No log yet */ }
+
+  var cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - opts.excludeDays);
+
+  // Build list of eligible members
+  var eligibleMembers = [];
+  for (var i = 1; i < memberData.length; i++) {
+    var row = memberData[i];
+    var memberId = row[memberIdCol];
+    var email = row[emailCol];
+    var firstName = row[firstNameCol];
+
+    // Skip if no valid member ID or email
+    if (!memberId || !email || !email.toString().includes('@')) continue;
+
+    // Skip if recently emailed
+    if (opts.excludeDays > 0 && surveyLog[memberId] && surveyLog[memberId] > cutoffDate) continue;
+
+    eligibleMembers.push({
+      memberId: memberId,
+      email: email,
+      firstName: firstName,
+      lastName: row[lastNameCol]
+    });
+  }
+
+  if (eligibleMembers.length === 0) {
+    return 'No eligible members found. All members may have been recently emailed.';
+  }
+
+  // Shuffle and select random members
+  var shuffled = eligibleMembers.sort(function() { return 0.5 - Math.random(); });
+  var selected = shuffled.slice(0, Math.min(opts.count, shuffled.length));
+
+  // Send emails
+  var sent = 0;
+  var errors = [];
+  var formUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+  var newLogEntries = [];
+
+  selected.forEach(function(member) {
+    try {
+      var personalizedUrl = formUrl + '?memberId=' + encodeURIComponent(member.memberId);
+      var body = 'Dear ' + member.firstName + ',\n\n' +
+        'We value your feedback! Please take a few minutes to complete our Member Satisfaction Survey.\n\n' +
+        'Your responses help us improve union services and representation.\n\n' +
+        'Survey Link: ' + personalizedUrl + '\n\n' +
+        'Your Member ID: ' + member.memberId + '\n' +
+        '(You will need this to verify your membership when submitting)\n\n' +
+        'Thank you for being a member!\n\n' +
+        'SEIU Local 509';
+
+      MailApp.sendEmail({
+        to: member.email,
+        subject: opts.subject,
+        body: body,
+        name: 'SEIU Local 509 Dashboard'
+      });
+
+      sent++;
+      newLogEntries.push([member.memberId, new Date()]);
+    } catch(e) {
+      errors.push(member.firstName + ' ' + member.lastName + ': ' + e.message);
+    }
+  });
+
+  // Update survey email log
+  if (newLogEntries.length > 0) {
+    var nextRow = Object.keys(surveyLog).length + 2;
+    configSheet.getRange(nextRow, surveyLogCol, newLogEntries.length, 2).setValues(newLogEntries);
+  }
+
+  var result = '✅ Sent ' + sent + ' survey emails';
+  if (errors.length > 0) {
+    result += '\n\n⚠️ ' + errors.length + ' errors:\n' + errors.slice(0, 5).join('\n');
+    if (errors.length > 5) result += '\n...and ' + (errors.length - 5) + ' more';
+  }
+
+  return result;
+}
+
+/**
+ * Validate that an email belongs to a member in the directory
+ * @param {string} email - Email to validate
+ * @returns {Object|null} Member info if valid, null otherwise
+ */
+function validateMemberEmail(email) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  if (!memberSheet || !email) return null;
+
+  var data = memberSheet.getDataRange().getValues();
+  var emailCol = MEMBER_COLS.EMAIL - 1;
+  var memberIdCol = MEMBER_COLS.MEMBER_ID - 1;
+  var firstNameCol = MEMBER_COLS.FIRST_NAME - 1;
+  var lastNameCol = MEMBER_COLS.LAST_NAME - 1;
+
+  email = email.toString().toLowerCase().trim();
+
+  for (var i = 1; i < data.length; i++) {
+    var rowEmail = (data[i][emailCol] || '').toString().toLowerCase().trim();
+    if (rowEmail === email) {
+      return {
+        memberId: data[i][memberIdCol],
+        firstName: data[i][firstNameCol],
+        lastName: data[i][lastNameCol],
+        email: rowEmail
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Get the current quarter string (e.g., "2026-Q1")
+ * @returns {string} Quarter string
+ */
+function getCurrentQuarter() {
+  var now = new Date();
+  var quarter = Math.floor(now.getMonth() / 3) + 1;
+  return now.getFullYear() + '-Q' + quarter;
+}
+
+/**
+ * Get quarter string from a date
+ * @param {Date} date - Date to get quarter from
+ * @returns {string} Quarter string
+ */
+function getQuarterFromDate(date) {
+  var d = new Date(date);
+  var quarter = Math.floor(d.getMonth() / 3) + 1;
+  return d.getFullYear() + '-Q' + quarter;
+}
+
+// ============================================================================
+// FLAGGED SUBMISSIONS REVIEW - Admin interface for pending survey responses
+// ============================================================================
+
+/**
+ * Show the flagged submissions review interface
+ * Displays count and email addresses of Pending Review submissions
+ * Protects actual survey answers - only shows metadata
+ */
+function showFlaggedSubmissionsReview() {
+  var html = HtmlService.createHtmlOutput(getFlaggedSubmissionsHtml())
+    .setWidth(700)
+    .setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Flagged Survey Submissions Review');
+}
+
+/**
+ * Get HTML for flagged submissions review interface
+ * @returns {string} HTML content
+ */
+function getFlaggedSubmissionsHtml() {
+  return '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    ':root{--purple:#5B4B9E;--green:#059669;--red:#DC2626;--orange:#F97316}' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;padding:20px}' +
+    '.container{max-width:650px;margin:0 auto}' +
+    '.stats-row{display:flex;gap:15px;margin-bottom:20px}' +
+    '.stat-card{flex:1;background:white;padding:20px;border-radius:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.stat-card.pending{border-left:4px solid var(--orange)}' +
+    '.stat-card.verified{border-left:4px solid var(--green)}' +
+    '.stat-value{font-size:32px;font-weight:bold;color:#333}' +
+    '.stat-label{font-size:13px;color:#666;margin-top:5px}' +
+    '.section{background:white;border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.section-title{font-size:16px;font-weight:600;color:#333;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #eee}' +
+    '.email-list{max-height:250px;overflow-y:auto}' +
+    '.email-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#f8f9fa;border-radius:8px;margin-bottom:8px}' +
+    '.email-info{display:flex;align-items:center;gap:10px}' +
+    '.email-text{font-size:14px;color:#333}' +
+    '.email-date{font-size:12px;color:#666}' +
+    '.actions{display:flex;gap:8px}' +
+    '.btn{padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500}' +
+    '.btn-approve{background:#059669;color:white}' +
+    '.btn-reject{background:#DC2626;color:white}' +
+    '.empty-state{text-align:center;padding:40px;color:#666}' +
+    '.info-box{background:#E8F4FD;padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#1E40AF}' +
+    '</style></head><body>' +
+    '<div class="container">' +
+    '<div id="content"><div class="empty-state">Loading...</div></div>' +
+    '</div>' +
+    '<script>' +
+    'function load(){google.script.run.withSuccessHandler(render).getFlaggedSubmissionsData()}' +
+    'function render(d){' +
+    '  var h="<div class=\\"stats-row\\">";' +
+    '  h+="<div class=\\"stat-card pending\\"><div class=\\"stat-value\\">"+d.pendingCount+"</div><div class=\\"stat-label\\">Pending Review</div></div>";' +
+    '  h+="<div class=\\"stat-card verified\\"><div class=\\"stat-value\\">"+d.verifiedCount+"</div><div class=\\"stat-label\\">Verified Responses</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"info-box\\">⚠️ These submissions could not be matched to a member email. Survey answers are protected and not shown here.</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📧 Pending Review Emails ("+d.pendingCount+")</div>";' +
+    '  if(d.pendingEmails.length===0){' +
+    '    h+="<div class=\\"empty-state\\">✅ No submissions pending review</div>";' +
+    '  }else{' +
+    '    h+="<div class=\\"email-list\\">";' +
+    '    d.pendingEmails.forEach(function(e){' +
+    '      h+="<div class=\\"email-item\\"><div class=\\"email-info\\">";' +
+    '      h+="<span class=\\"email-text\\">"+e.email+"</span>";' +
+    '      h+="<span class=\\"email-date\\">"+e.date+" | "+e.quarter+"</span></div>";' +
+    '      h+="<div class=\\"actions\\">";' +
+    '      h+="<button class=\\"btn btn-approve\\" onclick=\\"approve("+e.row+\")\\">✓ Approve</button>";' +
+    '      h+="<button class=\\"btn btn-reject\\" onclick=\\"reject("+e.row+\")\\">✗ Reject</button>";' +
+    '      h+="</div></div>";' +
+    '    });' +
+    '    h+="</div>";' +
+    '  }' +
+    '  h+="</div>";' +
+    '  document.getElementById("content").innerHTML=h;' +
+    '}' +
+    'function approve(row){' +
+    '  if(confirm("Mark this submission as verified? This will include it in statistics.")){' +
+    '    google.script.run.withSuccessHandler(function(){load()}).approveFlaggedSubmission(row);' +
+    '  }' +
+    '}' +
+    'function reject(row){' +
+    '  if(confirm("Reject this submission? It will be excluded from all statistics.")){' +
+    '    google.script.run.withSuccessHandler(function(){load()}).rejectFlaggedSubmission(row);' +
+    '  }' +
+    '}' +
+    'load();' +
+    '</script></body></html>';
+}
+
+/**
+ * Get data for flagged submissions review
+ * @returns {Object} Pending submissions data (email, date, row number - NO survey answers)
+ */
+function getFlaggedSubmissionsData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    pendingCount: 0,
+    verifiedCount: 0,
+    pendingEmails: []
+  };
+
+  if (!satSheet) return result;
+
+  var data = satSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var verified = data[i][SATISFACTION_COLS.VERIFIED - 1];
+    var email = data[i][SATISFACTION_COLS.EMAIL - 1] || '(no email provided)';
+    var timestamp = data[i][SATISFACTION_COLS.TIMESTAMP - 1];
+    var quarter = data[i][SATISFACTION_COLS.QUARTER - 1] || '';
+
+    if (verified === 'Yes') {
+      result.verifiedCount++;
+    } else if (verified === 'Pending Review') {
+      result.pendingCount++;
+      result.pendingEmails.push({
+        email: email.toString(),
+        date: timestamp ? Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'MMM d, yyyy') : 'Unknown',
+        quarter: quarter,
+        row: i + 1  // 1-indexed row number for editing
+      });
+    }
+    // Rejected submissions are counted but not shown
+  }
+
+  // Sort by most recent first
+  result.pendingEmails.sort(function(a, b) { return b.row - a.row; });
+
+  return result;
+}
+
+/**
+ * Approve a flagged submission - mark as Verified
+ * @param {number} rowNum - Row number (1-indexed)
+ */
+function approveFlaggedSubmission(rowNum) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet || rowNum < 2) return;
+
+  satSheet.getRange(rowNum, SATISFACTION_COLS.VERIFIED).setValue('Yes');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.REVIEWER_NOTES).setValue('Manually approved on ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
+
+  // Update dashboard
+  syncSatisfactionValues();
+}
+
+/**
+ * Reject a flagged submission - mark as Rejected
+ * @param {number} rowNum - Row number (1-indexed)
+ */
+function rejectFlaggedSubmission(rowNum) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet || rowNum < 2) return;
+
+  satSheet.getRange(rowNum, SATISFACTION_COLS.VERIFIED).setValue('Rejected');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.IS_LATEST).setValue('No');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.REVIEWER_NOTES).setValue('Rejected on ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
+
+  // Update dashboard
+  syncSatisfactionValues();
+}
+
+// ============================================================================
+// PUBLIC MEMBER DASHBOARD - Stats without PII
+// ============================================================================
+
+/**
+ * Show the public member dashboard
+ * Displays anonymized statistics accessible to all members
+ */
+function showPublicMemberDashboard() {
+  var html = HtmlService.createHtmlOutput(getPublicMemberDashboardHtml())
+    .setWidth(950)
+    .setHeight(700);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Member Dashboard - Union Statistics');
+}
+
+/**
+ * Get HTML for public member dashboard
+ * @returns {string} HTML content
+ */
+function getPublicMemberDashboardHtml() {
+  return '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    ':root{--purple:#5B4B9E;--green:#059669;--blue:#1a73e8}' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;padding:20px}' +
+    '.dashboard{max-width:900px;margin:0 auto}' +
+    '.tabs{display:flex;gap:5px;margin-bottom:20px;border-bottom:2px solid #ddd;padding-bottom:10px}' +
+    '.tab{padding:12px 20px;border:none;background:none;cursor:pointer;font-size:14px;font-weight:500;color:#666;border-radius:8px 8px 0 0;transition:all 0.2s}' +
+    '.tab:hover{background:#e8e8e8}' +
+    '.tab.active{background:var(--purple);color:white}' +
+    '.tab-content{display:none;background:white;border-radius:12px;padding:25px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.tab-content.active{display:block}' +
+    '.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px}' +
+    '.stat-card{background:linear-gradient(135deg,var(--purple),#7B6BB8);color:white;padding:20px;border-radius:12px;text-align:center}' +
+    '.stat-card.green{background:linear-gradient(135deg,var(--green),#10B981)}' +
+    '.stat-card.blue{background:linear-gradient(135deg,var(--blue),#3B82F6)}' +
+    '.stat-value{font-size:36px;font-weight:bold}' +
+    '.stat-label{font-size:13px;opacity:0.9;margin-top:5px}' +
+    '.section{margin-bottom:25px}' +
+    '.section-title{font-size:18px;font-weight:600;color:#333;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #eee}' +
+    '.bar-chart{margin:15px 0}' +
+    '.bar-row{display:flex;align-items:center;margin-bottom:10px}' +
+    '.bar-label{width:150px;font-size:13px;color:#555}' +
+    '.bar-container{flex:1;height:24px;background:#eee;border-radius:12px;overflow:hidden}' +
+    '.bar-fill{height:100%;border-radius:12px;transition:width 0.5s}' +
+    '.bar-value{width:50px;text-align:right;font-size:13px;font-weight:500;margin-left:10px}' +
+    '.steward-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px}' +
+    '.steward-card{background:#f8f9fa;border-radius:12px;padding:20px;border-left:4px solid var(--purple)}' +
+    '.steward-name{font-weight:600;font-size:16px;color:#333}' +
+    '.steward-info{font-size:13px;color:#666;margin-top:8px}' +
+    '.steward-info div{margin-bottom:5px}' +
+    '.loading{text-align:center;padding:40px;color:#666}' +
+    '</style></head><body>' +
+    '<div class="dashboard">' +
+    '<div class="tabs">' +
+    '<button class="tab active" onclick="switchTab(\'overview\',this)">📊 Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'survey\',this)">📋 Survey Results</button>' +
+    '<button class="tab" onclick="switchTab(\'grievances\',this)">⚖️ Grievance Stats</button>' +
+    '<button class="tab" onclick="switchTab(\'stewards\',this)">👥 Steward Directory</button>' +
+    '</div>' +
+    '<div id="overview" class="tab-content active"><div class="loading">Loading...</div></div>' +
+    '<div id="survey" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '<div id="grievances" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '<div id="stewards" class="tab-content"><div class="loading">Loading...</div></div>' +
+    '</div>' +
+    '<script>' +
+    'var loadedTabs={};' +
+    'function switchTab(id,btn){' +
+    '  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active")});' +
+    '  document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
+    '  btn.classList.add("active");' +
+    '  document.getElementById(id).classList.add("active");' +
+    '  if(!loadedTabs[id])loadTab(id);' +
+    '}' +
+    'function loadTab(id){' +
+    '  loadedTabs[id]=true;' +
+    '  if(id==="overview")google.script.run.withSuccessHandler(renderOverview).getPublicOverviewData();' +
+    '  else if(id==="survey")google.script.run.withSuccessHandler(renderSurvey).getPublicSurveyData(includeHistory);' +
+    '  else if(id==="grievances")google.script.run.withSuccessHandler(renderGrievances).getPublicGrievanceData();' +
+    '  else if(id==="stewards")google.script.run.withSuccessHandler(renderStewards).getPublicStewardData();' +
+    '}' +
+    'function renderOverview(d){' +
+    '  var h="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.totalMembers+"</div><div class=\\"stat-label\\">Total Members</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.totalStewards+"</div><div class=\\"stat-label\\">Active Stewards</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.totalGrievances+"</div><div class=\\"stat-label\\">Total Grievances</div></div>";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.winRate+"%</div><div class=\\"stat-label\\">Grievance Win Rate</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📍 Members by Location</div><div class=\\"bar-chart\\">";' +
+    '  d.locationBreakdown.forEach(function(l){' +
+    '    var pct=d.totalMembers>0?Math.round(l.count/d.totalMembers*100):0;' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+l.location+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:#5B4B9E\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+l.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("overview").innerHTML=h;' +
+    '}' +
+    'var includeHistory=false;' +
+    'function renderSurvey(d){' +
+    '  var h="<div class=\\"toggle-row\\" style=\\"display:flex;align-items:center;justify-content:flex-end;margin-bottom:15px;gap:10px\\"><label style=\\"font-size:13px;color:#666\\">Include historical responses:</label><input type=\\"checkbox\\" id=\\"historyToggle\\" "+(includeHistory?"checked":"")+" onchange=\\"toggleHistory(this.checked)\\" style=\\"width:18px;height:18px;cursor:pointer\\"></div>";' +
+    '  h+="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+(d.verifiedResponses||d.totalResponses)+"</div><div class=\\"stat-label\\">Verified Responses</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.avgSatisfaction.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction (1-10)</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.responseRate+"%</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
+    '  h+="</div>";' +
+    '  if(d.includesHistory){h+="<div style=\\"background:#FEF3C7;padding:10px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#92400E\\">⚠️ Showing all responses including historical (superseded) entries</div>";}' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Satisfaction by Section</div><div class=\\"bar-chart\\">";' +
+    '  d.sectionScores.forEach(function(s){' +
+    '    var pct=Math.round(s.score*10);' +
+    '    var color=s.score>=7?"#059669":s.score>=5?"#F59E0B":"#EF4444";' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.section+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+s.score.toFixed(1)+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("survey").innerHTML=h;' +
+    '}' +
+    'function toggleHistory(val){includeHistory=val;loadedTabs["survey"]=false;loadTab("survey");}' +
+    'function renderGrievances(d){' +
+    '  var h="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.open+"</div><div class=\\"stat-label\\">Open Grievances</div></div>";' +
+    '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.won+"</div><div class=\\"stat-label\\">Won</div></div>";' +
+    '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.settled+"</div><div class=\\"stat-label\\">Settled</div></div>";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.avgDaysToResolve+"</div><div class=\\"stat-label\\">Avg Days to Resolve</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Grievances by Type</div><div class=\\"bar-chart\\">";' +
+    '  d.byType.forEach(function(t){' +
+    '    var pct=d.total>0?Math.round(t.count/d.total*100):0;' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+t.type+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:#5B4B9E\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+t.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Grievances by Status</div><div class=\\"bar-chart\\">";' +
+    '  d.byStatus.forEach(function(s){' +
+    '    var pct=d.total>0?Math.round(s.count/d.total*100):0;' +
+    '    var color=s.status==="Open"?"#3B82F6":s.status==="Won"?"#059669":"#6B7280";' +
+    '    h+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+s.status+"</div>";' +
+    '    h+="<div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"></div></div>";' +
+    '    h+="<div class=\\"bar-value\\">"+s.count+"</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("grievances").innerHTML=h;' +
+    '}' +
+    'function renderStewards(d){' +
+    '  var h="<div class=\\"section\\"><div class=\\"section-title\\">👥 Your Union Stewards ("+d.stewards.length+")</div>";' +
+    '  h+="<p style=\\"color:#666;margin-bottom:20px\\">Contact your steward for help with workplace issues, grievances, or union questions.</p>";' +
+    '  h+="<div class=\\"steward-grid\\">";' +
+    '  d.stewards.forEach(function(s){' +
+    '    h+="<div class=\\"steward-card\\">";' +
+    '    h+="<div class=\\"steward-name\\">"+s.name+"</div>";' +
+    '    h+="<div class=\\"steward-info\\">";' +
+    '    h+="<div>📍 "+s.location+"</div>";' +
+    '    h+="<div>📅 Office Days: "+s.officeDays+"</div>";' +
+    '    h+="<div>📧 "+s.email+"</div>";' +
+    '    h+="</div></div>";' +
+    '  });' +
+    '  h+="</div></div>";' +
+    '  document.getElementById("stewards").innerHTML=h;' +
+    '}' +
+    'loadTab("overview");' +
+    '</script></body></html>';
+}
+
+/**
+ * Get public overview data (no PII)
+ * @returns {Object} Overview statistics
+ */
+function getPublicOverviewData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var result = {
+    totalMembers: 0,
+    totalStewards: 0,
+    totalGrievances: 0,
+    winRate: 0,
+    locationBreakdown: []
+  };
+
+  // Count members and stewards
+  if (memberSheet) {
+    var memberData = memberSheet.getDataRange().getValues();
+    var locationCounts = {};
+    var stewardCount = 0;
+
+    for (var i = 1; i < memberData.length; i++) {
+      var memberId = memberData[i][MEMBER_COLS.MEMBER_ID - 1];
+      if (!memberId || !memberId.toString().match(/^M/i)) continue;
+
+      result.totalMembers++;
+
+      // Count by location
+      var location = memberData[i][MEMBER_COLS.LOCATION - 1] || 'Unknown';
+      locationCounts[location] = (locationCounts[location] || 0) + 1;
+
+      // Count stewards
+      var isSteward = memberData[i][MEMBER_COLS.IS_STEWARD - 1];
+      if (isSteward === true || isSteward === 'Yes' || isSteward === 'TRUE') {
+        stewardCount++;
+      }
+    }
+
+    result.totalStewards = stewardCount;
+
+    // Convert location counts to array and sort
+    Object.keys(locationCounts).forEach(function(loc) {
+      result.locationBreakdown.push({ location: loc, count: locationCounts[loc] });
+    });
+    result.locationBreakdown.sort(function(a, b) { return b.count - a.count; });
+    result.locationBreakdown = result.locationBreakdown.slice(0, 10); // Top 10
+  }
+
+  // Count grievances and win rate
+  if (grievanceSheet) {
+    var grievanceData = grievanceSheet.getDataRange().getValues();
+    var won = 0, total = 0;
+
+    for (var j = 1; j < grievanceData.length; j++) {
+      var grievanceId = grievanceData[j][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+      if (!grievanceId) continue;
+
+      total++;
+      var resolution = (grievanceData[j][GRIEVANCE_COLS.RESOLUTION - 1] || '').toString().toLowerCase();
+      if (resolution.includes('won') || resolution.includes('favor')) {
+        won++;
+      }
+    }
+
+    result.totalGrievances = total;
+    result.winRate = total > 0 ? Math.round(won / total * 100) : 0;
+  }
+
+  return result;
+}
+
+/**
+ * Get public survey data (anonymized)
+ * Filters to only include Verified='Yes' and optionally IS_LATEST='Yes' responses
+ * @param {boolean} includeHistory - If true, include superseded responses; if false, only latest per member
+ * @returns {Object} Survey statistics
+ */
+function getPublicSurveyData(includeHistory) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  var result = {
+    totalResponses: 0,
+    verifiedResponses: 0,
+    avgSatisfaction: 0,
+    responseRate: 0,
+    sectionScores: [],
+    includesHistory: includeHistory || false
+  };
+
+  if (!satSheet) return result;
+
+  var data = satSheet.getDataRange().getValues();
+  if (data.length < 2) return result;
+
+  // Filter rows to only include verified responses
+  // If includeHistory is false (default), also filter to IS_LATEST='Yes'
+  var validRows = [];
+  for (var i = 1; i < data.length; i++) {
+    var verified = data[i][SATISFACTION_COLS.VERIFIED - 1];
+    var isLatest = data[i][SATISFACTION_COLS.IS_LATEST - 1];
+
+    // Only include Verified='Yes' responses
+    if (verified !== 'Yes') continue;
+
+    // If not including history, only include IS_LATEST='Yes'
+    if (!includeHistory && isLatest !== 'Yes') continue;
+
+    validRows.push(data[i]);
+  }
+
+  result.totalResponses = data.length - 1; // Total submissions (all)
+  result.verifiedResponses = validRows.length; // Verified responses used in calculations
+
+  // Calculate average satisfaction (Q6 - Satisfied with representation)
+  var satSum = 0, satCount = 0;
+  for (var j = 0; j < validRows.length; j++) {
+    var sat = parseFloat(validRows[j][SATISFACTION_COLS.Q6_SATISFIED_REP - 1]);
+    if (!isNaN(sat)) {
+      satSum += sat;
+      satCount++;
+    }
+  }
+  result.avgSatisfaction = satCount > 0 ? satSum / satCount : 0;
+
+  // Response rate (unique verified members / total members)
+  if (memberSheet) {
+    var memberCount = memberSheet.getLastRow() - 1;
+    // Count unique verified member IDs
+    var uniqueMembers = {};
+    for (var k = 0; k < validRows.length; k++) {
+      var memberId = validRows[k][SATISFACTION_COLS.MATCHED_MEMBER_ID - 1];
+      if (memberId) uniqueMembers[memberId] = true;
+    }
+    var uniqueCount = Object.keys(uniqueMembers).length;
+    result.responseRate = memberCount > 0 ? Math.round(uniqueCount / memberCount * 100) : 0;
+  }
+
+  // Section scores using only verified responses
+  var sections = [
+    { name: 'Overall Satisfaction', cols: [SATISFACTION_COLS.Q6_SATISFIED_REP, SATISFACTION_COLS.Q7_TRUST_UNION, SATISFACTION_COLS.Q8_FEEL_PROTECTED] },
+    { name: 'Steward Ratings', cols: [SATISFACTION_COLS.Q10_TIMELY_RESPONSE, SATISFACTION_COLS.Q11_TREATED_RESPECT, SATISFACTION_COLS.Q12_EXPLAINED_OPTIONS] },
+    { name: 'Chapter Effectiveness', cols: [SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES, SATISFACTION_COLS.Q22_CHAPTER_COMM, SATISFACTION_COLS.Q23_ORGANIZES] },
+    { name: 'Local Leadership', cols: [SATISFACTION_COLS.Q26_DECISIONS_CLEAR, SATISFACTION_COLS.Q27_UNDERSTAND_PROCESS, SATISFACTION_COLS.Q28_TRANSPARENT_FINANCE] },
+    { name: 'Communication', cols: [SATISFACTION_COLS.Q41_CLEAR_ACTIONABLE, SATISFACTION_COLS.Q42_ENOUGH_INFO] }
+  ];
+
+  sections.forEach(function(section) {
+    var sum = 0, count = 0;
+    for (var m = 0; m < validRows.length; m++) {
+      section.cols.forEach(function(col) {
+        if (col) {
+          var val = parseFloat(validRows[m][col - 1]);
+          if (!isNaN(val)) {
+            sum += val;
+            count++;
+          }
+        }
+      });
+    }
+    result.sectionScores.push({
+      section: section.name,
+      score: count > 0 ? sum / count : 0
+    });
+  });
+
+  result.sectionScores.sort(function(a, b) { return b.score - a.score; });
+
+  return result;
+}
+
+/**
+ * Get public grievance data (no PII)
+ * @returns {Object} Grievance statistics
+ */
+function getPublicGrievanceData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var grievanceSheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+
+  var result = {
+    total: 0,
+    open: 0,
+    won: 0,
+    settled: 0,
+    avgDaysToResolve: 0,
+    byType: [],
+    byStatus: []
+  };
+
+  if (!grievanceSheet) return result;
+
+  var data = grievanceSheet.getDataRange().getValues();
+  var typeCounts = {};
+  var statusCounts = {};
+  var daysToResolve = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var grievanceId = data[i][GRIEVANCE_COLS.GRIEVANCE_ID - 1];
+    if (!grievanceId) continue;
+
+    result.total++;
+
+    var status = data[i][GRIEVANCE_COLS.STATUS - 1] || 'Unknown';
+    var resolution = (data[i][GRIEVANCE_COLS.RESOLUTION - 1] || '').toString();
+    var gType = data[i][GRIEVANCE_COLS.GRIEVANCE_TYPE - 1] || 'Other';
+
+    // Count by status
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+    // Count by type
+    typeCounts[gType] = (typeCounts[gType] || 0) + 1;
+
+    // Track open/won/settled
+    if (status === 'Open' || status === 'Pending Info') {
+      result.open++;
+    }
+    if (resolution.toLowerCase().includes('won') || resolution.toLowerCase().includes('favor')) {
+      result.won++;
+    }
+    if (resolution.toLowerCase().includes('settled')) {
+      result.settled++;
+    }
+
+    // Calculate days to resolve for closed grievances
+    if (status === 'Closed' || status === 'Resolved') {
+      var dateOpened = data[i][GRIEVANCE_COLS.DATE_OPENED - 1];
+      var dateClosed = data[i][GRIEVANCE_COLS.DATE_CLOSED - 1];
+      if (dateOpened && dateClosed) {
+        var days = Math.round((new Date(dateClosed) - new Date(dateOpened)) / (1000 * 60 * 60 * 24));
+        if (days > 0) daysToResolve.push(days);
+      }
+    }
+  }
+
+  // Average days to resolve
+  if (daysToResolve.length > 0) {
+    result.avgDaysToResolve = Math.round(daysToResolve.reduce(function(a, b) { return a + b; }, 0) / daysToResolve.length);
+  }
+
+  // Convert to arrays
+  Object.keys(typeCounts).forEach(function(t) {
+    result.byType.push({ type: t, count: typeCounts[t] });
+  });
+  result.byType.sort(function(a, b) { return b.count - a.count; });
+  result.byType = result.byType.slice(0, 8);
+
+  Object.keys(statusCounts).forEach(function(s) {
+    result.byStatus.push({ status: s, count: statusCounts[s] });
+  });
+  result.byStatus.sort(function(a, b) { return b.count - a.count; });
+
+  return result;
+}
+
+/**
+ * Get public steward data (contact info only)
+ * @returns {Object} Steward directory
+ */
+function getPublicStewardData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+
+  var result = { stewards: [] };
+
+  if (!memberSheet) return result;
+
+  var data = memberSheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var isSteward = data[i][MEMBER_COLS.IS_STEWARD - 1];
+    if (isSteward !== true && isSteward !== 'Yes' && isSteward !== 'TRUE') continue;
+
+    var firstName = data[i][MEMBER_COLS.FIRST_NAME - 1] || '';
+    var lastName = data[i][MEMBER_COLS.LAST_NAME - 1] || '';
+
+    result.stewards.push({
+      name: firstName + ' ' + lastName,
+      location: data[i][MEMBER_COLS.LOCATION - 1] || 'Not specified',
+      officeDays: data[i][MEMBER_COLS.OFFICE_DAYS - 1] || 'Contact for availability',
+      email: data[i][MEMBER_COLS.EMAIL - 1] || 'Contact union office'
+    });
+  }
+
+  // Sort by name
+  result.stewards.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+  return result;
+}
+
+/**
  * Uses hidden sheet formulas for self-healing calculations
  */
 function recalcAllGrievancesBatched() {
@@ -7531,51 +8437,6 @@ function getSatisfactionDashboardHtml() {
     '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin 1s linear infinite}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
 
-    // Line chart styles
-    '.line-chart{position:relative;height:200px;background:white;border-radius:8px;padding:20px}' +
-    '.line-chart-svg{width:100%;height:100%}' +
-    '.line-path{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}' +
-    '.line-point{cursor:pointer;transition:r 0.2s}' +
-    '.line-point:hover{r:8}' +
-    '.line-label{font-size:10px;fill:#666}' +
-    '.line-grid{stroke:#e5e7eb;stroke-width:1}' +
-
-    // Donut chart styles
-    '.donut-container{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;align-items:center}' +
-    '.donut-chart{position:relative;width:160px;height:160px}' +
-    '.donut-svg{transform:rotate(-90deg)}' +
-    '.donut-segment{transition:opacity 0.2s;cursor:pointer}' +
-    '.donut-segment:hover{opacity:0.8}' +
-    '.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}' +
-    '.donut-value{font-size:28px;font-weight:bold;color:#1f2937}' +
-    '.donut-label{font-size:11px;color:#666}' +
-    '.donut-legend{display:flex;flex-direction:column;gap:8px}' +
-    '.legend-item{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}' +
-    '.legend-item:hover{opacity:0.8}' +
-    '.legend-color{width:14px;height:14px;border-radius:3px}' +
-
-    // Clickable elements
-    '.clickable{cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}' +
-    '.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}' +
-    '.clickable:active{transform:translateY(0)}' +
-
-    // Modal/Drill-down styles
-    '.drill-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}' +
-    '.drill-content{background:white;border-radius:12px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.3)}' +
-    '.drill-header{padding:20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}' +
-    '.drill-title{font-size:18px;font-weight:600;color:#1f2937}' +
-    '.drill-close{background:none;border:none;font-size:24px;cursor:pointer;color:#666}' +
-    '.drill-body{padding:20px}' +
-
-    // Additional color scheme
-    '.stat-card.teal .stat-value{color:#0d9488}' +
-    '.stat-card.indigo .stat-value{color:#4f46e5}' +
-    '.stat-card.pink .stat-value{color:#ec4899}' +
-    '.stat-card.amber .stat-value{color:#f59e0b}' +
-
-    // Response count badge
-    '.response-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#e0f2fe;color:#0369a1;border-radius:20px;font-size:12px;font-weight:600}' +
-
     // Responsive
     '@media (max-width:600px){' +
     '  .stats-grid{grid-template-columns:repeat(2,1fr)}' +
@@ -7583,8 +8444,6 @@ function getSatisfactionDashboardHtml() {
     '  .tab-icon{font-size:16px}' +
     '  .bar-label{width:100px}' +
     '  .gauge-container{flex-direction:column;align-items:center}' +
-    '  .donut-container{flex-direction:column}' +
-    '  .line-chart{height:150px}' +
     '}' +
 
     '</style>' +
@@ -7599,9 +8458,8 @@ function getSatisfactionDashboardHtml() {
     // Tab Navigation
     '<div class="tabs">' +
     '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
-    '<button class="tab" onclick="switchTab(\'trends\',this)" id="tab-trends"><span class="tab-icon">📈</span>Trends</button>' +
     '<button class="tab" onclick="switchTab(\'responses\',this)" id="tab-responses"><span class="tab-icon">📝</span>Responses</button>' +
-    '<button class="tab" onclick="switchTab(\'sections\',this)" id="tab-sections"><span class="tab-icon">📊</span>Sections</button>' +
+    '<button class="tab" onclick="switchTab(\'sections\',this)" id="tab-sections"><span class="tab-icon">📈</span>By Section</button>' +
     '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">🔍</span>Insights</button>' +
     '</div>' +
 
@@ -7609,22 +8467,7 @@ function getSatisfactionDashboardHtml() {
     '<div class="tab-content active" id="content-overview">' +
     '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
     '<div id="overview-gauges"></div>' +
-    '<div id="overview-distribution" style="margin-top:15px"></div>' +
     '<div id="overview-insights" style="margin-top:15px"></div>' +
-    '</div>' +
-
-    // Trends Tab
-    '<div class="tab-content" id="content-trends">' +
-    '<div class="filter-group" id="trend-period-filter">' +
-    '<button class="action-btn action-btn-primary" onclick="loadTrends(\'all\')">All Time</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'year\')">This Year</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'90\')">Last 90 Days</button>' +
-    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'30\')">Last 30 Days</button>' +
-    '</div>' +
-    '<div id="trend-summary" class="stats-grid" style="margin-bottom:15px"></div>' +
-    '<div id="trend-line-chart"></div>' +
-    '<div id="trend-response-chart" style="margin-top:15px"></div>' +
-    '<div id="trend-issues" style="margin-top:15px"></div>' +
     '</div>' +
 
     // Responses Tab
@@ -7651,7 +8494,7 @@ function getSatisfactionDashboardHtml() {
 
     // JavaScript
     '<script>' +
-    'var allResponses=[];var currentFilter="all";var analyticsLoaded=false;var sectionsLoaded=false;var trendsLoaded=false;var currentPeriod="all";' +
+    'var allResponses=[];var currentFilter="all";var analyticsLoaded=false;var sectionsLoaded=false;' +
 
     // Tab switching
     'function switchTab(tabName,btn){' +
@@ -7662,7 +8505,6 @@ function getSatisfactionDashboardHtml() {
     '  if(tabName==="responses"&&allResponses.length===0)loadResponses();' +
     '  if(tabName==="sections"&&!sectionsLoaded)loadSections();' +
     '  if(tabName==="analytics"&&!analyticsLoaded)loadAnalytics();' +
-    '  if(tabName==="trends"&&!trendsLoaded)loadTrends("all");' +
     '}' +
 
     // Score color helper
@@ -7690,13 +8532,12 @@ function getSatisfactionDashboardHtml() {
     // Render overview
     'function renderOverview(data){' +
     '  var html="";' +
-    '  html+="<div class=\\"stat-card clickable\\" onclick=\\"switchTab(\'responses\',document.getElementById(\'tab-responses\'))\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.avgOverall.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction</div></div>";' +
-    '  var maiColor=data.npsScore>=50?"green":data.npsScore>=0?"blue":"red";' +
-    '  html+="<div class=\\"stat-card "+maiColor+"\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Member Advocacy Index</div></div>";' +
+    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Loyalty Score</div></div>";' +
     '  html+="<div class=\\"stat-card purple\\"><div class=\\"stat-value\\">"+data.responseRate+"</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
-    '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"teal":data.avgSteward>=5?"amber":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
-    '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"indigo":data.avgLeadership>=5?"amber":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"green":data.avgSteward>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"green":data.avgLeadership>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
     '  document.getElementById("overview-stats").innerHTML=html;' +
     // Gauge display
     '  var gauges="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Key Metrics at a Glance</div><div class=\\"gauge-container\\">";' +
@@ -7706,9 +8547,9 @@ function getSatisfactionDashboardHtml() {
     '  gauges+=renderGauge(data.avgRecommend,"Would\\nRecommend");' +
     '  gauges+="</div></div>";' +
     '  document.getElementById("overview-gauges").innerHTML=gauges;' +
-    // Insights - add Member Advocacy Index explanation first
+    // Insights - add Loyalty Score explanation first
     '  var insights="";' +
-    '  insights+="<div class=\\"insight-card\\" style=\\"background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left-color:#2563eb\\"><div class=\\"insight-title\\">ℹ️ Understanding Member Advocacy Index</div><div class=\\"insight-text\\">The <strong>Member Advocacy Index (MAI)</strong> ranges from -100 to +100 and measures member loyalty. <strong style=\\"color:#059669\\">50+</strong> = Excellent (many advocates), <strong style=\\"color:#2563eb\\">0-49</strong> = Positive (opportunity to grow), <strong style=\\"color:#dc2626\\">Below 0</strong> = Needs attention (more critics than advocates). Based on \\"Would Recommend\\" responses.</div></div>";' +
+    '  insights+="<div class=\\"insight-card\\" style=\\"background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left-color:#2563eb\\"><div class=\\"insight-title\\">ℹ️ Understanding Loyalty Score</div><div class=\\"insight-text\\">The <strong>Loyalty Score</strong> (ranging from -100 to +100) measures how likely members are to recommend the union. <strong>50+</strong> = Excellent (many advocates), <strong>0-49</strong> = Good (room for growth), <strong>Below 0</strong> = Needs work (more critics than advocates). It\'s based on the \\"Would Recommend\\" question.</div></div>";' +
     '  if(data.insights&&data.insights.length>0){' +
     '    data.insights.forEach(function(i){' +
     '      insights+="<div class=\\"insight-card "+i.type+"\\"><div class=\\"insight-title\\">"+i.icon+" "+i.title+"</div><div class=\\"insight-text\\">"+i.text+"</div></div>";' +
@@ -7854,13 +8695,13 @@ function getSatisfactionDashboardHtml() {
     '    });' +
     '  }else{html+="<div class=\\"empty-state\\">No insights available</div>";}' +
     '  html+="</div>";' +
-    // By worksite breakdown (clickable for drill-down)
+    // By worksite breakdown
     '  if(data.byWorksite&&data.byWorksite.length>0){' +
-    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Satisfaction by Worksite <span style=\\"font-size:11px;color:#666;font-weight:normal\\">(click for details)</span></div><div class=\\"bar-chart\\">";' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Satisfaction by Worksite</div><div class=\\"bar-chart\\">";' +
     '    data.byWorksite.forEach(function(w){' +
     '      var pct=(w.avg/10)*100;' +
     '      var color=getScoreColor(w.avg);' +
-    '      html+="<div class=\\"bar-row clickable\\" onclick=\\"showWorksiteDrill(\'"+w.name.replace(/\'/g,"\\\\\'")+"\')\\" style=\\"cursor:pointer\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+"</div></div>";' +
+    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+" responses</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -7900,123 +8741,6 @@ function getSatisfactionDashboardHtml() {
     '  c.innerHTML=html;' +
     '}' +
 
-    // Load trends data
-    'function loadTrends(period){' +
-    '  trendsLoaded=true;' +
-    '  currentPeriod=period;' +
-    '  document.querySelectorAll("#trend-period-filter .action-btn").forEach(function(b){b.classList.remove("action-btn-primary");b.classList.add("action-btn-secondary")});' +
-    '  if(event&&event.target)event.target.classList.remove("action-btn-secondary"),event.target.classList.add("action-btn-primary");' +
-    '  document.getElementById("trend-line-chart").innerHTML="<div class=\\"loading\\"><div class=\\"spinner\\"></div><p>Loading trends...</p></div>";' +
-    '  google.script.run.withSuccessHandler(function(data){renderTrends(data)}).getSatisfactionTrendData(period);' +
-    '}' +
-
-    // Render trends
-    'function renderTrends(data){' +
-    '  var summary="<div class=\\"stat-card indigo\\"><div class=\\"stat-value\\">"+data.totalInPeriod+"</div><div class=\\"stat-label\\">Responses in Period</div></div>";' +
-    '  summary+="<div class=\\"stat-card teal\\"><div class=\\"stat-value\\">"+data.byMonth.length+"</div><div class=\\"stat-label\\">Months of Data</div></div>";' +
-    '  if(data.satisfactionTrend.length>0){' +
-    '    var latest=data.satisfactionTrend[data.satisfactionTrend.length-1];' +
-    '    var first=data.satisfactionTrend[0];' +
-    '    var change=latest.avg-first.avg;' +
-    '    var changeColor=change>=0?"green":"red";' +
-    '    summary+="<div class=\\"stat-card "+changeColor+"\\"><div class=\\"stat-value\\">"+(change>=0?"+":"")+change.toFixed(1)+"</div><div class=\\"stat-label\\">Score Change</div></div>";' +
-    '  }' +
-    '  document.getElementById("trend-summary").innerHTML=summary;' +
-    // Line chart for satisfaction trend
-    '  var lineHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📈 Satisfaction Score Over Time</div>";' +
-    '  if(data.satisfactionTrend.length<2){lineHtml+="<div class=\\"empty-state\\">Need at least 2 months of data for trend</div>";}else{' +
-    '    lineHtml+=renderLineChart(data.satisfactionTrend,"avg",0,10);' +
-    '  }' +
-    '  lineHtml+="</div>";' +
-    '  document.getElementById("trend-line-chart").innerHTML=lineHtml;' +
-    // Response count chart
-    '  var respHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Responses by Month</div>";' +
-    '  if(data.byMonth.length===0){respHtml+="<div class=\\"empty-state\\">No response data available</div>";}else{' +
-    '    respHtml+="<div class=\\"bar-chart\\">";' +
-    '    var maxC=Math.max.apply(null,data.byMonth.map(function(m){return m.count}))||1;' +
-    '    var colors=["#059669","#0d9488","#0284c7","#4f46e5","#7c3aed","#c026d3","#e11d48"];' +
-    '    data.byMonth.forEach(function(m,i){' +
-    '      var pct=(m.count/maxC)*100;' +
-    '      var color=colors[i%colors.length];' +
-    '      respHtml+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+m.label+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+m.count+"</span></div></div></div>";' +
-    '    });' +
-    '    respHtml+="</div>";' +
-    '  }' +
-    '  respHtml+="</div>";' +
-    '  document.getElementById("trend-response-chart").innerHTML=respHtml;' +
-    // Top issues trend
-    '  var issuesHtml="";' +
-    '  if(data.issuesTrend&&data.issuesTrend.length>0){' +
-    '    issuesHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🎯 Top Issues in Period</div>";' +
-    '    issuesHtml+=renderDonutChart(data.issuesTrend.slice(0,5));' +
-    '    issuesHtml+="</div>";' +
-    '  }' +
-    '  document.getElementById("trend-issues").innerHTML=issuesHtml;' +
-    '}' +
-
-    // Render line chart SVG
-    'function renderLineChart(data,valueKey,minY,maxY){' +
-    '  var w=500,h=150,padding=40;' +
-    '  var chartW=w-padding*2,chartH=h-padding*2;' +
-    '  var points=data.map(function(d,i){' +
-    '    var x=padding+(i/(data.length-1))*chartW;' +
-    '    var y=h-padding-((d[valueKey]-minY)/(maxY-minY))*chartH;' +
-    '    return{x:x,y:y,label:d.label,value:d[valueKey]};' +
-    '  });' +
-    '  var path="M"+points.map(function(p){return p.x+","+p.y}).join("L");' +
-    '  var svg="<svg viewBox=\\"0 0 "+w+" "+h+"\\" class=\\"line-chart-svg\\">";' +
-    '  svg+="<line x1=\\""+padding+"\\" y1=\\""+padding+"\\" x2=\\""+padding+"\\" y2=\\""+(h-padding)+"\\" class=\\"line-grid\\"/>";' +
-    '  svg+="<line x1=\\""+padding+"\\" y1=\\""+(h-padding)+"\\" x2=\\""+(w-padding)+"\\" y2=\\""+(h-padding)+"\\" class=\\"line-grid\\"/>";' +
-    '  svg+="<path d=\\""+path+"\\" class=\\"line-path\\" style=\\"stroke:#059669\\"/>";' +
-    '  points.forEach(function(p){' +
-    '    svg+="<circle cx=\\""+p.x+"\\" cy=\\""+p.y+"\\" r=\\"5\\" class=\\"line-point\\" style=\\"fill:#059669\\" onclick=\\"alert(\'"+p.label+": "+p.value.toFixed(1)+"\')\\"/>";' +
-    '    svg+="<text x=\\""+p.x+"\\" y=\\""+(h-10)+"\\" text-anchor=\\"middle\\" class=\\"line-label\\">"+p.label+"</text>";' +
-    '  });' +
-    '  svg+="</svg>";' +
-    '  return"<div class=\\"line-chart\\">"+svg+"</div>";' +
-    '}' +
-
-    // Render donut chart
-    'function renderDonutChart(data){' +
-    '  var total=data.reduce(function(s,d){return s+d.count},0);' +
-    '  var colors=["#059669","#0284c7","#7c3aed","#e11d48","#f59e0b"];' +
-    '  var html="<div class=\\"donut-container\\">";' +
-    '  html+="<div class=\\"donut-chart\\"><svg viewBox=\\"0 0 100 100\\" class=\\"donut-svg\\">";' +
-    '  var offset=0;' +
-    '  data.forEach(function(d,i){' +
-    '    var pct=(d.count/total)*100;' +
-    '    var dashArray=pct+" "+(100-pct);' +
-    '    html+="<circle cx=\\"50\\" cy=\\"50\\" r=\\"40\\" fill=\\"none\\" stroke=\\""+colors[i%colors.length]+"\\" stroke-width=\\"20\\" stroke-dasharray=\\""+dashArray+"\\" stroke-dashoffset=\\"-"+offset+"\\" class=\\"donut-segment\\" onclick=\\"alert(\'"+d.name+": "+d.count+" ("+Math.round(pct)+"%)\')\\"/>";' +
-    '    offset+=pct;' +
-    '  });' +
-    '  html+="</svg><div class=\\"donut-center\\"><div class=\\"donut-value\\">"+total+"</div><div class=\\"donut-label\\">Total</div></div></div>";' +
-    '  html+="<div class=\\"donut-legend\\">";' +
-    '  data.forEach(function(d,i){' +
-    '    var pct=Math.round((d.count/total)*100);' +
-    '    html+="<div class=\\"legend-item\\" onclick=\\"alert(\'"+d.name+": "+d.count+" mentions\')\\"><div class=\\"legend-color\\" style=\\"background:"+colors[i%colors.length]+"\\"></div><span>"+d.name+" ("+pct+"%)</span></div>";' +
-    '  });' +
-    '  html+="</div></div>";' +
-    '  return html;' +
-    '}' +
-
-    // Drill-down for worksite
-    'function showWorksiteDrill(location){' +
-    '  var modal=document.createElement("div");modal.className="drill-modal";modal.onclick=function(e){if(e.target===modal)modal.remove()};' +
-    '  modal.innerHTML="<div class=\\"drill-content\\"><div class=\\"drill-header\\"><div class=\\"drill-title\\">📍 "+location+"</div><button class=\\"drill-close\\" onclick=\\"this.closest(\'.drill-modal\').remove()\\">×</button></div><div class=\\"drill-body\\"><div class=\\"loading\\"><div class=\\"spinner\\"></div></div></div></div>";' +
-    '  document.body.appendChild(modal);' +
-    '  google.script.run.withSuccessHandler(function(data){' +
-    '    var html="<div class=\\"stats-grid\\" style=\\"margin-bottom:15px\\"><div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.count+"</div><div class=\\"stat-label\\">Responses</div></div><div class=\\"stat-card "+(data.avgScore>=7?"green":data.avgScore>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgScore.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Score</div></div></div>";' +
-    '    if(data.responses.length>0){' +
-    '      html+="<div style=\\"font-weight:600;margin-bottom:10px\\">Recent Responses:</div>";' +
-    '      data.responses.slice(0,5).forEach(function(r){' +
-    '        var color=r.avgScore>=7?"#059669":r.avgScore>=5?"#f59e0b":"#dc2626";' +
-    '        html+="<div style=\\"display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee\\"><span>"+r.role+" - "+r.date+"</span><span style=\\"font-weight:600;color:"+color+"\\">"+r.avgScore.toFixed(1)+"</span></div>";' +
-    '      });' +
-    '    }' +
-    '    modal.querySelector(".drill-body").innerHTML=html;' +
-    '  }).getSatisfactionLocationDrill(location);' +
-    '}' +
-
     // Initialize
     'loadOverview();' +
     '</script>' +
@@ -8041,7 +8765,8 @@ function getSatisfactionOverviewData() {
     avgRecommend: 0,
     npsScore: 0,
     responseRate: 'N/A',
-    insights: []
+    insights: [],
+    distribution: { high: 0, mid: 0, low: 0 }
   };
 
   if (!sheet) return data;
@@ -8084,6 +8809,12 @@ function getSatisfactionOverviewData() {
       // NPS calculation (based on recommend score 1-10)
       if (recommend >= 9) promoters++;
       else if (recommend <= 6) detractors++;
+
+      // Calculate distribution based on average score
+      var avgScore = (satisfied + trust + protected_ + recommend) / 4;
+      if (avgScore >= 7) data.distribution.high++;
+      else if (avgScore >= 5) data.distribution.mid++;
+      else data.distribution.low++;
     }
   });
 
@@ -8164,22 +8895,22 @@ function getSatisfactionOverviewData() {
     data.insights.push({
       type: '',
       icon: '🎯',
-      title: 'Strong Member Advocacy',
-      text: 'Member Advocacy Index of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
+      title: 'Members Highly Recommend',
+      text: 'Loyalty Score of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
     });
   } else if (data.npsScore >= 0) {
     data.insights.push({
       type: '',
       icon: '📊',
-      title: 'Growing Member Advocacy',
-      text: 'Member Advocacy Index of ' + data.npsScore + ' shows positive momentum. Focus on converting neutral members to advocates.'
+      title: 'Moderate Member Loyalty',
+      text: 'Loyalty Score of ' + data.npsScore + ' shows members are neutral. Focus on converting neutral members to advocates.'
     });
   } else {
     data.insights.push({
       type: 'warning',
       icon: '⚠️',
-      title: 'Member Advocacy Needs Attention',
-      text: 'Member Advocacy Index of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
+      title: 'Member Loyalty Needs Attention',
+      text: 'Loyalty Score of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
     });
   }
 
@@ -8353,6 +9084,269 @@ function getSatisfactionSectionData() {
   result.sections.sort(function(a, b) { return a.avg - b.avg; });
 
   return result;
+}
+
+/**
+ * Get trend data for satisfaction dashboard - responses over time
+ */
+function getSatisfactionTrendData(period) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    byMonth: [],
+    satisfactionTrend: [],
+    issuesTrend: [],
+    totalInPeriod: 0
+  };
+
+  if (!sheet) return result;
+
+  // Get data
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  // Filter by period
+  var now = new Date();
+  var cutoff = null;
+  if (period === '30') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  else if (period === '90') cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  else if (period === 'year') cutoff = new Date(now.getFullYear(), 0, 1);
+
+  // Group by month
+  var monthData = {};
+  for (var i = 0; i < numRows; i++) {
+    var ts = timestamps[i][0];
+    if (!(ts instanceof Date)) continue;
+    if (cutoff && ts < cutoff) continue;
+
+    var monthKey = Utilities.formatDate(ts, tz, 'yyyy-MM');
+    var monthLabel = Utilities.formatDate(ts, tz, 'MMM yy');
+
+    if (!monthData[monthKey]) {
+      monthData[monthKey] = { label: monthLabel, count: 0, sum: 0, validCount: 0 };
+    }
+
+    monthData[monthKey].count++;
+    result.totalInPeriod++;
+
+    // Calculate avg satisfaction
+    var row = satisfactionData[i];
+    var rowSum = 0, rowCount = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { rowSum += v; rowCount++; }
+    });
+    if (rowCount > 0) {
+      monthData[monthKey].sum += rowSum / rowCount;
+      monthData[monthKey].validCount++;
+    }
+  }
+
+  // Convert to arrays sorted by date
+  var months = Object.keys(monthData).sort();
+  months.forEach(function(key) {
+    var m = monthData[key];
+    result.byMonth.push({ label: m.label, count: m.count });
+    result.satisfactionTrend.push({
+      label: m.label,
+      avg: m.validCount > 0 ? m.sum / m.validCount : 0
+    });
+  });
+
+  // Get common issues/priorities for trend
+  try {
+    var prioritiesData = sheet.getRange(2, SATISFACTION_COLS.Q64_TOP_PRIORITIES, numRows, 1).getValues();
+    var issueMap = {};
+    for (var i = 0; i < numRows; i++) {
+      var ts = timestamps[i][0];
+      if (!(ts instanceof Date)) continue;
+      if (cutoff && ts < cutoff) continue;
+
+      var priorities = String(prioritiesData[i][0] || '');
+      if (priorities) {
+        priorities.split(',').forEach(function(item) {
+          var p = item.trim();
+          if (p) issueMap[p] = (issueMap[p] || 0) + 1;
+        });
+      }
+    }
+    for (var issue in issueMap) {
+      result.issuesTrend.push({ name: issue, count: issueMap[issue] });
+    }
+    result.issuesTrend.sort(function(a, b) { return b.count - a.count; });
+  } catch(e) { /* ignore if column doesn't exist */ }
+
+  return result;
+}
+
+/**
+ * Get breakdown data for satisfaction dashboard
+ */
+function getSatisfactionBreakdownData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    sections: [],
+    byWorksite: [],
+    byRole: []
+  };
+
+  if (!sheet) return result;
+
+  // Get sections data
+  var sectionResult = getSatisfactionSectionData();
+  result.sections = sectionResult.sections;
+
+  // Get analytics data for worksite/role
+  var analyticsData = getSatisfactionAnalyticsData();
+  result.byWorksite = analyticsData.byWorksite;
+  result.byRole = analyticsData.byRole;
+
+  return result;
+}
+
+/**
+ * Get insights data for satisfaction dashboard
+ */
+function getSatisfactionInsightsData() {
+  var analyticsData = getSatisfactionAnalyticsData();
+  var overviewData = getSatisfactionOverviewData();
+
+  var result = {
+    insights: analyticsData.insights || [],
+    stewardImpact: analyticsData.stewardImpact,
+    topPriorities: analyticsData.topPriorities
+  };
+
+  // Add additional insights based on overview data
+  if (overviewData.avgOverall >= 8) {
+    result.insights.unshift({
+      type: 'success',
+      icon: '🌟',
+      title: 'Excellent Overall Satisfaction',
+      text: 'Members report high satisfaction (' + overviewData.avgOverall.toFixed(1) + '/10). Keep up the great work!'
+    });
+  } else if (overviewData.avgOverall < 5) {
+    result.insights.unshift({
+      type: 'alert',
+      icon: '⚠️',
+      title: 'Satisfaction Needs Attention',
+      text: 'Overall satisfaction is below target at ' + overviewData.avgOverall.toFixed(1) + '/10. Review member feedback for areas to improve.'
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Get drill-down data for specific categories
+ */
+function getSatisfactionDrillData(type) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { items: [] };
+  if (!sheet) return result;
+
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  if (type === 'responses') {
+    // Show recent responses
+    var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+    var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+    var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+    for (var i = 0; i < numRows; i++) {
+      var ts = timestamps[i][0];
+      var row = satisfactionData[i];
+      var sum = 0, count = 0;
+      row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
+      var avg = count > 0 ? sum / count : 0;
+
+      result.items.push({
+        label: worksiteData[i][0] || 'Unknown',
+        detail: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
+        score: avg
+      });
+    }
+    result.items.sort(function(a, b) { return b.score - a.score; });
+    result.items = result.items.slice(0, 20);
+  }
+
+  return result;
+}
+
+/**
+ * Get location-specific drill-down data
+ */
+function getSatisfactionLocationDrill(location) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { count: 0, avgScore: 0, responses: [] };
+  if (!sheet || !location) return result;
+
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  var totalScore = 0;
+
+  for (var i = 0; i < numRows; i++) {
+    if (worksiteData[i][0] !== location) continue;
+
+    var ts = timestamps[i][0];
+    var row = satisfactionData[i];
+    var sum = 0, count = 0;
+    row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
+    var avg = count > 0 ? sum / count : 0;
+
+    result.count++;
+    totalScore += avg;
+
+    result.responses.push({
+      role: roleData[i][0] || 'Unknown',
+      date: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
+      avgScore: avg
+    });
+  }
+
+  result.avgScore = result.count > 0 ? totalScore / result.count : 0;
+  result.responses.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+  return result;
+}
+
+/**
+ * Helper function to get last row with data
+ */
+function getSheetLastRow(sheet) {
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      return i;
+    }
+  }
+  return timestamps.length;
 }
 
 /**
@@ -8553,166 +9547,6 @@ function getSatisfactionAnalyticsData() {
   return result;
 }
 
-/**
- * Helper function to get last row with data
- */
-function getSheetLastRow(sheet) {
-  var timestamps = sheet.getRange('A:A').getValues();
-  for (var i = 1; i < timestamps.length; i++) {
-    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
-      return i;
-    }
-  }
-  return timestamps.length;
-}
-
-/**
- * Get trend data for satisfaction dashboard - responses over time
- */
-function getSatisfactionTrendData(period) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
-
-  var result = {
-    byMonth: [],
-    satisfactionTrend: [],
-    issuesTrend: [],
-    totalInPeriod: 0
-  };
-
-  if (!sheet) return result;
-
-  // Get data
-  var lastRow = getSheetLastRow(sheet);
-  if (lastRow <= 1) return result;
-
-  var numRows = lastRow - 1;
-  var tz = Session.getScriptTimeZone();
-
-  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
-  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
-
-  // Filter by period
-  var now = new Date();
-  var cutoff = null;
-  if (period === '30') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-  else if (period === '90') cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-  else if (period === 'year') cutoff = new Date(now.getFullYear(), 0, 1);
-
-  // Group by month
-  var monthData = {};
-  for (var i = 0; i < numRows; i++) {
-    var ts = timestamps[i][0];
-    if (!(ts instanceof Date)) continue;
-    if (cutoff && ts < cutoff) continue;
-
-    var monthKey = Utilities.formatDate(ts, tz, 'yyyy-MM');
-    var monthLabel = Utilities.formatDate(ts, tz, 'MMM yy');
-
-    if (!monthData[monthKey]) {
-      monthData[monthKey] = { label: monthLabel, count: 0, sum: 0, validCount: 0 };
-    }
-
-    monthData[monthKey].count++;
-    result.totalInPeriod++;
-
-    // Calculate avg satisfaction
-    var row = satisfactionData[i];
-    var rowSum = 0, rowCount = 0;
-    row.forEach(function(val) {
-      var v = parseFloat(val);
-      if (v > 0) { rowSum += v; rowCount++; }
-    });
-    if (rowCount > 0) {
-      monthData[monthKey].sum += rowSum / rowCount;
-      monthData[monthKey].validCount++;
-    }
-  }
-
-  // Convert to arrays sorted by date
-  var months = Object.keys(monthData).sort();
-  months.forEach(function(key) {
-    var m = monthData[key];
-    result.byMonth.push({ label: m.label, count: m.count });
-    result.satisfactionTrend.push({
-      label: m.label,
-      avg: m.validCount > 0 ? m.sum / m.validCount : 0
-    });
-  });
-
-  // Get common issues/priorities for trend
-  try {
-    var prioritiesData = sheet.getRange(2, SATISFACTION_COLS.Q64_TOP_PRIORITIES, numRows, 1).getValues();
-    var issueMap = {};
-    for (var i = 0; i < numRows; i++) {
-      var ts = timestamps[i][0];
-      if (!(ts instanceof Date)) continue;
-      if (cutoff && ts < cutoff) continue;
-
-      var priorities = String(prioritiesData[i][0] || '');
-      if (priorities) {
-        priorities.split(',').forEach(function(item) {
-          var p = item.trim();
-          if (p) issueMap[p] = (issueMap[p] || 0) + 1;
-        });
-      }
-    }
-    for (var issue in issueMap) {
-      result.issuesTrend.push({ name: issue, count: issueMap[issue] });
-    }
-    result.issuesTrend.sort(function(a, b) { return b.count - a.count; });
-  } catch(e) { /* ignore if column doesn't exist */ }
-
-  return result;
-}
-
-/**
- * Get location-specific drill-down data
- */
-function getSatisfactionLocationDrill(location) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
-
-  var result = { count: 0, avgScore: 0, responses: [] };
-  if (!sheet || !location) return result;
-
-  var lastRow = getSheetLastRow(sheet);
-  if (lastRow <= 1) return result;
-
-  var numRows = lastRow - 1;
-  var tz = Session.getScriptTimeZone();
-
-  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
-  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
-  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
-  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
-
-  var totalScore = 0;
-
-  for (var i = 0; i < numRows; i++) {
-    if (worksiteData[i][0] !== location) continue;
-
-    var ts = timestamps[i][0];
-    var row = satisfactionData[i];
-    var sum = 0, count = 0;
-    row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
-    var avg = count > 0 ? sum / count : 0;
-
-    result.count++;
-    totalScore += avg;
-
-    result.responses.push({
-      role: roleData[i][0] || 'Unknown',
-      date: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
-      avgScore: avg
-    });
-  }
-
-  result.avgScore = result.count > 0 ? totalScore / result.count : 0;
-  result.responses.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-
-  return result;
-}
 
 
 // ================================================================================
@@ -11460,19 +12294,19 @@ function repairAllCheckboxes() {
 
 
 // ================================================================================
-// MODULE: ADHDFeatures.gs
-// Source: ADHDFeatures.gs
+// MODULE: ComfortViewFeatures.gs
+// Source: ComfortViewFeatures.gs
 // ================================================================================
 
 /**
  * ============================================================================
- * ADHD ACCESSIBILITY & THEMING
+ * COMFORT VIEW ACCESSIBILITY & THEMING
  * ============================================================================
  * Features for neurodivergent users + theme customization
  */
 
-// ADHD Configuration
-var ADHD_CONFIG = {
+// Comfort View Configuration
+var COMFORT_VIEW_CONFIG = {
   FOCUS_MODE_COLORS: { background: '#f5f5f5', header: '#4a4a4a', accent: '#6b9bd1' },
   HIGH_CONTRAST: { background: '#ffffff', header: '#000000', accent: '#0066cc' },
   PASTEL: { background: '#fef9e7', header: '#85929e', accent: '#7fb3d5' }
@@ -11489,7 +12323,7 @@ var THEME_CONFIG = {
   DEFAULT_THEME: 'LIGHT'
 };
 
-// ==================== ADHD SETTINGS ====================
+// ==================== COMFORT VIEW SETTINGS ====================
 
 function getADHDSettings() {
   var props = PropertiesService.getUserProperties();
@@ -11518,7 +12352,7 @@ function applyADHDSettings(settings) {
 
 function resetADHDSettings() {
   PropertiesService.getUserProperties().deleteProperty('adhdSettings');
-  SpreadsheetApp.getActiveSpreadsheet().toast('✅ ADHD settings reset', 'Settings', 3);
+  SpreadsheetApp.getActiveSpreadsheet().toast('✅ Comfort View settings reset', 'Settings', 3);
 }
 
 // ==================== VISUAL HELPERS ====================
@@ -11580,7 +12414,7 @@ function toggleReducedMotion() {
 // ==================== FOCUS MODE ====================
 
 /**
- * Activate Focus Mode - ADHD-friendly distraction-free view
+ * Activate Focus Mode - distraction-free view for focused work
  *
  * WHAT IT DOES:
  * - Hides all sheets except the one you're currently viewing
@@ -11588,7 +12422,7 @@ function toggleReducedMotion() {
  * - Creates a clean, focused work environment
  *
  * HOW TO EXIT:
- * - Use menu: ADHD > Exit Focus Mode
+ * - Use menu: Comfort View > Exit Focus Mode
  * - Or run: deactivateFocusMode()
  *
  * BEST FOR:
@@ -11608,7 +12442,7 @@ function activateFocusMode() {
     ui.alert('🎯 Focus Mode',
       'Focus mode is already active (only one sheet visible).\n\n' +
       'To exit focus mode, use:\n' +
-      'ADHD Menu > Exit Focus Mode',
+      'Comfort View Menu > Exit Focus Mode',
       ui.ButtonSet.OK);
     return;
   }
@@ -11625,7 +12459,7 @@ function activateFocusMode() {
     '• Hides all other sheets to reduce distractions\n' +
     '• Removes gridlines for a cleaner view\n\n' +
     'TO EXIT:\n' +
-    '• Use menu: 🔧 ADHD > Exit Focus Mode\n' +
+    '• Use menu: ♿ Comfort View > Exit Focus Mode\n' +
     '• Or run: deactivateFocusMode()\n\n' +
     '💡 Tip: Focus mode helps with deep work and reduces cognitive load.',
     ui.ButtonSet.OK);
@@ -11674,7 +12508,7 @@ function setBreakReminders(minutes) {
   });
   if (minutes > 0) {
     ScriptApp.newTrigger('showBreakReminder').timeBased().everyMinutes(minutes).create();
-    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Break reminders: every ' + minutes + ' min', 'ADHD', 3);
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Break reminders: every ' + minutes + ' min', 'Comfort View', 3);
   }
 }
 
@@ -11731,14 +12565,14 @@ function quickToggleDarkMode() {
   applyTheme(current === 'LIGHT' ? 'DARK' : 'LIGHT', 'all');
 }
 
-// ==================== ADHD CONTROL PANEL ====================
+// ==================== COMFORT VIEW CONTROL PANEL ====================
 
 function showADHDControlPanel() {
   var settings = getADHDSettings();
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>♿ ADHD Control Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();setTimeout(function(){location.reload()},1000)">' + (settings.zebraStripes ? '✅ On' : 'Off') + '</button></div><div class="row"><span>Gridlines</span><button onclick="google.script.run.toggleGridlinesADHD();setTimeout(function(){location.reload()},1000)">' + (settings.gridlines ? '✅ Visible' : 'Hidden') + '</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">🎯 Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad()">📝 Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">⏱️ Start</button></div></div><button class="sec" onclick="google.script.run.resetADHDSettings();google.script.host.close()">🔄 Reset</button><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>♿ Comfort View Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();setTimeout(function(){location.reload()},1000)">' + (settings.zebraStripes ? '✅ On' : 'Off') + '</button></div><div class="row"><span>Gridlines</span><button onclick="google.script.run.toggleGridlinesADHD();setTimeout(function(){location.reload()},1000)">' + (settings.gridlines ? '✅ Visible' : 'Hidden') + '</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">🎯 Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad()">📝 Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">⏱️ Start</button></div></div><button class="sec" onclick="google.script.run.resetADHDSettings();google.script.host.close()">🔄 Reset</button><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
   ).setWidth(500).setHeight(500);
-  SpreadsheetApp.getUi().showModalDialog(html, '♿ ADHD Control Panel');
+  SpreadsheetApp.getUi().showModalDialog(html, '♿ Comfort View Panel');
 }
 
 function showThemeManager() {
@@ -11759,7 +12593,7 @@ function showThemeManager() {
 // ==================== SETUP DEFAULTS ====================
 
 /**
- * Setup ADHD-friendly defaults with options dialog
+ * Setup Comfort View defaults with options dialog
  * User can choose which settings to apply and settings can be undone
  */
 function setupADHDDefaults() {
@@ -11781,8 +12615,8 @@ function setupADHDDefaults() {
     '.secondary{background:#e0e0e0;color:#333}' +
     '.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px}' +
     '</style></head><body><div class="container">' +
-    '<h2>🎨 ADHD-Friendly Setup</h2>' +
-    '<div class="info">💡 These settings can be undone anytime via the ADHD Control Panel or by running "Undo ADHD Defaults"</div>' +
+    '<h2>🎨 Comfort View Setup</h2>' +
+    '<div class="info">💡 These settings can be undone anytime via the Comfort View Panel or by running "Undo Comfort View"</div>' +
     '<div class="option" onclick="toggle(\'gridlines\')"><input type="checkbox" id="gridlines" checked><div class="option-text"><div class="option-label">Hide Gridlines</div><div class="option-desc">Reduce visual clutter by hiding sheet gridlines</div></div></div>' +
     '<div class="option" onclick="toggle(\'zebra\')"><input type="checkbox" id="zebra"><div class="option-text"><div class="option-label">Zebra Stripes</div><div class="option-desc">Alternating row colors for easier reading</div></div></div>' +
     '<div class="option" onclick="toggle(\'fontSize\')"><input type="checkbox" id="fontSize"><div class="option-text"><div class="option-label">Larger Font (12pt)</div><div class="option-desc">Increase default font size for better readability</div></div></div>' +
@@ -11798,11 +12632,11 @@ function setupADHDDefaults() {
     'google.script.run.withSuccessHandler(function(){google.script.host.close()}).applyADHDDefaultsWithOptions(opts)}' +
     '</script></body></html>'
   ).setWidth(500).setHeight(450);
-  ui.showModalDialog(html, '🎨 ADHD-Friendly Setup');
+  ui.showModalDialog(html, '🎨 Comfort View Setup');
 }
 
 /**
- * Apply ADHD defaults with selected options
+ * Apply Comfort View defaults with selected options
  * @param {Object} options - Selected options
  */
 function applyADHDDefaultsWithOptions(options) {
@@ -11860,11 +12694,11 @@ function applyADHDDefaultsWithOptions(options) {
 }
 
 /**
- * Undo ADHD defaults - restore original settings
+ * Undo Comfort View defaults - restore original settings
  */
 function undoADHDDefaults() {
   var ui = SpreadsheetApp.getUi();
-  var response = ui.alert('↩️ Undo ADHD Defaults',
+  var response = ui.alert('↩️ Undo Comfort View',
     'This will:\n\n' +
     '• Show all gridlines\n' +
     '• Remove zebra stripes\n' +
@@ -11902,7 +12736,7 @@ function undoADHDDefaults() {
     resetADHDSettings();
 
     ui.alert('↩️ Undo Complete',
-      'ADHD defaults have been reset:\n\n' +
+      'Comfort View defaults have been reset:\n\n' +
       '✅ Gridlines restored\n' +
       '✅ Zebra stripes removed\n' +
       '✅ Font size reset to 10pt\n' +
@@ -13412,6 +14246,76 @@ function getInteractiveGrievanceData() {
       unit: row[GRIEVANCE_COLS.UNIT - 1] || 'N/A',
       steward: row[GRIEVANCE_COLS.STEWARD - 1] || 'N/A',
       resolution: row[GRIEVANCE_COLS.RESOLUTION - 1] || ''
+    };
+  }).filter(function(g) { return g !== null; });
+}
+
+/**
+ * Get steward's assigned grievances for My Cases tab
+ * Returns grievances where current user is the assigned steward
+ */
+function getMyStewardCases() {
+  var email = Session.getActiveUser().getEmail();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.GRIEVANCE_LOG);
+  if (!sheet || sheet.getLastRow() <= 1) return [];
+
+  var data = sheet.getRange(2, 1, sheet.getLastRow() - 1, GRIEVANCE_COLS.QUICK_ACTIONS).getValues();
+  var tz = Session.getScriptTimeZone();
+
+  // Also check Member Directory to get steward name for matching
+  var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
+  var userStewardName = '';
+  if (memberSheet && memberSheet.getLastRow() > 1) {
+    var memberData = memberSheet.getRange(2, 1, memberSheet.getLastRow() - 1, MEMBER_COLS.IS_STEWARD).getValues();
+    for (var i = 0; i < memberData.length; i++) {
+      var memberEmail = memberData[i][MEMBER_COLS.EMAIL - 1] || '';
+      if (memberEmail.toLowerCase() === email.toLowerCase() && memberData[i][MEMBER_COLS.IS_STEWARD - 1] === 'Yes') {
+        userStewardName = ((memberData[i][MEMBER_COLS.FIRST_NAME - 1] || '') + ' ' + (memberData[i][MEMBER_COLS.LAST_NAME - 1] || '')).trim();
+        break;
+      }
+    }
+  }
+
+  return data.map(function(row, idx) {
+    var grievanceId = row[GRIEVANCE_COLS.GRIEVANCE_ID - 1] || '';
+    // Skip blank rows
+    if (!grievanceId || (typeof grievanceId === 'string' && !grievanceId.toString().match(/^G/i))) return null;
+
+    // Check if current user is the steward for this grievance
+    var steward = row[GRIEVANCE_COLS.STEWARD - 1] || '';
+    var isMyCase = false;
+
+    // Match by email
+    if (steward && steward.toLowerCase().indexOf(email.toLowerCase()) >= 0) {
+      isMyCase = true;
+    }
+    // Match by name if we found the user's steward name
+    if (!isMyCase && userStewardName && steward && steward.toLowerCase().indexOf(userStewardName.toLowerCase()) >= 0) {
+      isMyCase = true;
+    }
+
+    if (!isMyCase) return null;
+
+    var filed = row[GRIEVANCE_COLS.DATE_FILED - 1];
+    var nextDue = row[GRIEVANCE_COLS.NEXT_ACTION_DUE - 1];
+    var daysToDeadline = row[GRIEVANCE_COLS.DAYS_TO_DEADLINE - 1];
+
+    return {
+      id: grievanceId,
+      rowNum: idx + 2,
+      memberId: row[GRIEVANCE_COLS.MEMBER_ID - 1] || '',
+      memberName: ((row[GRIEVANCE_COLS.FIRST_NAME - 1] || '') + ' ' + (row[GRIEVANCE_COLS.LAST_NAME - 1] || '')).trim(),
+      status: row[GRIEVANCE_COLS.STATUS - 1] || 'Filed',
+      currentStep: row[GRIEVANCE_COLS.CURRENT_STEP - 1] || 'Step I',
+      issueType: row[GRIEVANCE_COLS.ISSUE_CATEGORY - 1] || 'N/A',
+      articles: row[GRIEVANCE_COLS.ARTICLES - 1] || 'N/A',
+      filedDate: filed instanceof Date ? Utilities.formatDate(filed, tz, 'MM/dd/yyyy') : (filed || 'N/A'),
+      nextActionDue: nextDue instanceof Date ? Utilities.formatDate(nextDue, tz, 'MM/dd/yyyy') : (nextDue || 'N/A'),
+      daysToDeadline: daysToDeadline,
+      isOverdue: daysToDeadline === 'Overdue' || (typeof daysToDeadline === 'number' && daysToDeadline < 0),
+      daysOpen: row[GRIEVANCE_COLS.DAYS_OPEN - 1] || 0,
+      location: row[GRIEVANCE_COLS.LOCATION - 1] || 'N/A'
     };
   }).filter(function(g) { return g !== null; });
 }

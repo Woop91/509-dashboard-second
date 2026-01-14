@@ -1,12 +1,12 @@
 /**
  * ============================================================================
- * ADHD ACCESSIBILITY & THEMING
+ * COMFORT VIEW ACCESSIBILITY & THEMING
  * ============================================================================
  * Features for neurodivergent users + theme customization
  */
 
-// ADHD Configuration
-var ADHD_CONFIG = {
+// Comfort View Configuration
+var COMFORT_VIEW_CONFIG = {
   FOCUS_MODE_COLORS: { background: '#f5f5f5', header: '#4a4a4a', accent: '#6b9bd1' },
   HIGH_CONTRAST: { background: '#ffffff', header: '#000000', accent: '#0066cc' },
   PASTEL: { background: '#fef9e7', header: '#85929e', accent: '#7fb3d5' }
@@ -23,7 +23,7 @@ var THEME_CONFIG = {
   DEFAULT_THEME: 'LIGHT'
 };
 
-// ==================== ADHD SETTINGS ====================
+// ==================== COMFORT VIEW SETTINGS ====================
 
 function getADHDSettings() {
   var props = PropertiesService.getUserProperties();
@@ -52,7 +52,7 @@ function applyADHDSettings(settings) {
 
 function resetADHDSettings() {
   PropertiesService.getUserProperties().deleteProperty('adhdSettings');
-  SpreadsheetApp.getActiveSpreadsheet().toast('✅ ADHD settings reset', 'Settings', 3);
+  SpreadsheetApp.getActiveSpreadsheet().toast('✅ Comfort View settings reset', 'Settings', 3);
 }
 
 // ==================== VISUAL HELPERS ====================
@@ -114,7 +114,7 @@ function toggleReducedMotion() {
 // ==================== FOCUS MODE ====================
 
 /**
- * Activate Focus Mode - ADHD-friendly distraction-free view
+ * Activate Focus Mode - distraction-free view for focused work
  *
  * WHAT IT DOES:
  * - Hides all sheets except the one you're currently viewing
@@ -122,7 +122,7 @@ function toggleReducedMotion() {
  * - Creates a clean, focused work environment
  *
  * HOW TO EXIT:
- * - Use menu: ADHD > Exit Focus Mode
+ * - Use menu: Comfort View > Exit Focus Mode
  * - Or run: deactivateFocusMode()
  *
  * BEST FOR:
@@ -142,7 +142,7 @@ function activateFocusMode() {
     ui.alert('🎯 Focus Mode',
       'Focus mode is already active (only one sheet visible).\n\n' +
       'To exit focus mode, use:\n' +
-      'ADHD Menu > Exit Focus Mode',
+      'Comfort View Menu > Exit Focus Mode',
       ui.ButtonSet.OK);
     return;
   }
@@ -159,7 +159,7 @@ function activateFocusMode() {
     '• Hides all other sheets to reduce distractions\n' +
     '• Removes gridlines for a cleaner view\n\n' +
     'TO EXIT:\n' +
-    '• Use menu: 🔧 ADHD > Exit Focus Mode\n' +
+    '• Use menu: ♿ Comfort View > Exit Focus Mode\n' +
     '• Or run: deactivateFocusMode()\n\n' +
     '💡 Tip: Focus mode helps with deep work and reduces cognitive load.',
     ui.ButtonSet.OK);
@@ -208,7 +208,7 @@ function setBreakReminders(minutes) {
   });
   if (minutes > 0) {
     ScriptApp.newTrigger('showBreakReminder').timeBased().everyMinutes(minutes).create();
-    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Break reminders: every ' + minutes + ' min', 'ADHD', 3);
+    SpreadsheetApp.getActiveSpreadsheet().toast('✅ Break reminders: every ' + minutes + ' min', 'Comfort View', 3);
   }
 }
 
@@ -265,14 +265,14 @@ function quickToggleDarkMode() {
   applyTheme(current === 'LIGHT' ? 'DARK' : 'LIGHT', 'all');
 }
 
-// ==================== ADHD CONTROL PANEL ====================
+// ==================== COMFORT VIEW CONTROL PANEL ====================
 
 function showADHDControlPanel() {
   var settings = getADHDSettings();
   var html = HtmlService.createHtmlOutput(
-    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>♿ ADHD Control Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();setTimeout(function(){location.reload()},1000)">' + (settings.zebraStripes ? '✅ On' : 'Off') + '</button></div><div class="row"><span>Gridlines</span><button onclick="google.script.run.toggleGridlinesADHD();setTimeout(function(){location.reload()},1000)">' + (settings.gridlines ? '✅ Visible' : 'Hidden') + '</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">🎯 Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad()">📝 Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">⏱️ Start</button></div></div><button class="sec" onclick="google.script.run.resetADHDSettings();google.script.host.close()">🔄 Reset</button><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
+    '<!DOCTYPE html><html><head><base target="_top"><style>body{font-family:Arial;padding:20px;background:#f5f5f5}.container{background:white;padding:25px;border-radius:8px}h2{color:#1a73e8;border-bottom:3px solid #1a73e8;padding-bottom:10px}.section{background:#f8f9fa;padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #1a73e8}.row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #e0e0e0}button{background:#1a73e8;color:white;border:none;padding:10px 20px;border-radius:4px;cursor:pointer;margin:5px}button:hover{background:#1557b0}button.sec{background:#6c757d}</style></head><body><div class="container"><h2>♿ Comfort View Panel</h2><div class="section"><div class="row"><span>Zebra Stripes</span><button onclick="google.script.run.toggleZebraStripes();setTimeout(function(){location.reload()},1000)">' + (settings.zebraStripes ? '✅ On' : 'Off') + '</button></div><div class="row"><span>Gridlines</span><button onclick="google.script.run.toggleGridlinesADHD();setTimeout(function(){location.reload()},1000)">' + (settings.gridlines ? '✅ Visible' : 'Hidden') + '</button></div><div class="row"><span>Focus Mode</span><button onclick="google.script.run.activateFocusMode();google.script.host.close()">🎯 Activate</button></div></div><div class="section"><div class="row"><span>Quick Capture</span><button onclick="google.script.run.showQuickCaptureNotepad()">📝 Open</button></div><div class="row"><span>Pomodoro Timer</span><button onclick="google.script.run.startPomodoroTimer();google.script.host.close()">⏱️ Start</button></div></div><button class="sec" onclick="google.script.run.resetADHDSettings();google.script.host.close()">🔄 Reset</button><button class="sec" onclick="google.script.host.close()">Close</button></div></body></html>'
   ).setWidth(500).setHeight(500);
-  SpreadsheetApp.getUi().showModalDialog(html, '♿ ADHD Control Panel');
+  SpreadsheetApp.getUi().showModalDialog(html, '♿ Comfort View Panel');
 }
 
 function showThemeManager() {
@@ -293,7 +293,7 @@ function showThemeManager() {
 // ==================== SETUP DEFAULTS ====================
 
 /**
- * Setup ADHD-friendly defaults with options dialog
+ * Setup Comfort View defaults with options dialog
  * User can choose which settings to apply and settings can be undone
  */
 function setupADHDDefaults() {
@@ -315,8 +315,8 @@ function setupADHDDefaults() {
     '.secondary{background:#e0e0e0;color:#333}' +
     '.info{background:#e8f4fd;padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px}' +
     '</style></head><body><div class="container">' +
-    '<h2>🎨 ADHD-Friendly Setup</h2>' +
-    '<div class="info">💡 These settings can be undone anytime via the ADHD Control Panel or by running "Undo ADHD Defaults"</div>' +
+    '<h2>🎨 Comfort View Setup</h2>' +
+    '<div class="info">💡 These settings can be undone anytime via the Comfort View Panel or by running "Undo Comfort View"</div>' +
     '<div class="option" onclick="toggle(\'gridlines\')"><input type="checkbox" id="gridlines" checked><div class="option-text"><div class="option-label">Hide Gridlines</div><div class="option-desc">Reduce visual clutter by hiding sheet gridlines</div></div></div>' +
     '<div class="option" onclick="toggle(\'zebra\')"><input type="checkbox" id="zebra"><div class="option-text"><div class="option-label">Zebra Stripes</div><div class="option-desc">Alternating row colors for easier reading</div></div></div>' +
     '<div class="option" onclick="toggle(\'fontSize\')"><input type="checkbox" id="fontSize"><div class="option-text"><div class="option-label">Larger Font (12pt)</div><div class="option-desc">Increase default font size for better readability</div></div></div>' +
@@ -332,11 +332,11 @@ function setupADHDDefaults() {
     'google.script.run.withSuccessHandler(function(){google.script.host.close()}).applyADHDDefaultsWithOptions(opts)}' +
     '</script></body></html>'
   ).setWidth(500).setHeight(450);
-  ui.showModalDialog(html, '🎨 ADHD-Friendly Setup');
+  ui.showModalDialog(html, '🎨 Comfort View Setup');
 }
 
 /**
- * Apply ADHD defaults with selected options
+ * Apply Comfort View defaults with selected options
  * @param {Object} options - Selected options
  */
 function applyADHDDefaultsWithOptions(options) {
@@ -394,11 +394,11 @@ function applyADHDDefaultsWithOptions(options) {
 }
 
 /**
- * Undo ADHD defaults - restore original settings
+ * Undo Comfort View defaults - restore original settings
  */
 function undoADHDDefaults() {
   var ui = SpreadsheetApp.getUi();
-  var response = ui.alert('↩️ Undo ADHD Defaults',
+  var response = ui.alert('↩️ Undo Comfort View',
     'This will:\n\n' +
     '• Show all gridlines\n' +
     '• Remove zebra stripes\n' +
@@ -436,7 +436,7 @@ function undoADHDDefaults() {
     resetADHDSettings();
 
     ui.alert('↩️ Undo Complete',
-      'ADHD defaults have been reset:\n\n' +
+      'Comfort View defaults have been reset:\n\n' +
       '✅ Gridlines restored\n' +
       '✅ Zebra stripes removed\n' +
       '✅ Font size reset to 10pt\n' +

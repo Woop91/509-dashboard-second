@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.1.0 (Dashboard Renaming, My Cases Tab & Member Satisfaction Enhancements)
+**Version:** 2.2.0 (Survey Verification, Quarterly Tracking & Member Authentication)
 **Last Updated:** 2026-01-14
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -134,7 +134,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 ├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
+├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -299,7 +299,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
-**ADHDFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
+**ComfortViewFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
 - `showADHDControlPanel()` - Main Comfort View settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
 - `applyADHDSettings()` - Apply visual settings
@@ -992,6 +992,66 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 ---
 
 ## Changelog
+
+### Version 2.2.0 (2026-01-14) - Survey Verification, Quarterly Tracking & Member Authentication
+
+**New Survey Verification System:**
+- Survey responses are now verified against the Member Directory
+- Email matching: Survey respondent email is compared against member contact emails
+- Verified responses are marked with `Verified: Yes`
+- Unmatched emails are flagged as `Pending Review` for manual review
+- Rejected submissions excluded from all statistics
+
+**New Quarterly Tracking with History:**
+- Each survey response is assigned a quarter (e.g., "2026-Q1")
+- Members can submit multiple responses per quarter - only the latest counts in stats
+- Historical responses preserved (not deleted) with `IS_LATEST: No` marking
+- Previous responses marked with reference to newer submission (`SUPERSEDED_BY` column)
+- Toggle in Member Dashboard to include/exclude historical responses from statistics
+
+**New Flagged Submissions Review Interface:**
+- Menu: 509 Dashboard > Survey Tools > 🔍 Review Flagged Submissions
+- Shows count of pending review submissions
+- Displays email addresses of unverified submissions (survey answers protected)
+- One-click Approve or Reject actions for administrators
+- Functions: `showFlaggedSubmissionsReview()`, `getFlaggedSubmissionsData()`, `approveFlaggedSubmission()`, `rejectFlaggedSubmission()`
+
+**Public Member Dashboard Updates:**
+- Survey statistics now filter to only show Verified responses
+- Response rate calculated from unique verified member IDs
+- New toggle: "Include historical responses" checkbox
+- When enabled, shows all responses including superseded entries
+- Visual warning when historical data is included
+
+**New SATISFACTION_COLS Columns (Constants.gs):**
+| Column | Name | Purpose |
+|--------|------|---------|
+| CE (83) | EMAIL | Email address from form submission |
+| CF (84) | VERIFIED | Yes / Pending Review / Rejected |
+| CG (85) | MATCHED_MEMBER_ID | Member ID if email matched |
+| CH (86) | QUARTER | Quarter string (e.g., "2026-Q1") |
+| CI (87) | IS_LATEST | Yes/No - Is this the latest for this member this quarter? |
+| CJ (88) | SUPERSEDED_BY | Row number of newer response (if superseded) |
+| CK (89) | REVIEWER_NOTES | Notes from reviewer |
+
+**Email Collection Configuration:**
+For verification to work, the Google Form must collect respondent emails. Two options:
+1. **Enable "Collect email addresses"** in Google Form settings (recommended)
+2. **Add an "Email Address" question** to the form
+
+If neither is configured, all submissions will be marked as "Pending Review" and require manual approval.
+
+**Updated Functions:**
+- `onSatisfactionFormSubmit(e)` - Now includes email verification and quarterly tracking
+- `validateMemberEmail(email)` - Validates email against Member Directory
+- `getCurrentQuarter()` - Returns current quarter string
+- `getPublicSurveyData(includeHistory)` - Now accepts toggle for historical data
+
+**Files Modified:**
+- `Constants.gs` - Added SATISFACTION_COLS verification columns
+- `Code.gs` - Updated form handler, added review interface, updated public dashboard
+
+---
 
 ### Version 2.1.0 (2026-01-14) - Dashboard Renaming, My Cases Tab & Member Satisfaction Enhancements
 
