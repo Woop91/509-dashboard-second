@@ -27,7 +27,6 @@ function onOpen() {
   // ============================================================================
   ui.createMenu('📊 509 Dashboard')
     .addItem('📊 Dashboard', 'showInteractiveDashboardTab')
-    .addItem('📋 Dashboard Pend', 'showSmartDashboard')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addSeparator()
