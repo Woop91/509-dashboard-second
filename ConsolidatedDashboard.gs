@@ -7531,6 +7531,51 @@ function getSatisfactionDashboardHtml() {
     '.spinner{display:inline-block;width:24px;height:24px;border:3px solid #e5e7eb;border-top-color:#059669;border-radius:50%;animation:spin 1s linear infinite}' +
     '@keyframes spin{to{transform:rotate(360deg)}}' +
 
+    // Line chart styles
+    '.line-chart{position:relative;height:200px;background:white;border-radius:8px;padding:20px}' +
+    '.line-chart-svg{width:100%;height:100%}' +
+    '.line-path{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}' +
+    '.line-point{cursor:pointer;transition:r 0.2s}' +
+    '.line-point:hover{r:8}' +
+    '.line-label{font-size:10px;fill:#666}' +
+    '.line-grid{stroke:#e5e7eb;stroke-width:1}' +
+
+    // Donut chart styles
+    '.donut-container{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;align-items:center}' +
+    '.donut-chart{position:relative;width:160px;height:160px}' +
+    '.donut-svg{transform:rotate(-90deg)}' +
+    '.donut-segment{transition:opacity 0.2s;cursor:pointer}' +
+    '.donut-segment:hover{opacity:0.8}' +
+    '.donut-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}' +
+    '.donut-value{font-size:28px;font-weight:bold;color:#1f2937}' +
+    '.donut-label{font-size:11px;color:#666}' +
+    '.donut-legend{display:flex;flex-direction:column;gap:8px}' +
+    '.legend-item{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}' +
+    '.legend-item:hover{opacity:0.8}' +
+    '.legend-color{width:14px;height:14px;border-radius:3px}' +
+
+    // Clickable elements
+    '.clickable{cursor:pointer;transition:transform 0.2s,box-shadow 0.2s}' +
+    '.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,0.15)}' +
+    '.clickable:active{transform:translateY(0)}' +
+
+    // Modal/Drill-down styles
+    '.drill-modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}' +
+    '.drill-content{background:white;border-radius:12px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 20px 50px rgba(0,0,0,0.3)}' +
+    '.drill-header{padding:20px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}' +
+    '.drill-title{font-size:18px;font-weight:600;color:#1f2937}' +
+    '.drill-close{background:none;border:none;font-size:24px;cursor:pointer;color:#666}' +
+    '.drill-body{padding:20px}' +
+
+    // Additional color scheme
+    '.stat-card.teal .stat-value{color:#0d9488}' +
+    '.stat-card.indigo .stat-value{color:#4f46e5}' +
+    '.stat-card.pink .stat-value{color:#ec4899}' +
+    '.stat-card.amber .stat-value{color:#f59e0b}' +
+
+    // Response count badge
+    '.response-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;background:#e0f2fe;color:#0369a1;border-radius:20px;font-size:12px;font-weight:600}' +
+
     // Responsive
     '@media (max-width:600px){' +
     '  .stats-grid{grid-template-columns:repeat(2,1fr)}' +
@@ -7538,6 +7583,8 @@ function getSatisfactionDashboardHtml() {
     '  .tab-icon{font-size:16px}' +
     '  .bar-label{width:100px}' +
     '  .gauge-container{flex-direction:column;align-items:center}' +
+    '  .donut-container{flex-direction:column}' +
+    '  .line-chart{height:150px}' +
     '}' +
 
     '</style>' +
@@ -7552,8 +7599,9 @@ function getSatisfactionDashboardHtml() {
     // Tab Navigation
     '<div class="tabs">' +
     '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'trends\',this)" id="tab-trends"><span class="tab-icon">📈</span>Trends</button>' +
     '<button class="tab" onclick="switchTab(\'responses\',this)" id="tab-responses"><span class="tab-icon">📝</span>Responses</button>' +
-    '<button class="tab" onclick="switchTab(\'sections\',this)" id="tab-sections"><span class="tab-icon">📈</span>By Section</button>' +
+    '<button class="tab" onclick="switchTab(\'sections\',this)" id="tab-sections"><span class="tab-icon">📊</span>Sections</button>' +
     '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">🔍</span>Insights</button>' +
     '</div>' +
 
@@ -7561,7 +7609,22 @@ function getSatisfactionDashboardHtml() {
     '<div class="tab-content active" id="content-overview">' +
     '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
     '<div id="overview-gauges"></div>' +
+    '<div id="overview-distribution" style="margin-top:15px"></div>' +
     '<div id="overview-insights" style="margin-top:15px"></div>' +
+    '</div>' +
+
+    // Trends Tab
+    '<div class="tab-content" id="content-trends">' +
+    '<div class="filter-group" id="trend-period-filter">' +
+    '<button class="action-btn action-btn-primary" onclick="loadTrends(\'all\')">All Time</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'year\')">This Year</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'90\')">Last 90 Days</button>' +
+    '<button class="action-btn action-btn-secondary" onclick="loadTrends(\'30\')">Last 30 Days</button>' +
+    '</div>' +
+    '<div id="trend-summary" class="stats-grid" style="margin-bottom:15px"></div>' +
+    '<div id="trend-line-chart"></div>' +
+    '<div id="trend-response-chart" style="margin-top:15px"></div>' +
+    '<div id="trend-issues" style="margin-top:15px"></div>' +
     '</div>' +
 
     // Responses Tab
@@ -7588,7 +7651,7 @@ function getSatisfactionDashboardHtml() {
 
     // JavaScript
     '<script>' +
-    'var allResponses=[];var currentFilter="all";var analyticsLoaded=false;var sectionsLoaded=false;' +
+    'var allResponses=[];var currentFilter="all";var analyticsLoaded=false;var sectionsLoaded=false;var trendsLoaded=false;var currentPeriod="all";' +
 
     // Tab switching
     'function switchTab(tabName,btn){' +
@@ -7599,6 +7662,7 @@ function getSatisfactionDashboardHtml() {
     '  if(tabName==="responses"&&allResponses.length===0)loadResponses();' +
     '  if(tabName==="sections"&&!sectionsLoaded)loadSections();' +
     '  if(tabName==="analytics"&&!analyticsLoaded)loadAnalytics();' +
+    '  if(tabName==="trends"&&!trendsLoaded)loadTrends("all");' +
     '}' +
 
     // Score color helper
@@ -7626,12 +7690,13 @@ function getSatisfactionDashboardHtml() {
     // Render overview
     'function renderOverview(data){' +
     '  var html="";' +
-    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
+    '  html+="<div class=\\"stat-card clickable\\" onclick=\\"switchTab(\'responses\',document.getElementById(\'tab-responses\'))\\"><div class=\\"stat-value\\">"+data.totalResponses+"</div><div class=\\"stat-label\\">Total Responses</div></div>";' +
     '  html+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+data.avgOverall.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction</div></div>";' +
-    '  html+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Loyalty Score</div></div>";' +
+    '  var maiColor=data.npsScore>=50?"green":data.npsScore>=0?"blue":"red";' +
+    '  html+="<div class=\\"stat-card "+maiColor+"\\"><div class=\\"stat-value\\">"+data.npsScore+"</div><div class=\\"stat-label\\">Member Advocacy Index</div></div>";' +
     '  html+="<div class=\\"stat-card purple\\"><div class=\\"stat-value\\">"+data.responseRate+"</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
-    '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"green":data.avgSteward>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
-    '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"green":data.avgLeadership>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgSteward>=7?"teal":data.avgSteward>=5?"amber":"red")+"\\"><div class=\\"stat-value\\">"+data.avgSteward.toFixed(1)+"</div><div class=\\"stat-label\\">Steward Rating</div></div>";' +
+    '  html+="<div class=\\"stat-card "+(data.avgLeadership>=7?"indigo":data.avgLeadership>=5?"amber":"red")+"\\"><div class=\\"stat-value\\">"+data.avgLeadership.toFixed(1)+"</div><div class=\\"stat-label\\">Leadership</div></div>";' +
     '  document.getElementById("overview-stats").innerHTML=html;' +
     // Gauge display
     '  var gauges="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Key Metrics at a Glance</div><div class=\\"gauge-container\\">";' +
@@ -7641,9 +7706,9 @@ function getSatisfactionDashboardHtml() {
     '  gauges+=renderGauge(data.avgRecommend,"Would\\nRecommend");' +
     '  gauges+="</div></div>";' +
     '  document.getElementById("overview-gauges").innerHTML=gauges;' +
-    // Insights - add Loyalty Score explanation first
+    // Insights - add Member Advocacy Index explanation first
     '  var insights="";' +
-    '  insights+="<div class=\\"insight-card\\" style=\\"background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left-color:#2563eb\\"><div class=\\"insight-title\\">ℹ️ Understanding Loyalty Score</div><div class=\\"insight-text\\">The <strong>Loyalty Score</strong> (ranging from -100 to +100) measures how likely members are to recommend the union. <strong>50+</strong> = Excellent (many advocates), <strong>0-49</strong> = Good (room for growth), <strong>Below 0</strong> = Needs work (more critics than advocates). It\'s based on the \\"Would Recommend\\" question.</div></div>";' +
+    '  insights+="<div class=\\"insight-card\\" style=\\"background:linear-gradient(135deg,#eff6ff,#dbeafe);border-left-color:#2563eb\\"><div class=\\"insight-title\\">ℹ️ Understanding Member Advocacy Index</div><div class=\\"insight-text\\">The <strong>Member Advocacy Index (MAI)</strong> ranges from -100 to +100 and measures member loyalty. <strong style=\\"color:#059669\\">50+</strong> = Excellent (many advocates), <strong style=\\"color:#2563eb\\">0-49</strong> = Positive (opportunity to grow), <strong style=\\"color:#dc2626\\">Below 0</strong> = Needs attention (more critics than advocates). Based on \\"Would Recommend\\" responses.</div></div>";' +
     '  if(data.insights&&data.insights.length>0){' +
     '    data.insights.forEach(function(i){' +
     '      insights+="<div class=\\"insight-card "+i.type+"\\"><div class=\\"insight-title\\">"+i.icon+" "+i.title+"</div><div class=\\"insight-text\\">"+i.text+"</div></div>";' +
@@ -7789,13 +7854,13 @@ function getSatisfactionDashboardHtml() {
     '    });' +
     '  }else{html+="<div class=\\"empty-state\\">No insights available</div>";}' +
     '  html+="</div>";' +
-    // By worksite breakdown
+    // By worksite breakdown (clickable for drill-down)
     '  if(data.byWorksite&&data.byWorksite.length>0){' +
-    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Satisfaction by Worksite</div><div class=\\"bar-chart\\">";' +
+    '    html+="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📍 Satisfaction by Worksite <span style=\\"font-size:11px;color:#666;font-weight:normal\\">(click for details)</span></div><div class=\\"bar-chart\\">";' +
     '    data.byWorksite.forEach(function(w){' +
     '      var pct=(w.avg/10)*100;' +
     '      var color=getScoreColor(w.avg);' +
-    '      html+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+" responses</div></div>";' +
+    '      html+="<div class=\\"bar-row clickable\\" onclick=\\"showWorksiteDrill(\'"+w.name.replace(/\'/g,"\\\\\'")+"\')\\" style=\\"cursor:pointer\\"><div class=\\"bar-label\\">"+w.name+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+w.avg.toFixed(1)+"</span></div></div><div class=\\"bar-value\\">"+w.count+"</div></div>";' +
     '    });' +
     '    html+="</div></div>";' +
     '  }' +
@@ -7833,6 +7898,123 @@ function getSatisfactionDashboardHtml() {
     '    html+="</div></div>";' +
     '  }' +
     '  c.innerHTML=html;' +
+    '}' +
+
+    // Load trends data
+    'function loadTrends(period){' +
+    '  trendsLoaded=true;' +
+    '  currentPeriod=period;' +
+    '  document.querySelectorAll("#trend-period-filter .action-btn").forEach(function(b){b.classList.remove("action-btn-primary");b.classList.add("action-btn-secondary")});' +
+    '  if(event&&event.target)event.target.classList.remove("action-btn-secondary"),event.target.classList.add("action-btn-primary");' +
+    '  document.getElementById("trend-line-chart").innerHTML="<div class=\\"loading\\"><div class=\\"spinner\\"></div><p>Loading trends...</p></div>";' +
+    '  google.script.run.withSuccessHandler(function(data){renderTrends(data)}).getSatisfactionTrendData(period);' +
+    '}' +
+
+    // Render trends
+    'function renderTrends(data){' +
+    '  var summary="<div class=\\"stat-card indigo\\"><div class=\\"stat-value\\">"+data.totalInPeriod+"</div><div class=\\"stat-label\\">Responses in Period</div></div>";' +
+    '  summary+="<div class=\\"stat-card teal\\"><div class=\\"stat-value\\">"+data.byMonth.length+"</div><div class=\\"stat-label\\">Months of Data</div></div>";' +
+    '  if(data.satisfactionTrend.length>0){' +
+    '    var latest=data.satisfactionTrend[data.satisfactionTrend.length-1];' +
+    '    var first=data.satisfactionTrend[0];' +
+    '    var change=latest.avg-first.avg;' +
+    '    var changeColor=change>=0?"green":"red";' +
+    '    summary+="<div class=\\"stat-card "+changeColor+"\\"><div class=\\"stat-value\\">"+(change>=0?"+":"")+change.toFixed(1)+"</div><div class=\\"stat-label\\">Score Change</div></div>";' +
+    '  }' +
+    '  document.getElementById("trend-summary").innerHTML=summary;' +
+    // Line chart for satisfaction trend
+    '  var lineHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📈 Satisfaction Score Over Time</div>";' +
+    '  if(data.satisfactionTrend.length<2){lineHtml+="<div class=\\"empty-state\\">Need at least 2 months of data for trend</div>";}else{' +
+    '    lineHtml+=renderLineChart(data.satisfactionTrend,"avg",0,10);' +
+    '  }' +
+    '  lineHtml+="</div>";' +
+    '  document.getElementById("trend-line-chart").innerHTML=lineHtml;' +
+    // Response count chart
+    '  var respHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">📊 Responses by Month</div>";' +
+    '  if(data.byMonth.length===0){respHtml+="<div class=\\"empty-state\\">No response data available</div>";}else{' +
+    '    respHtml+="<div class=\\"bar-chart\\">";' +
+    '    var maxC=Math.max.apply(null,data.byMonth.map(function(m){return m.count}))||1;' +
+    '    var colors=["#059669","#0d9488","#0284c7","#4f46e5","#7c3aed","#c026d3","#e11d48"];' +
+    '    data.byMonth.forEach(function(m,i){' +
+    '      var pct=(m.count/maxC)*100;' +
+    '      var color=colors[i%colors.length];' +
+    '      respHtml+="<div class=\\"bar-row\\"><div class=\\"bar-label\\">"+m.label+"</div><div class=\\"bar-container\\"><div class=\\"bar-fill\\" style=\\"width:"+pct+"%;background:"+color+"\\"><span class=\\"bar-inner-value\\">"+m.count+"</span></div></div></div>";' +
+    '    });' +
+    '    respHtml+="</div>";' +
+    '  }' +
+    '  respHtml+="</div>";' +
+    '  document.getElementById("trend-response-chart").innerHTML=respHtml;' +
+    // Top issues trend
+    '  var issuesHtml="";' +
+    '  if(data.issuesTrend&&data.issuesTrend.length>0){' +
+    '    issuesHtml="<div class=\\"chart-container\\"><div class=\\"chart-title\\">🎯 Top Issues in Period</div>";' +
+    '    issuesHtml+=renderDonutChart(data.issuesTrend.slice(0,5));' +
+    '    issuesHtml+="</div>";' +
+    '  }' +
+    '  document.getElementById("trend-issues").innerHTML=issuesHtml;' +
+    '}' +
+
+    // Render line chart SVG
+    'function renderLineChart(data,valueKey,minY,maxY){' +
+    '  var w=500,h=150,padding=40;' +
+    '  var chartW=w-padding*2,chartH=h-padding*2;' +
+    '  var points=data.map(function(d,i){' +
+    '    var x=padding+(i/(data.length-1))*chartW;' +
+    '    var y=h-padding-((d[valueKey]-minY)/(maxY-minY))*chartH;' +
+    '    return{x:x,y:y,label:d.label,value:d[valueKey]};' +
+    '  });' +
+    '  var path="M"+points.map(function(p){return p.x+","+p.y}).join("L");' +
+    '  var svg="<svg viewBox=\\"0 0 "+w+" "+h+"\\" class=\\"line-chart-svg\\">";' +
+    '  svg+="<line x1=\\""+padding+"\\" y1=\\""+padding+"\\" x2=\\""+padding+"\\" y2=\\""+(h-padding)+"\\" class=\\"line-grid\\"/>";' +
+    '  svg+="<line x1=\\""+padding+"\\" y1=\\""+(h-padding)+"\\" x2=\\""+(w-padding)+"\\" y2=\\""+(h-padding)+"\\" class=\\"line-grid\\"/>";' +
+    '  svg+="<path d=\\""+path+"\\" class=\\"line-path\\" style=\\"stroke:#059669\\"/>";' +
+    '  points.forEach(function(p){' +
+    '    svg+="<circle cx=\\""+p.x+"\\" cy=\\""+p.y+"\\" r=\\"5\\" class=\\"line-point\\" style=\\"fill:#059669\\" onclick=\\"alert(\'"+p.label+": "+p.value.toFixed(1)+"\')\\"/>";' +
+    '    svg+="<text x=\\""+p.x+"\\" y=\\""+(h-10)+"\\" text-anchor=\\"middle\\" class=\\"line-label\\">"+p.label+"</text>";' +
+    '  });' +
+    '  svg+="</svg>";' +
+    '  return"<div class=\\"line-chart\\">"+svg+"</div>";' +
+    '}' +
+
+    // Render donut chart
+    'function renderDonutChart(data){' +
+    '  var total=data.reduce(function(s,d){return s+d.count},0);' +
+    '  var colors=["#059669","#0284c7","#7c3aed","#e11d48","#f59e0b"];' +
+    '  var html="<div class=\\"donut-container\\">";' +
+    '  html+="<div class=\\"donut-chart\\"><svg viewBox=\\"0 0 100 100\\" class=\\"donut-svg\\">";' +
+    '  var offset=0;' +
+    '  data.forEach(function(d,i){' +
+    '    var pct=(d.count/total)*100;' +
+    '    var dashArray=pct+" "+(100-pct);' +
+    '    html+="<circle cx=\\"50\\" cy=\\"50\\" r=\\"40\\" fill=\\"none\\" stroke=\\""+colors[i%colors.length]+"\\" stroke-width=\\"20\\" stroke-dasharray=\\""+dashArray+"\\" stroke-dashoffset=\\"-"+offset+"\\" class=\\"donut-segment\\" onclick=\\"alert(\'"+d.name+": "+d.count+" ("+Math.round(pct)+"%)\')\\"/>";' +
+    '    offset+=pct;' +
+    '  });' +
+    '  html+="</svg><div class=\\"donut-center\\"><div class=\\"donut-value\\">"+total+"</div><div class=\\"donut-label\\">Total</div></div></div>";' +
+    '  html+="<div class=\\"donut-legend\\">";' +
+    '  data.forEach(function(d,i){' +
+    '    var pct=Math.round((d.count/total)*100);' +
+    '    html+="<div class=\\"legend-item\\" onclick=\\"alert(\'"+d.name+": "+d.count+" mentions\')\\"><div class=\\"legend-color\\" style=\\"background:"+colors[i%colors.length]+"\\"></div><span>"+d.name+" ("+pct+"%)</span></div>";' +
+    '  });' +
+    '  html+="</div></div>";' +
+    '  return html;' +
+    '}' +
+
+    // Drill-down for worksite
+    'function showWorksiteDrill(location){' +
+    '  var modal=document.createElement("div");modal.className="drill-modal";modal.onclick=function(e){if(e.target===modal)modal.remove()};' +
+    '  modal.innerHTML="<div class=\\"drill-content\\"><div class=\\"drill-header\\"><div class=\\"drill-title\\">📍 "+location+"</div><button class=\\"drill-close\\" onclick=\\"this.closest(\'.drill-modal\').remove()\\">×</button></div><div class=\\"drill-body\\"><div class=\\"loading\\"><div class=\\"spinner\\"></div></div></div></div>";' +
+    '  document.body.appendChild(modal);' +
+    '  google.script.run.withSuccessHandler(function(data){' +
+    '    var html="<div class=\\"stats-grid\\" style=\\"margin-bottom:15px\\"><div class=\\"stat-card\\"><div class=\\"stat-value\\">"+data.count+"</div><div class=\\"stat-label\\">Responses</div></div><div class=\\"stat-card "+(data.avgScore>=7?"green":data.avgScore>=5?"orange":"red")+"\\"><div class=\\"stat-value\\">"+data.avgScore.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Score</div></div></div>";' +
+    '    if(data.responses.length>0){' +
+    '      html+="<div style=\\"font-weight:600;margin-bottom:10px\\">Recent Responses:</div>";' +
+    '      data.responses.slice(0,5).forEach(function(r){' +
+    '        var color=r.avgScore>=7?"#059669":r.avgScore>=5?"#f59e0b":"#dc2626";' +
+    '        html+="<div style=\\"display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee\\"><span>"+r.role+" - "+r.date+"</span><span style=\\"font-weight:600;color:"+color+"\\">"+r.avgScore.toFixed(1)+"</span></div>";' +
+    '      });' +
+    '    }' +
+    '    modal.querySelector(".drill-body").innerHTML=html;' +
+    '  }).getSatisfactionLocationDrill(location);' +
     '}' +
 
     // Initialize
@@ -7982,22 +8164,22 @@ function getSatisfactionOverviewData() {
     data.insights.push({
       type: '',
       icon: '🎯',
-      title: 'Members Highly Recommend',
-      text: 'Loyalty Score of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
+      title: 'Strong Member Advocacy',
+      text: 'Member Advocacy Index of ' + data.npsScore + ' means members actively recommend the union to colleagues.'
     });
   } else if (data.npsScore >= 0) {
     data.insights.push({
       type: '',
       icon: '📊',
-      title: 'Moderate Member Loyalty',
-      text: 'Loyalty Score of ' + data.npsScore + ' shows members are neutral. Focus on converting neutral members to advocates.'
+      title: 'Growing Member Advocacy',
+      text: 'Member Advocacy Index of ' + data.npsScore + ' shows positive momentum. Focus on converting neutral members to advocates.'
     });
   } else {
     data.insights.push({
       type: 'warning',
       icon: '⚠️',
-      title: 'Member Loyalty Needs Attention',
-      text: 'Loyalty Score of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
+      title: 'Member Advocacy Needs Attention',
+      text: 'Member Advocacy Index of ' + data.npsScore + ' indicates more critics than advocates. Address member concerns to improve.'
     });
   }
 
@@ -8371,6 +8553,166 @@ function getSatisfactionAnalyticsData() {
   return result;
 }
 
+/**
+ * Helper function to get last row with data
+ */
+function getSheetLastRow(sheet) {
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      return i;
+    }
+  }
+  return timestamps.length;
+}
+
+/**
+ * Get trend data for satisfaction dashboard - responses over time
+ */
+function getSatisfactionTrendData(period) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    byMonth: [],
+    satisfactionTrend: [],
+    issuesTrend: [],
+    totalInPeriod: 0
+  };
+
+  if (!sheet) return result;
+
+  // Get data
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  // Filter by period
+  var now = new Date();
+  var cutoff = null;
+  if (period === '30') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  else if (period === '90') cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  else if (period === 'year') cutoff = new Date(now.getFullYear(), 0, 1);
+
+  // Group by month
+  var monthData = {};
+  for (var i = 0; i < numRows; i++) {
+    var ts = timestamps[i][0];
+    if (!(ts instanceof Date)) continue;
+    if (cutoff && ts < cutoff) continue;
+
+    var monthKey = Utilities.formatDate(ts, tz, 'yyyy-MM');
+    var monthLabel = Utilities.formatDate(ts, tz, 'MMM yy');
+
+    if (!monthData[monthKey]) {
+      monthData[monthKey] = { label: monthLabel, count: 0, sum: 0, validCount: 0 };
+    }
+
+    monthData[monthKey].count++;
+    result.totalInPeriod++;
+
+    // Calculate avg satisfaction
+    var row = satisfactionData[i];
+    var rowSum = 0, rowCount = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { rowSum += v; rowCount++; }
+    });
+    if (rowCount > 0) {
+      monthData[monthKey].sum += rowSum / rowCount;
+      monthData[monthKey].validCount++;
+    }
+  }
+
+  // Convert to arrays sorted by date
+  var months = Object.keys(monthData).sort();
+  months.forEach(function(key) {
+    var m = monthData[key];
+    result.byMonth.push({ label: m.label, count: m.count });
+    result.satisfactionTrend.push({
+      label: m.label,
+      avg: m.validCount > 0 ? m.sum / m.validCount : 0
+    });
+  });
+
+  // Get common issues/priorities for trend
+  try {
+    var prioritiesData = sheet.getRange(2, SATISFACTION_COLS.Q64_TOP_PRIORITIES, numRows, 1).getValues();
+    var issueMap = {};
+    for (var i = 0; i < numRows; i++) {
+      var ts = timestamps[i][0];
+      if (!(ts instanceof Date)) continue;
+      if (cutoff && ts < cutoff) continue;
+
+      var priorities = String(prioritiesData[i][0] || '');
+      if (priorities) {
+        priorities.split(',').forEach(function(item) {
+          var p = item.trim();
+          if (p) issueMap[p] = (issueMap[p] || 0) + 1;
+        });
+      }
+    }
+    for (var issue in issueMap) {
+      result.issuesTrend.push({ name: issue, count: issueMap[issue] });
+    }
+    result.issuesTrend.sort(function(a, b) { return b.count - a.count; });
+  } catch(e) { /* ignore if column doesn't exist */ }
+
+  return result;
+}
+
+/**
+ * Get location-specific drill-down data
+ */
+function getSatisfactionLocationDrill(location) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { count: 0, avgScore: 0, responses: [] };
+  if (!sheet || !location) return result;
+
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  var totalScore = 0;
+
+  for (var i = 0; i < numRows; i++) {
+    if (worksiteData[i][0] !== location) continue;
+
+    var ts = timestamps[i][0];
+    var row = satisfactionData[i];
+    var sum = 0, count = 0;
+    row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
+    var avg = count > 0 ? sum / count : 0;
+
+    result.count++;
+    totalScore += avg;
+
+    result.responses.push({
+      role: roleData[i][0] || 'Unknown',
+      date: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
+      avgScore: avg
+    });
+  }
+
+  result.avgScore = result.count > 0 ? totalScore / result.count : 0;
+  result.responses.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+  return result;
+}
 
 
 // ================================================================================
