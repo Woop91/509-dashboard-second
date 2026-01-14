@@ -26,13 +26,12 @@ function onOpen() {
   // MENU 1: 509 Dashboard - Main user-facing menu
   // ============================================================================
   ui.createMenu('📊 509 Dashboard')
-    .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
-    .addItem('🎯 Custom View', 'showInteractiveDashboardTab')
+    .addItem('📊 Dashboard', 'showInteractiveDashboardTab')
+    .addItem('📋 Dashboard Pend', 'showSmartDashboard')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
-    .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
     .addToUi();
 
@@ -7024,7 +7023,8 @@ function getSatisfactionOverviewData() {
     avgRecommend: 0,
     npsScore: 0,
     responseRate: 'N/A',
-    insights: []
+    insights: [],
+    distribution: { high: 0, mid: 0, low: 0 }
   };
 
   if (!sheet) return data;
@@ -7067,6 +7067,12 @@ function getSatisfactionOverviewData() {
       // NPS calculation (based on recommend score 1-10)
       if (recommend >= 9) promoters++;
       else if (recommend <= 6) detractors++;
+
+      // Calculate distribution based on average score
+      var avgScore = (satisfied + trust + protected_ + recommend) / 4;
+      if (avgScore >= 7) data.distribution.high++;
+      else if (avgScore >= 5) data.distribution.mid++;
+      else data.distribution.low++;
     }
   });
 
@@ -7336,6 +7342,269 @@ function getSatisfactionSectionData() {
   result.sections.sort(function(a, b) { return a.avg - b.avg; });
 
   return result;
+}
+
+/**
+ * Get trend data for satisfaction dashboard - responses over time
+ */
+function getSatisfactionTrendData(period) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    byMonth: [],
+    satisfactionTrend: [],
+    issuesTrend: [],
+    totalInPeriod: 0
+  };
+
+  if (!sheet) return result;
+
+  // Get data
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  // Filter by period
+  var now = new Date();
+  var cutoff = null;
+  if (period === '30') cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+  else if (period === '90') cutoff = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+  else if (period === 'year') cutoff = new Date(now.getFullYear(), 0, 1);
+
+  // Group by month
+  var monthData = {};
+  for (var i = 0; i < numRows; i++) {
+    var ts = timestamps[i][0];
+    if (!(ts instanceof Date)) continue;
+    if (cutoff && ts < cutoff) continue;
+
+    var monthKey = Utilities.formatDate(ts, tz, 'yyyy-MM');
+    var monthLabel = Utilities.formatDate(ts, tz, 'MMM yy');
+
+    if (!monthData[monthKey]) {
+      monthData[monthKey] = { label: monthLabel, count: 0, sum: 0, validCount: 0 };
+    }
+
+    monthData[monthKey].count++;
+    result.totalInPeriod++;
+
+    // Calculate avg satisfaction
+    var row = satisfactionData[i];
+    var rowSum = 0, rowCount = 0;
+    row.forEach(function(val) {
+      var v = parseFloat(val);
+      if (v > 0) { rowSum += v; rowCount++; }
+    });
+    if (rowCount > 0) {
+      monthData[monthKey].sum += rowSum / rowCount;
+      monthData[monthKey].validCount++;
+    }
+  }
+
+  // Convert to arrays sorted by date
+  var months = Object.keys(monthData).sort();
+  months.forEach(function(key) {
+    var m = monthData[key];
+    result.byMonth.push({ label: m.label, count: m.count });
+    result.satisfactionTrend.push({
+      label: m.label,
+      avg: m.validCount > 0 ? m.sum / m.validCount : 0
+    });
+  });
+
+  // Get common issues/priorities for trend
+  try {
+    var prioritiesData = sheet.getRange(2, SATISFACTION_COLS.Q64_TOP_PRIORITIES, numRows, 1).getValues();
+    var issueMap = {};
+    for (var i = 0; i < numRows; i++) {
+      var ts = timestamps[i][0];
+      if (!(ts instanceof Date)) continue;
+      if (cutoff && ts < cutoff) continue;
+
+      var priorities = String(prioritiesData[i][0] || '');
+      if (priorities) {
+        priorities.split(',').forEach(function(item) {
+          var p = item.trim();
+          if (p) issueMap[p] = (issueMap[p] || 0) + 1;
+        });
+      }
+    }
+    for (var issue in issueMap) {
+      result.issuesTrend.push({ name: issue, count: issueMap[issue] });
+    }
+    result.issuesTrend.sort(function(a, b) { return b.count - a.count; });
+  } catch(e) { /* ignore if column doesn't exist */ }
+
+  return result;
+}
+
+/**
+ * Get breakdown data for satisfaction dashboard
+ */
+function getSatisfactionBreakdownData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    sections: [],
+    byWorksite: [],
+    byRole: []
+  };
+
+  if (!sheet) return result;
+
+  // Get sections data
+  var sectionResult = getSatisfactionSectionData();
+  result.sections = sectionResult.sections;
+
+  // Get analytics data for worksite/role
+  var analyticsData = getSatisfactionAnalyticsData();
+  result.byWorksite = analyticsData.byWorksite;
+  result.byRole = analyticsData.byRole;
+
+  return result;
+}
+
+/**
+ * Get insights data for satisfaction dashboard
+ */
+function getSatisfactionInsightsData() {
+  var analyticsData = getSatisfactionAnalyticsData();
+  var overviewData = getSatisfactionOverviewData();
+
+  var result = {
+    insights: analyticsData.insights || [],
+    stewardImpact: analyticsData.stewardImpact,
+    topPriorities: analyticsData.topPriorities
+  };
+
+  // Add additional insights based on overview data
+  if (overviewData.avgOverall >= 8) {
+    result.insights.unshift({
+      type: 'success',
+      icon: '🌟',
+      title: 'Excellent Overall Satisfaction',
+      text: 'Members report high satisfaction (' + overviewData.avgOverall.toFixed(1) + '/10). Keep up the great work!'
+    });
+  } else if (overviewData.avgOverall < 5) {
+    result.insights.unshift({
+      type: 'alert',
+      icon: '⚠️',
+      title: 'Satisfaction Needs Attention',
+      text: 'Overall satisfaction is below target at ' + overviewData.avgOverall.toFixed(1) + '/10. Review member feedback for areas to improve.'
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Get drill-down data for specific categories
+ */
+function getSatisfactionDrillData(type) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { items: [] };
+  if (!sheet) return result;
+
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  if (type === 'responses') {
+    // Show recent responses
+    var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+    var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+    var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+    for (var i = 0; i < numRows; i++) {
+      var ts = timestamps[i][0];
+      var row = satisfactionData[i];
+      var sum = 0, count = 0;
+      row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
+      var avg = count > 0 ? sum / count : 0;
+
+      result.items.push({
+        label: worksiteData[i][0] || 'Unknown',
+        detail: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
+        score: avg
+      });
+    }
+    result.items.sort(function(a, b) { return b.score - a.score; });
+    result.items = result.items.slice(0, 20);
+  }
+
+  return result;
+}
+
+/**
+ * Get location-specific drill-down data
+ */
+function getSatisfactionLocationDrill(location) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = { count: 0, avgScore: 0, responses: [] };
+  if (!sheet || !location) return result;
+
+  var lastRow = getSheetLastRow(sheet);
+  if (lastRow <= 1) return result;
+
+  var numRows = lastRow - 1;
+  var tz = Session.getScriptTimeZone();
+
+  var timestamps = sheet.getRange(2, 1, numRows, 1).getValues();
+  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
+  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
+  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
+
+  var totalScore = 0;
+
+  for (var i = 0; i < numRows; i++) {
+    if (worksiteData[i][0] !== location) continue;
+
+    var ts = timestamps[i][0];
+    var row = satisfactionData[i];
+    var sum = 0, count = 0;
+    row.forEach(function(val) { var v = parseFloat(val); if (v > 0) { sum += v; count++; } });
+    var avg = count > 0 ? sum / count : 0;
+
+    result.count++;
+    totalScore += avg;
+
+    result.responses.push({
+      role: roleData[i][0] || 'Unknown',
+      date: ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : 'N/A',
+      avgScore: avg
+    });
+  }
+
+  result.avgScore = result.count > 0 ? totalScore / result.count : 0;
+  result.responses.sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+  return result;
+}
+
+/**
+ * Helper function to get last row with data
+ */
+function getSheetLastRow(sheet) {
+  var timestamps = sheet.getRange('A:A').getValues();
+  for (var i = 1; i < timestamps.length; i++) {
+    if (timestamps[i][0] === '' || timestamps[i][0] === null) {
+      return i;
+    }
+  }
+  return timestamps.length;
 }
 
 /**
