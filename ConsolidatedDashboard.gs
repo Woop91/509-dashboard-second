@@ -14,7 +14,7 @@
  * Build Info:
  * - Version: 2.0.0 (Unknown)
  * - Build ID: unknown
- * - Build Date: 2026-01-14T03:48:28.734Z
+ * - Build Date: 2026-01-14T04:07:09.844Z
  * - Build Type: DEVELOPMENT
  * - Modules: 9 files
  * - Tests Included: Yes
@@ -445,7 +445,16 @@ var SATISFACTION_COLS = {
   AVG_COMMUNICATION: 79,          // CA - Avg of Q41-Q45
   AVG_MEMBER_VOICE: 80,           // CB - Avg of Q46-Q50
   AVG_VALUE_ACTION: 81,           // CC - Avg of Q51-Q55
-  AVG_SCHEDULING: 82              // CD - Avg of Q56-Q62
+  AVG_SCHEDULING: 82,             // CD - Avg of Q56-Q62
+
+  // ── VERIFICATION & TRACKING COLUMNS (CE onwards) ──
+  EMAIL: 83,                      // CE - Email address from form submission
+  VERIFIED: 84,                   // CF - Yes / Pending Review / Rejected
+  MATCHED_MEMBER_ID: 85,          // CG - Member ID if email matched
+  QUARTER: 86,                    // CH - Quarter string (e.g., "2026-Q1")
+  IS_LATEST: 87,                  // CI - Yes/No - Is this the latest for this member this quarter?
+  SUPERSEDED_BY: 88,              // CJ - Row number of newer response (if superseded)
+  REVIEWER_NOTES: 89              // CK - Notes from reviewer
 };
 
 /**
@@ -873,7 +882,9 @@ function onOpen() {
     .addSubMenu(ui.createMenu('📧 Survey Tools')
       .addItem('📧 Send Survey to Random Members', 'sendRandomSurveyEmails')
       .addItem('🔗 Get Survey Link', 'getSatisfactionSurveyLink')
-      .addItem('⚙️ Setup Survey Trigger', 'setupSatisfactionFormTrigger'))
+      .addItem('⚙️ Setup Survey Trigger', 'setupSatisfactionFormTrigger')
+      .addSeparator()
+      .addItem('🔍 Review Flagged Submissions', 'showFlaggedSubmissionsReview'))
     .addToUi();
 
   // ============================================================================
@@ -5639,6 +5650,57 @@ function onSatisfactionFormSubmit(e) {
     newRow[SATISFACTION_COLS.Q66_KEEP_DOING - 1] = getFormValue_(responses, 'One thing union should keep doing');
     newRow[SATISFACTION_COLS.Q67_ADDITIONAL - 1] = getFormValue_(responses, 'Additional comments (no names)');
 
+    // ══════════════════════════════════════════════════════════════════════════
+    // EMAIL VERIFICATION & QUARTERLY TRACKING
+    // ══════════════════════════════════════════════════════════════════════════
+
+    // Get email from form (try multiple common field names)
+    var email = getFormValue_(responses, 'Email Address') ||
+                getFormValue_(responses, 'Email') ||
+                getFormValue_(responses, 'email') ||
+                (e.response ? e.response.getRespondentEmail() : '') || '';
+    email = email.toString().toLowerCase().trim();
+
+    newRow[SATISFACTION_COLS.EMAIL - 1] = email;
+
+    // Get current quarter
+    var currentQuarter = getCurrentQuarter();
+    newRow[SATISFACTION_COLS.QUARTER - 1] = currentQuarter;
+
+    // Validate email against Member Directory
+    var memberMatch = validateMemberEmail(email);
+
+    if (memberMatch) {
+      // Email matches a member - mark as verified
+      newRow[SATISFACTION_COLS.VERIFIED - 1] = 'Yes';
+      newRow[SATISFACTION_COLS.MATCHED_MEMBER_ID - 1] = memberMatch.memberId;
+      newRow[SATISFACTION_COLS.IS_LATEST - 1] = 'Yes';
+
+      // Check for existing responses from this member in same quarter
+      var existingData = satSheet.getDataRange().getValues();
+      for (var i = 1; i < existingData.length; i++) {
+        var rowEmail = (existingData[i][SATISFACTION_COLS.EMAIL - 1] || '').toString().toLowerCase().trim();
+        var rowQuarter = existingData[i][SATISFACTION_COLS.QUARTER - 1];
+        var rowIsLatest = existingData[i][SATISFACTION_COLS.IS_LATEST - 1];
+
+        // If same email, same quarter, and currently marked as latest
+        if (rowEmail === email && rowQuarter === currentQuarter && rowIsLatest === 'Yes') {
+          // Mark the old row as superseded (row index is i+1 because of 0-indexing and header)
+          var oldRowNum = i + 1;
+          satSheet.getRange(oldRowNum, SATISFACTION_COLS.IS_LATEST).setValue('No');
+          satSheet.getRange(oldRowNum, SATISFACTION_COLS.SUPERSEDED_BY).setValue(satSheet.getLastRow() + 1);
+          Logger.log('Marked row ' + oldRowNum + ' as superseded by new submission');
+        }
+      }
+    } else {
+      // Email doesn't match - flag for review
+      newRow[SATISFACTION_COLS.VERIFIED - 1] = 'Pending Review';
+      newRow[SATISFACTION_COLS.MATCHED_MEMBER_ID - 1] = '';
+      newRow[SATISFACTION_COLS.IS_LATEST - 1] = 'Yes';
+    }
+
+    newRow[SATISFACTION_COLS.REVIEWER_NOTES - 1] = '';
+
     // Append row to satisfaction sheet
     satSheet.appendRow(newRow);
 
@@ -5649,7 +5711,7 @@ function onSatisfactionFormSubmit(e) {
     // Update dashboard summary values
     syncSatisfactionValues();
 
-    Logger.log('Satisfaction survey response recorded at ' + new Date());
+    Logger.log('Satisfaction survey response recorded at ' + new Date() + ' | Verified: ' + newRow[SATISFACTION_COLS.VERIFIED - 1]);
 
   } catch (error) {
     Logger.log('Error processing satisfaction survey submission: ' + error.message);
@@ -5950,31 +6012,174 @@ function getQuarterFromDate(date) {
   return d.getFullYear() + '-Q' + quarter;
 }
 
+// ============================================================================
+// FLAGGED SUBMISSIONS REVIEW - Admin interface for pending survey responses
+// ============================================================================
+
 /**
- * Process survey response with quarterly tracking
- * Only keeps the latest response per member per quarter
- * Called from onSatisfactionFormSubmit or manually
+ * Show the flagged submissions review interface
+ * Displays count and email addresses of Pending Review submissions
+ * Protects actual survey answers - only shows metadata
  */
-function processQuarterlySurveyResponse(memberId, responseRow, satSheet) {
-  if (!memberId || !responseRow || !satSheet) return false;
+function showFlaggedSubmissionsReview() {
+  var html = HtmlService.createHtmlOutput(getFlaggedSubmissionsHtml())
+    .setWidth(700)
+    .setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, '🔍 Flagged Survey Submissions Review');
+}
 
-  var currentQuarter = getCurrentQuarter();
+/**
+ * Get HTML for flagged submissions review interface
+ * @returns {string} HTML content
+ */
+function getFlaggedSubmissionsHtml() {
+  return '<!DOCTYPE html><html><head><base target="_top">' +
+    '<style>' +
+    ':root{--purple:#5B4B9E;--green:#059669;--red:#DC2626;--orange:#F97316}' +
+    '*{box-sizing:border-box;margin:0;padding:0}' +
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;padding:20px}' +
+    '.container{max-width:650px;margin:0 auto}' +
+    '.stats-row{display:flex;gap:15px;margin-bottom:20px}' +
+    '.stat-card{flex:1;background:white;padding:20px;border-radius:12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.stat-card.pending{border-left:4px solid var(--orange)}' +
+    '.stat-card.verified{border-left:4px solid var(--green)}' +
+    '.stat-value{font-size:32px;font-weight:bold;color:#333}' +
+    '.stat-label{font-size:13px;color:#666;margin-top:5px}' +
+    '.section{background:white;border-radius:12px;padding:20px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}' +
+    '.section-title{font-size:16px;font-weight:600;color:#333;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid #eee}' +
+    '.email-list{max-height:250px;overflow-y:auto}' +
+    '.email-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#f8f9fa;border-radius:8px;margin-bottom:8px}' +
+    '.email-info{display:flex;align-items:center;gap:10px}' +
+    '.email-text{font-size:14px;color:#333}' +
+    '.email-date{font-size:12px;color:#666}' +
+    '.actions{display:flex;gap:8px}' +
+    '.btn{padding:6px 12px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:500}' +
+    '.btn-approve{background:#059669;color:white}' +
+    '.btn-reject{background:#DC2626;color:white}' +
+    '.empty-state{text-align:center;padding:40px;color:#666}' +
+    '.info-box{background:#E8F4FD;padding:15px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#1E40AF}' +
+    '</style></head><body>' +
+    '<div class="container">' +
+    '<div id="content"><div class="empty-state">Loading...</div></div>' +
+    '</div>' +
+    '<script>' +
+    'function load(){google.script.run.withSuccessHandler(render).getFlaggedSubmissionsData()}' +
+    'function render(d){' +
+    '  var h="<div class=\\"stats-row\\">";' +
+    '  h+="<div class=\\"stat-card pending\\"><div class=\\"stat-value\\">"+d.pendingCount+"</div><div class=\\"stat-label\\">Pending Review</div></div>";' +
+    '  h+="<div class=\\"stat-card verified\\"><div class=\\"stat-value\\">"+d.verifiedCount+"</div><div class=\\"stat-label\\">Verified Responses</div></div>";' +
+    '  h+="</div>";' +
+    '  h+="<div class=\\"info-box\\">⚠️ These submissions could not be matched to a member email. Survey answers are protected and not shown here.</div>";' +
+    '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📧 Pending Review Emails ("+d.pendingCount+")</div>";' +
+    '  if(d.pendingEmails.length===0){' +
+    '    h+="<div class=\\"empty-state\\">✅ No submissions pending review</div>";' +
+    '  }else{' +
+    '    h+="<div class=\\"email-list\\">";' +
+    '    d.pendingEmails.forEach(function(e){' +
+    '      h+="<div class=\\"email-item\\"><div class=\\"email-info\\">";' +
+    '      h+="<span class=\\"email-text\\">"+e.email+"</span>";' +
+    '      h+="<span class=\\"email-date\\">"+e.date+" | "+e.quarter+"</span></div>";' +
+    '      h+="<div class=\\"actions\\">";' +
+    '      h+="<button class=\\"btn btn-approve\\" onclick=\\"approve("+e.row+\")\\">✓ Approve</button>";' +
+    '      h+="<button class=\\"btn btn-reject\\" onclick=\\"reject("+e.row+\")\\">✗ Reject</button>";' +
+    '      h+="</div></div>";' +
+    '    });' +
+    '    h+="</div>";' +
+    '  }' +
+    '  h+="</div>";' +
+    '  document.getElementById("content").innerHTML=h;' +
+    '}' +
+    'function approve(row){' +
+    '  if(confirm("Mark this submission as verified? This will include it in statistics.")){' +
+    '    google.script.run.withSuccessHandler(function(){load()}).approveFlaggedSubmission(row);' +
+    '  }' +
+    '}' +
+    'function reject(row){' +
+    '  if(confirm("Reject this submission? It will be excluded from all statistics.")){' +
+    '    google.script.run.withSuccessHandler(function(){load()}).rejectFlaggedSubmission(row);' +
+    '  }' +
+    '}' +
+    'load();' +
+    '</script></body></html>';
+}
+
+/**
+ * Get data for flagged submissions review
+ * @returns {Object} Pending submissions data (email, date, row number - NO survey answers)
+ */
+function getFlaggedSubmissionsData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  var result = {
+    pendingCount: 0,
+    verifiedCount: 0,
+    pendingEmails: []
+  };
+
+  if (!satSheet) return result;
+
   var data = satSheet.getDataRange().getValues();
-  var memberIdCol = 1; // Assuming member ID is tracked (we'll add this)
-  var timestampCol = SATISFACTION_COLS.TIMESTAMP - 1;
-  var quarterCol = 70; // Column BR for quarter tracking
 
-  // Find existing response for this member in current quarter
-  var existingRow = -1;
   for (var i = 1; i < data.length; i++) {
-    // Check by member ID in a tracking column (if we add one)
-    // For now, this is a placeholder - will need member ID in survey
+    var verified = data[i][SATISFACTION_COLS.VERIFIED - 1];
+    var email = data[i][SATISFACTION_COLS.EMAIL - 1] || '(no email provided)';
+    var timestamp = data[i][SATISFACTION_COLS.TIMESTAMP - 1];
+    var quarter = data[i][SATISFACTION_COLS.QUARTER - 1] || '';
+
+    if (verified === 'Yes') {
+      result.verifiedCount++;
+    } else if (verified === 'Pending Review') {
+      result.pendingCount++;
+      result.pendingEmails.push({
+        email: email.toString(),
+        date: timestamp ? Utilities.formatDate(new Date(timestamp), Session.getScriptTimeZone(), 'MMM d, yyyy') : 'Unknown',
+        quarter: quarter,
+        row: i + 1  // 1-indexed row number for editing
+      });
+    }
+    // Rejected submissions are counted but not shown
   }
 
-  // If existing response found, update it; otherwise append
-  // This logic would need member ID in the survey form
+  // Sort by most recent first
+  result.pendingEmails.sort(function(a, b) { return b.row - a.row; });
 
-  return true;
+  return result;
+}
+
+/**
+ * Approve a flagged submission - mark as Verified
+ * @param {number} rowNum - Row number (1-indexed)
+ */
+function approveFlaggedSubmission(rowNum) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet || rowNum < 2) return;
+
+  satSheet.getRange(rowNum, SATISFACTION_COLS.VERIFIED).setValue('Yes');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.REVIEWER_NOTES).setValue('Manually approved on ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
+
+  // Update dashboard
+  syncSatisfactionValues();
+}
+
+/**
+ * Reject a flagged submission - mark as Rejected
+ * @param {number} rowNum - Row number (1-indexed)
+ */
+function rejectFlaggedSubmission(rowNum) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
+
+  if (!satSheet || rowNum < 2) return;
+
+  satSheet.getRange(rowNum, SATISFACTION_COLS.VERIFIED).setValue('Rejected');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.IS_LATEST).setValue('No');
+  satSheet.getRange(rowNum, SATISFACTION_COLS.REVIEWER_NOTES).setValue('Rejected on ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm'));
+
+  // Update dashboard
+  syncSatisfactionValues();
 }
 
 // ============================================================================
@@ -6054,7 +6259,7 @@ function getPublicMemberDashboardHtml() {
     'function loadTab(id){' +
     '  loadedTabs[id]=true;' +
     '  if(id==="overview")google.script.run.withSuccessHandler(renderOverview).getPublicOverviewData();' +
-    '  else if(id==="survey")google.script.run.withSuccessHandler(renderSurvey).getPublicSurveyData();' +
+    '  else if(id==="survey")google.script.run.withSuccessHandler(renderSurvey).getPublicSurveyData(includeHistory);' +
     '  else if(id==="grievances")google.script.run.withSuccessHandler(renderGrievances).getPublicGrievanceData();' +
     '  else if(id==="stewards")google.script.run.withSuccessHandler(renderStewards).getPublicStewardData();' +
     '}' +
@@ -6075,12 +6280,15 @@ function getPublicMemberDashboardHtml() {
     '  h+="</div></div>";' +
     '  document.getElementById("overview").innerHTML=h;' +
     '}' +
+    'var includeHistory=false;' +
     'function renderSurvey(d){' +
-    '  var h="<div class=\\"stats-grid\\">";' +
-    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.totalResponses+"</div><div class=\\"stat-label\\">Survey Responses</div></div>";' +
+    '  var h="<div class=\\"toggle-row\\" style=\\"display:flex;align-items:center;justify-content:flex-end;margin-bottom:15px;gap:10px\\"><label style=\\"font-size:13px;color:#666\\">Include historical responses:</label><input type=\\"checkbox\\" id=\\"historyToggle\\" "+(includeHistory?"checked":"")+" onchange=\\"toggleHistory(this.checked)\\" style=\\"width:18px;height:18px;cursor:pointer\\"></div>";' +
+    '  h+="<div class=\\"stats-grid\\">";' +
+    '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+(d.verifiedResponses||d.totalResponses)+"</div><div class=\\"stat-label\\">Verified Responses</div></div>";' +
     '  h+="<div class=\\"stat-card green\\"><div class=\\"stat-value\\">"+d.avgSatisfaction.toFixed(1)+"</div><div class=\\"stat-label\\">Avg Satisfaction (1-10)</div></div>";' +
     '  h+="<div class=\\"stat-card blue\\"><div class=\\"stat-value\\">"+d.responseRate+"%</div><div class=\\"stat-label\\">Response Rate</div></div>";' +
     '  h+="</div>";' +
+    '  if(d.includesHistory){h+="<div style=\\"background:#FEF3C7;padding:10px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#92400E\\">⚠️ Showing all responses including historical (superseded) entries</div>";}' +
     '  h+="<div class=\\"section\\"><div class=\\"section-title\\">📊 Satisfaction by Section</div><div class=\\"bar-chart\\">";' +
     '  d.sectionScores.forEach(function(s){' +
     '    var pct=Math.round(s.score*10);' +
@@ -6092,6 +6300,7 @@ function getPublicMemberDashboardHtml() {
     '  h+="</div></div>";' +
     '  document.getElementById("survey").innerHTML=h;' +
     '}' +
+    'function toggleHistory(val){includeHistory=val;loadedTabs["survey"]=false;loadTab("survey");}' +
     'function renderGrievances(d){' +
     '  var h="<div class=\\"stats-grid\\">";' +
     '  h+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+d.open+"</div><div class=\\"stat-label\\">Open Grievances</div></div>";' +
@@ -6213,18 +6422,22 @@ function getPublicOverviewData() {
 
 /**
  * Get public survey data (anonymized)
+ * Filters to only include Verified='Yes' and optionally IS_LATEST='Yes' responses
+ * @param {boolean} includeHistory - If true, include superseded responses; if false, only latest per member
  * @returns {Object} Survey statistics
  */
-function getPublicSurveyData() {
+function getPublicSurveyData(includeHistory) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var satSheet = ss.getSheetByName(SHEETS.SATISFACTION);
   var memberSheet = ss.getSheetByName(SHEETS.MEMBER_DIR);
 
   var result = {
     totalResponses: 0,
+    verifiedResponses: 0,
     avgSatisfaction: 0,
     responseRate: 0,
-    sectionScores: []
+    sectionScores: [],
+    includesHistory: includeHistory || false
   };
 
   if (!satSheet) return result;
@@ -6232,12 +6445,29 @@ function getPublicSurveyData() {
   var data = satSheet.getDataRange().getValues();
   if (data.length < 2) return result;
 
-  result.totalResponses = data.length - 1;
+  // Filter rows to only include verified responses
+  // If includeHistory is false (default), also filter to IS_LATEST='Yes'
+  var validRows = [];
+  for (var i = 1; i < data.length; i++) {
+    var verified = data[i][SATISFACTION_COLS.VERIFIED - 1];
+    var isLatest = data[i][SATISFACTION_COLS.IS_LATEST - 1];
+
+    // Only include Verified='Yes' responses
+    if (verified !== 'Yes') continue;
+
+    // If not including history, only include IS_LATEST='Yes'
+    if (!includeHistory && isLatest !== 'Yes') continue;
+
+    validRows.push(data[i]);
+  }
+
+  result.totalResponses = data.length - 1; // Total submissions (all)
+  result.verifiedResponses = validRows.length; // Verified responses used in calculations
 
   // Calculate average satisfaction (Q6 - Satisfied with representation)
   var satSum = 0, satCount = 0;
-  for (var i = 1; i < data.length; i++) {
-    var sat = parseFloat(data[i][SATISFACTION_COLS.Q6_SATISFIED_REP - 1]);
+  for (var j = 0; j < validRows.length; j++) {
+    var sat = parseFloat(validRows[j][SATISFACTION_COLS.Q6_SATISFIED_REP - 1]);
     if (!isNaN(sat)) {
       satSum += sat;
       satCount++;
@@ -6245,27 +6475,34 @@ function getPublicSurveyData() {
   }
   result.avgSatisfaction = satCount > 0 ? satSum / satCount : 0;
 
-  // Response rate
+  // Response rate (unique verified members / total members)
   if (memberSheet) {
     var memberCount = memberSheet.getLastRow() - 1;
-    result.responseRate = memberCount > 0 ? Math.round(result.totalResponses / memberCount * 100) : 0;
+    // Count unique verified member IDs
+    var uniqueMembers = {};
+    for (var k = 0; k < validRows.length; k++) {
+      var memberId = validRows[k][SATISFACTION_COLS.MATCHED_MEMBER_ID - 1];
+      if (memberId) uniqueMembers[memberId] = true;
+    }
+    var uniqueCount = Object.keys(uniqueMembers).length;
+    result.responseRate = memberCount > 0 ? Math.round(uniqueCount / memberCount * 100) : 0;
   }
 
-  // Section scores
+  // Section scores using only verified responses
   var sections = [
     { name: 'Overall Satisfaction', cols: [SATISFACTION_COLS.Q6_SATISFIED_REP, SATISFACTION_COLS.Q7_TRUST_UNION, SATISFACTION_COLS.Q8_FEEL_PROTECTED] },
     { name: 'Steward Ratings', cols: [SATISFACTION_COLS.Q10_TIMELY_RESPONSE, SATISFACTION_COLS.Q11_TREATED_RESPECT, SATISFACTION_COLS.Q12_EXPLAINED_OPTIONS] },
     { name: 'Chapter Effectiveness', cols: [SATISFACTION_COLS.Q21_UNDERSTAND_ISSUES, SATISFACTION_COLS.Q22_CHAPTER_COMM, SATISFACTION_COLS.Q23_ORGANIZES] },
     { name: 'Local Leadership', cols: [SATISFACTION_COLS.Q26_DECISIONS_CLEAR, SATISFACTION_COLS.Q27_UNDERSTAND_PROCESS, SATISFACTION_COLS.Q28_TRANSPARENT_FINANCE] },
-    { name: 'Communication', cols: [SATISFACTION_COLS.Q41_CLEAR_REGULAR || 41, SATISFACTION_COLS.Q42_EASY_INFO || 42] }
+    { name: 'Communication', cols: [SATISFACTION_COLS.Q41_CLEAR_ACTIONABLE, SATISFACTION_COLS.Q42_ENOUGH_INFO] }
   ];
 
   sections.forEach(function(section) {
     var sum = 0, count = 0;
-    for (var i = 1; i < data.length; i++) {
+    for (var m = 0; m < validRows.length; m++) {
       section.cols.forEach(function(col) {
         if (col) {
-          var val = parseFloat(data[i][col - 1]);
+          var val = parseFloat(validRows[m][col - 1]);
           if (!isNaN(val)) {
             sum += val;
             count++;

@@ -415,7 +415,16 @@ var SATISFACTION_COLS = {
   AVG_COMMUNICATION: 79,          // CA - Avg of Q41-Q45
   AVG_MEMBER_VOICE: 80,           // CB - Avg of Q46-Q50
   AVG_VALUE_ACTION: 81,           // CC - Avg of Q51-Q55
-  AVG_SCHEDULING: 82              // CD - Avg of Q56-Q62
+  AVG_SCHEDULING: 82,             // CD - Avg of Q56-Q62
+
+  // ── VERIFICATION & TRACKING COLUMNS (CE onwards) ──
+  EMAIL: 83,                      // CE - Email address from form submission
+  VERIFIED: 84,                   // CF - Yes / Pending Review / Rejected
+  MATCHED_MEMBER_ID: 85,          // CG - Member ID if email matched
+  QUARTER: 86,                    // CH - Quarter string (e.g., "2026-Q1")
+  IS_LATEST: 87,                  // CI - Yes/No - Is this the latest for this member this quarter?
+  SUPERSEDED_BY: 88,              // CJ - Row number of newer response (if superseded)
+  REVIEWER_NOTES: 89              // CK - Notes from reviewer
 };
 
 /**
