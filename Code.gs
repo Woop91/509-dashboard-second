@@ -169,6 +169,22 @@ function onOpen() {
       .addItem('⚡ Run Quick Tests', 'runQuickTests')
       .addItem('📊 View Test Results', 'viewTestResults'))
     .addToUi();
+
+  // ============================================================================
+  // MENU 6: Data Integrity - Data quality and validation tools
+  // ============================================================================
+  ui.createMenu('🛡️ Data Integrity')
+    .addItem('🔍 Find Orphaned Grievances', 'highlightOrphanedGrievances')
+    .addItem('⚙️ Config Health Check', 'showConfigHealthCheck')
+    .addSeparator()
+    .addItem('📊 Steward Workload Dashboard', 'showStewardWorkloadDashboard')
+    .addItem('📱 Create/Update Steward Portal', 'createMobileStewardPortal')
+    .addSeparator()
+    .addItem('🎨 Apply Deadline Heatmap', 'applyDeadlineHeatmap')
+    .addItem('📦 Archive Closed Grievances', 'showArchiveDialog')
+    .addSeparator()
+    .addItem('📜 View Audit Log', 'showAuditLogViewer')
+    .addToUi();
 }
 
 // ============================================================================
@@ -2165,7 +2181,21 @@ function setMemberIdValidation(grievanceSheet, memberSheet) {
  */
 function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
   // Config data starts at row 3 (row 1 = section headers, row 2 = column headers)
-  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
+  // Use dynamic row count instead of fixed 100 to handle large Config lists
+  var configLastRow = configSheet.getLastRow();
+  var configData = configSheet.getRange(3, sourceCol, Math.max(1, configLastRow - 2), 1).getValues();
+  var actualRows = 0;
+
+  for (var i = 0; i < configData.length; i++) {
+    if (configData[i][0] !== '' && configData[i][0] !== null) {
+      actualRows = i + 1;
+    }
+  }
+
+  // Use at least 10 rows, or actual count + buffer for growth
+  var rowCount = Math.max(10, actualRows + 10);
+
+  var sourceRange = configSheet.getRange(3, sourceCol, rowCount, 1);
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(sourceRange, true)
     .setAllowInvalid(false)
@@ -2185,7 +2215,21 @@ function setDropdownValidation(targetSheet, targetCol, configSheet, sourceCol) {
  */
 function setMultiSelectValidation(targetSheet, targetCol, configSheet, sourceCol) {
   // Config data starts at row 3
-  var sourceRange = configSheet.getRange(3, sourceCol, 100, 1);
+  // Use dynamic row count instead of fixed 100 to handle large Config lists
+  var configLastRow = configSheet.getLastRow();
+  var configData = configSheet.getRange(3, sourceCol, Math.max(1, configLastRow - 2), 1).getValues();
+  var actualRows = 0;
+
+  for (var i = 0; i < configData.length; i++) {
+    if (configData[i][0] !== '' && configData[i][0] !== null) {
+      actualRows = i + 1;
+    }
+  }
+
+  // Use at least 10 rows, or actual count + buffer for growth
+  var rowCount = Math.max(10, actualRows + 10);
+
+  var sourceRange = configSheet.getRange(3, sourceCol, rowCount, 1);
   var rule = SpreadsheetApp.newDataValidation()
     .requireValueInRange(sourceRange, true)
     .setAllowInvalid(true)  // Allow comma-separated values
@@ -3775,6 +3819,57 @@ var CONTACT_FORM_CONFIG = {
   }
 };
 
+// ============================================================================
+// FORM URL CONFIGURATION HELPERS
+// ============================================================================
+
+/**
+ * Get form URL from Config sheet, falling back to hardcoded default
+ * This allows admins to update form links without touching code
+ * @param {string} formType - 'grievance', 'contact', or 'satisfaction'
+ * @returns {string} The form URL
+ */
+function getFormUrlFromConfig(formType) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName(SHEETS.CONFIG);
+
+  var configCol, defaultUrl;
+
+  switch(formType.toLowerCase()) {
+    case 'grievance':
+      configCol = CONFIG_COLS.GRIEVANCE_FORM_URL;
+      defaultUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+      break;
+    case 'contact':
+      configCol = CONFIG_COLS.CONTACT_FORM_URL;
+      defaultUrl = CONTACT_FORM_CONFIG.FORM_URL;
+      break;
+    case 'satisfaction':
+      configCol = CONFIG_COLS.SATISFACTION_FORM_URL;
+      defaultUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+      break;
+    default:
+      Logger.log('Unknown form type: ' + formType);
+      return '';
+  }
+
+  // Try to get from Config sheet (row 2 contains data, row 3 for newer format)
+  if (configSheet) {
+    // Check row 2 first (original format)
+    var url = configSheet.getRange(2, configCol).getValue();
+    if (!url || url === '') {
+      // Check row 3 (newer format with section headers)
+      url = configSheet.getRange(3, configCol).getValue();
+    }
+    if (url && url !== '' && url.indexOf('http') === 0) {
+      return url;
+    }
+  }
+
+  // Fall back to hardcoded default
+  return defaultUrl;
+}
+
 /**
  * Start a new grievance for a member
  * Opens pre-filled Google Form with member info from Member Directory
@@ -3910,7 +4005,8 @@ function getCurrentStewardInfo_(ss) {
  * @private
  */
 function buildGrievanceFormUrl_(memberData, stewardData) {
-  var baseUrl = GRIEVANCE_FORM_CONFIG.FORM_URL;
+  // Get form URL from Config (allows admin to update without code changes)
+  var baseUrl = getFormUrlFromConfig('grievance');
   var fields = GRIEVANCE_FORM_CONFIG.FIELD_IDS;
 
   var params = [];
@@ -4315,7 +4411,8 @@ function testGrievanceFormSubmission() {
  */
 function sendContactInfoForm() {
   var ui = SpreadsheetApp.getUi();
-  var formUrl = CONTACT_FORM_CONFIG.FORM_URL;
+  // Get form URL from Config (allows admin to update without code changes)
+  var formUrl = getFormUrlFromConfig('contact');
 
   // Show dialog with form link options
   var response = ui.alert('📋 Personal Contact Info Form',
@@ -4602,7 +4699,8 @@ var SATISFACTION_FORM_CONFIG = {
  */
 function getSatisfactionSurveyLink() {
   var ui = SpreadsheetApp.getUi();
-  var formUrl = SATISFACTION_FORM_CONFIG.FORM_URL;
+  // Get form URL from Config (allows admin to update without code changes)
+  var formUrl = getFormUrlFromConfig('satisfaction');
 
   // Show dialog with form link options
   var response = ui.alert('📊 Member Satisfaction Survey',

@@ -68,6 +68,7 @@ const CORE_MODULES = [
 
   // ===== LEVEL 2: FEATURE MODULES =====
   'HiddenSheets.gs',       // Hidden sheet architecture for self-healing calculations
+  'DataIntegrity.gs',      // Data integrity, batch ops, validation, audit logging
   'ADHDFeatures.gs',       // ADHD accessibility and theming features
   'MobileQuickActions.gs', // Mobile-optimized interface with device detection
   'PerformanceUndo.gs',    // Performance caching and undo/redo system
@@ -96,6 +97,7 @@ function validateModuleDependencies() {
   const dependencies = {
     'Code.gs': ['Constants.gs'],
     'HiddenSheets.gs': ['Constants.gs'],
+    'DataIntegrity.gs': ['Constants.gs'],
     'ADHDFeatures.gs': ['Constants.gs'],
     'MobileQuickActions.gs': ['Constants.gs', 'Code.gs'],
     'PerformanceUndo.gs': ['Constants.gs'],
