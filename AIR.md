@@ -18,14 +18,15 @@
 
 ## Quick Start
 
-> ⚠️ **IMPORTANT: Deploy ONLY `ConsolidatedDashboard.gs`**
-> The modular `.gs` files are source files used to generate ConsolidatedDashboard.gs.
-> Deploying multiple files will cause function conflicts and trigger errors.
+> ⚠️ **IMPORTANT: Deploy TWO consolidated files**
+> The modular `.gs` files are source files. Deploy only the consolidated files.
 
-1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
-2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
-3. Use `🔧 Admin > 🎭 Demo Data > Seed All Sample Data` to populate test data
-4. Customize Config sheet with your organization's values
+1. Copy `ConsolidatedDashboard.gs` to Google Apps Script (main code)
+2. Create new script file, paste `ConsolidatedDeveloperTools.gs` (demo tools)
+3. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
+4. Use `🔧 Admin > 🎭 Demo Data > Seed All Sample Data` to populate test data
+5. Customize Config sheet with your organization's values
+6. **Before production:** Delete the DeveloperTools file from Apps Script
 
 ---
 
@@ -126,7 +127,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 
 ## File Architecture
 
-### Project Structure (10 Source Files)
+### Project Structure (10 Source Files → 2 Deployment Files)
 
 ```
 509-dashboard/
@@ -140,7 +141,10 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
 ├── WebApp.gs              # Standalone web app for mobile phone access
-└── AIR.md                 # This document
+├── AIR.md                 # This document
+│
+├── ConsolidatedDashboard.gs      # AUTO-GENERATED: Main code (deploy this)
+└── ConsolidatedDeveloperTools.gs # AUTO-GENERATED: Demo tools (delete before production)
 ```
 
 ### File Descriptions

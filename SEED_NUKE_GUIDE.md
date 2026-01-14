@@ -4,7 +4,7 @@
 
 The **Developer Tools** feature (in `DeveloperTools.gs`) allows you to seed demo data for testing and remove it when transitioning to production mode. This file is designed to be **deleted before production** - once you delete the file from the Apps Script editor, all demo functions are permanently gone.
 
-> **⚠️ IMPORTANT**: The `DeveloperTools.gs` file should be **DELETED FROM THE SCRIPT EDITOR** before going live. This ensures stewards cannot accidentally trigger a data wipe.
+> **⚠️ IMPORTANT**: The `DeveloperTools` file (or `ConsolidatedDeveloperTools.gs` if using consolidated deployment) should be **DELETED FROM THE SCRIPT EDITOR** before going live. This ensures stewards cannot accidentally trigger a data wipe.
 
 ---
 
@@ -437,10 +437,18 @@ In version 2.0.0, the seed/nuke functionality was moved to a separate file for c
 - **Manual file deletion** - No Apps Script API required; just delete the file from the editor
 - **Zero residue after deletion** - Once DeveloperTools.gs is deleted, all demo functions are gone
 
-**Production Deployment Steps:**
-1. Run `NUKE_SEEDED_DATA()` to clear test data (hides Demo menu)
-2. Delete `DeveloperTools.gs` from the Apps Script editor
-3. Stewards cannot accidentally trigger data wipes
+**Two-File Consolidated Deployment:**
+The build system now creates two separate consolidated files:
+- `ConsolidatedDashboard.gs` (~790 KB) - Main dashboard code
+- `ConsolidatedDeveloperTools.gs` (~63 KB) - Demo tools only
+
+**Deployment Steps:**
+1. Copy `ConsolidatedDashboard.gs` into Apps Script (main code)
+2. Create new file, paste `ConsolidatedDeveloperTools.gs` (demo tools)
+3. Use Demo menu to seed test data and explore features
+4. Run `NUKE_SEEDED_DATA()` to clear test data (hides Demo menu)
+5. Delete the `DeveloperTools` file from Apps Script
+6. Stewards cannot accidentally trigger data wipes
 
 ---
 
