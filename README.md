@@ -352,7 +352,7 @@ Dashboard (Real-time metrics and visualizations)
 Project Files (10 source files → 1 consolidated deployment)
 ├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS, SATISFACTION_COLS, FEEDBACK_COLS
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
-├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
+├── DeveloperTools.gs      # Demo data seeding and clearing - DELETE BEFORE PRODUCTION
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
 ├── DataIntegrity.gs       # Data integrity, batch operations, validation, audit logging (NEW v3.48)
 ├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)

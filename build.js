@@ -50,7 +50,7 @@ const path = require('path');
  *   - DataIntegrity.gs
  *   - ComfortViewFeatures.gs
  *   - PerformanceUndo.gs
- *   - SeedNuke.gs
+ *   - DeveloperTools.gs
  *   - WebApp.gs
  *   - TestingValidation.gs
  *
@@ -73,7 +73,7 @@ const CORE_MODULES = [
   'ComfortViewFeatures.gs',  // Comfort View accessibility and theming features
   'MobileQuickActions.gs', // Mobile-optimized interface with device detection
   'PerformanceUndo.gs',    // Performance caching and undo/redo system
-  'SeedNuke.gs',           // Demo mode seeding and clearing
+  'DeveloperTools.gs',     // Demo mode seeding and clearing (DELETE BEFORE PRODUCTION)
   'WebApp.gs',             // Web app deployment for mobile access
   'TestingValidation.gs'   // Unit/integration testing framework
 ];
@@ -102,7 +102,7 @@ function validateModuleDependencies() {
     'ComfortViewFeatures.gs': ['Constants.gs'],
     'MobileQuickActions.gs': ['Constants.gs', 'Code.gs'],
     'PerformanceUndo.gs': ['Constants.gs'],
-    'SeedNuke.gs': ['Constants.gs'],
+    'DeveloperTools.gs': ['Constants.gs'],
     'WebApp.gs': ['Constants.gs'],
     'TestingValidation.gs': ['Constants.gs']
   };
