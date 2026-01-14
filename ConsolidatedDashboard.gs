@@ -9079,23 +9079,18 @@ function getSatisfactionResponseData() {
   var numRows = lastRow - 1;
   var tz = Session.getScriptTimeZone();
 
-  // Get worksite, role, shift, time in role, steward contact, and satisfaction scores
-  var worksiteData = sheet.getRange(2, SATISFACTION_COLS.Q1_WORKSITE, numRows, 1).getValues();
-  var roleData = sheet.getRange(2, SATISFACTION_COLS.Q2_ROLE, numRows, 1).getValues();
-  var shiftData = sheet.getRange(2, SATISFACTION_COLS.Q3_SHIFT, numRows, 1).getValues();
-  var timeData = sheet.getRange(2, SATISFACTION_COLS.Q4_TIME_IN_ROLE, numRows, 1).getValues();
-  var stewardContactData = sheet.getRange(2, SATISFACTION_COLS.Q5_STEWARD_CONTACT, numRows, 1).getValues();
-  var timestampData = sheet.getRange(2, 1, numRows, 1).getValues();
-  var satisfactionData = sheet.getRange(2, SATISFACTION_COLS.Q6_SATISFIED_REP, numRows, 4).getValues();
-  var stewardRatingsData = sheet.getRange(2, SATISFACTION_COLS.Q10_TIMELY_RESPONSE, numRows, 7).getValues();
+  // PERFORMANCE: Single batch read instead of 8 separate getRange calls
+  // Columns 1-17: Timestamp, Q1-Q5 (work context), Q6-Q9 (satisfaction), Q10-Q16 (steward ratings)
+  var allData = sheet.getRange(2, 1, numRows, 17).getValues();
 
   var responses = [];
   for (var i = 0; i < numRows; i++) {
-    // Get individual scores
-    var satisfaction = parseFloat(satisfactionData[i][0]) || 0;
-    var trust = parseFloat(satisfactionData[i][1]) || 0;
-    var protected_ = parseFloat(satisfactionData[i][2]) || 0;
-    var recommend = parseFloat(satisfactionData[i][3]) || 0;
+    var row = allData[i];
+    // Get individual scores from columns 7-10 (index 6-9)
+    var satisfaction = parseFloat(row[6]) || 0;
+    var trust = parseFloat(row[7]) || 0;
+    var protected_ = parseFloat(row[8]) || 0;
+    var recommend = parseFloat(row[9]) || 0;
 
     // Calculate average satisfaction score
     var sum = 0, count = 0;
@@ -9104,23 +9099,23 @@ function getSatisfactionResponseData() {
     });
     var avgScore = count > 0 ? sum / count : 0;
 
-    // Calculate steward rating average
+    // Calculate steward rating average from columns 11-17 (index 10-16)
     var stewardSum = 0, stewardCount = 0;
-    stewardRatingsData[i].forEach(function(s) {
-      var v = parseFloat(s);
+    for (var j = 10; j < 17; j++) {
+      var v = parseFloat(row[j]);
       if (v > 0) { stewardSum += v; stewardCount++; }
-    });
+    }
     var stewardRating = stewardCount > 0 ? stewardSum / stewardCount : 0;
 
-    var ts = timestampData[i][0];
+    var ts = row[0]; // Timestamp is column 1 (index 0)
     var dateStr = ts instanceof Date ? Utilities.formatDate(ts, tz, 'MM/dd/yyyy') : (ts || 'N/A');
-    var stewardContact = stewardContactData[i][0];
+    var stewardContact = row[5]; // Q5_STEWARD_CONTACT is column 6 (index 5)
 
     responses.push({
-      worksite: worksiteData[i][0] || 'Unknown',
-      role: roleData[i][0] || 'Unknown',
-      shift: shiftData[i][0] || 'N/A',
-      timeInRole: timeData[i][0] || 'N/A',
+      worksite: row[1] || 'Unknown',  // Q1_WORKSITE column 2 (index 1)
+      role: row[2] || 'Unknown',       // Q2_ROLE column 3 (index 2)
+      shift: row[3] || 'N/A',          // Q3_SHIFT column 4 (index 3)
+      timeInRole: row[4] || 'N/A',     // Q4_TIME_IN_ROLE column 5 (index 4)
       date: dateStr,
       avgScore: avgScore,
       satisfaction: satisfaction,
