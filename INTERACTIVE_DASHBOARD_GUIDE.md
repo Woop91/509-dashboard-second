@@ -20,7 +20,7 @@ A **popup modal dialog** with a tabbed interface featuring:
 
 ### 2. 📊 Sheet-Based Dashboard
 
-**Tab:** `🎯 Interactive` (spreadsheet tab)
+**Tab:** `🎯 Custom View` (spreadsheet tab)
 
 A **customizable spreadsheet tab** that lets you:
 - ✅ Select which metrics to display
@@ -54,13 +54,13 @@ This opens a popup with 5 tabs:
 
 ## 🚀 Quick Start
 
-### Step 1: Access the Interactive Dashboard
+### Step 1: Access the Custom View Dashboard
 1. Open your 509 Dashboard spreadsheet
-2. Click **509 Tools** → **Interactive Dashboard** → **View Interactive Dashboard**
+2. Click the **🎯 Custom View** tab at the bottom of the spreadsheet
 3. The sheet will open with pre-configured controls
 
 ### Step 2: Setup Controls (First Time Only)
-1. Click **509 Tools** → **Interactive Dashboard** → **Setup Controls**
+1. Go to **📊 Sheet Manager** → **Setup** → **Setup Data Validations**
 2. This creates dropdown menus for metric and chart selection
 
 ### Step 3: Customize Your Dashboard
@@ -73,7 +73,7 @@ This opens a popup with 5 tabs:
    - **Enable Comparison**: Set to "Yes" to show both metrics
 
 ### Step 4: Refresh Charts
-1. After making selections, click **509 Tools** → **Interactive Dashboard** → **Refresh Charts**
+1. After making selections, click **📊 Sheet Manager** → **📈 Refresh Interactive Charts**
 2. The dashboard will update with your chosen metrics and visualizations
 
 ---
@@ -329,7 +329,7 @@ The Interactive Dashboard automatically pulls data from:
 
 To ensure data is current:
 1. Update your Member Directory or Grievance Log
-2. Click **509 Tools** → **Interactive Dashboard** → **Refresh Charts**
+2. Click **📊 Sheet Manager** → **📈 Refresh Interactive Charts**
 3. All visualizations update in real-time
 
 ---
@@ -409,7 +409,7 @@ Quickly change the entire dashboard appearance:
 **Problem:** Can't select metrics or chart types
 
 **Solutions:**
-1. Click **509 Tools** → **Interactive Dashboard** → **Setup Controls**
+1. Go to **📊 Sheet Manager** → **Setup** → **Setup Data Validations**
 2. Verify you're editing Row 7 (not Row 6)
 3. Check that Config sheet exists and has data
 
@@ -420,9 +420,9 @@ Quickly change the entire dashboard appearance:
 
 **Solutions:**
 1. Update source data in Member Directory or Grievance Log
-2. Click **509 Tools** → **Data Management** → **Recalc All Members**
-3. Click **509 Tools** → **Data Management** → **Recalc All Grievances**
-4. Click **509 Tools** → **Interactive Dashboard** → **Refresh Charts**
+2. Click **📋 Grievances** → **🔄 Refresh Member Data**
+3. Click **📋 Grievances** → **🔄 Refresh Grievance Data**
+4. Click **📊 Sheet Manager** → **📈 Refresh Interactive Charts**
 
 ---
 
@@ -461,7 +461,7 @@ The Interactive Dashboard is mobile-friendly:
 
 3. **Export-Ready**
    - Set up perfect view
-   - Use **509 Tools** → **Export Data** → **Export Dashboard to PDF**
+   - Use Google Sheets File → Print or Export to PDF
    - Share with leadership
 
 4. **Regular Refresh**

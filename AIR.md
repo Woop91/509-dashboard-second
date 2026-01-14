@@ -134,7 +134,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 ├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
+├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu
@@ -299,7 +299,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
-**ADHDFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
+**ComfortViewFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
 - `showADHDControlPanel()` - Main Comfort View settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
 - `applyADHDSettings()` - Apply visual settings

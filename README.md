@@ -294,7 +294,7 @@ Project Files (9 source files → 1 consolidated deployment)
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
-├── ADHDFeatures.gs        # Comfort View accessibility & theming (focus mode, themes, pomodoro)
+├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
 ├── MobileQuickActions.gs  # Mobile interface & quick actions menu

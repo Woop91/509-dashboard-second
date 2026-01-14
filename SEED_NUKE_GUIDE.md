@@ -186,7 +186,7 @@ Enter:
 - **Row 3**: Steward Email
 - **Row 4**: Steward Phone
 
-Or use: `👤 Dashboard > 📋 Grievance Tools > ➕ Start New Grievance` (then configure steward info in Config sheet)
+Or use: `📋 Grievances > ➕ Start New Grievance` (then configure steward info in Config sheet)
 
 ### 2. Review Config Dropdown Lists
 
@@ -225,9 +225,9 @@ This enables:
 - Real-time dashboard updates
 - Member snapshot updates
 
-### 5. Customize Interactive Dashboard
+### 5. Customize Custom View Dashboard
 
-**Menu**: `👤 Dashboard > 🎯 Interactive Dashboard`
+**Tab**: Click the `🎯 Custom View` sheet tab, or **Menu**: `📊 509 Dashboard > 📊 Dashboard`
 
 Create custom views for:
 - Key metrics you track

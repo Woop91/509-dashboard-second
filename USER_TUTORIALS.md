@@ -180,22 +180,22 @@ After entering, these columns auto-populate:
 
 ### Refreshing the Dashboard
 
-1. Click **👤 Dashboard** → **🔄 Refresh All**
+1. Click **📊 Sheet Manager** → **🔄 Refresh All Formulas**
 2. Wait for "Complete" toast message
 3. All metrics now current
 
 ---
 
-## 6. Customizing the Interactive Dashboard
+## 6. Customizing the Custom View Dashboard
 
-### Accessing Interactive Dashboard
+### Accessing the Dashboard
 
 **Option 1: Modal Popup** (⚠️ PROTECTED)
-- Click **👤 Dashboard** → **🎯 Interactive Dashboard**
-- Opens a tabbed popup with Overview, Members, Grievances, Analytics
+- Click **📊 509 Dashboard** → **📊 Dashboard**
+- Opens a tabbed popup with Overview, My Cases, Members, Grievances, Analytics
 
 **Option 2: Sheet Tab**
-- Click the **🎯 Interactive** sheet tab directly
+- Click the **🎯 Custom View** sheet tab directly
 - Use dropdowns to customize metrics and charts
 
 ### Selecting Metrics
