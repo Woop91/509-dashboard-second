@@ -24,7 +24,7 @@
 
 1. Copy **only** `ConsolidatedDashboard.gs` to Google Apps Script
 2. Run `CREATE_509_DASHBOARD()` to create 5 sheets + 6 hidden calculation sheets
-3. Use `Demo > Seed All Sample Data` to populate test data
+3. Use `🔧 Admin > 🎭 Demo Data > Seed All Sample Data` to populate test data
 4. Customize Config sheet with your organization's values
 
 ---
@@ -877,12 +877,13 @@ The menu system has been reorganized from 9 menus to 5 logical groups:
 │   ├── 🗄️ Cache Status
 │   ├── 🔥 Warm Caches
 │   └── 🗑️ Clear Caches
-├── 🎭 Demo (submenu)
-│   ├── 🚀 Seed All Sample Data
-│   └── ☢️ NUKE SEEDED DATA
-└── ⚡ Quick Seed (submenu)
-    ├── 🌱 Seed 50 Members
-    └── 🌱 Seed 100 Members
+└── 🎭 Demo Data (submenu) - Only visible if DEMO_MODE_DISABLED != 'true'
+    ├── 🚀 Seed All Sample Data
+    ├── ☢️ NUKE SEEDED DATA
+    ├── 🧹 Clear Config Dropdowns Only
+    └── 🔄 Restore Config & Dropdowns
+
+    NOTE: Delete DeveloperTools.gs before production to remove all demo functions
 ```
 
 ---

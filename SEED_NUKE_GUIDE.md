@@ -33,7 +33,7 @@ When you execute the **Nuke Seed Data** function, the system will:
    > **NOTE (v3.11+):** These fields are now LEFT EMPTY during CREATE_509_DASHBOARD. Users populate them with their own data. If no user data was added, there's nothing to clear.
 
 ### Demo Mode Disabling
-8. **Disable Demo Menu**: Sets a flag (`DEMO_MODE_DISABLED`) to hide the "🎭 Demo" menu on next refresh
+8. **Disable Demo Menu**: Sets a flag (`DEMO_MODE_DISABLED`) to hide the "🎭 Demo Data" submenu on next refresh
 9. **Clear Tracking**: Removes the tracked seeded ID lists from Script Properties
 
 ### Preserved Items
@@ -82,7 +82,7 @@ Before nuking seed data, make sure you:
 
 ### Step 1: Access the Nuke Function
 
-**Menu**: `🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA`
+**Menu**: `🔧 Admin > 🎭 Demo Data > ☢️ NUKE SEEDED DATA`
 
 *Note: This menu item only appears if seed data hasn't been nuked yet.*
 
@@ -152,7 +152,7 @@ After nuking, verify the system is ready:
    - No overdue grievances
 
 3. **Menu Changes**:
-   - "🎭 Demo" menu completely removed
+   - "🎭 Demo Data" submenu hidden from Admin menu
    - Cleaner menu structure
    - Focus on production tools
 
@@ -286,7 +286,7 @@ After running NUKE and verifying you're ready for production:
 **Solution**:
 - Close and reopen the spreadsheet
 - The menu is rebuilt on open
-- The 🎭 Demo menu only shows when demo mode is enabled
+- The 🎭 Demo Data submenu only shows when demo mode is enabled
 
 ### Problem: Need to Re-Seed for Training
 
@@ -370,7 +370,7 @@ Once `DeveloperTools.gs` is deleted:
 
 ### Menu Location (Before Nuke)
 ```
-🎭 Demo > 🗑️ Nuke Data > ☢️ NUKE SEEDED DATA
+🔧 Admin > 🎭 Demo Data > ☢️ NUKE SEEDED DATA
 ```
 
 ### What Gets Deleted

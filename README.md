@@ -174,14 +174,13 @@ For verification to work, enable "Collect email addresses" in your Google Form s
 - **Verification commands** - Built-in tools to verify code quality
 - **MAP/LAMBDA formulas** - Fixed Member Directory formulas for proper row-by-row calculations
 
-**Menu System (7 Menus):**
-- 👤 Dashboard - Daily operations, search, grievance tools
-- 📊 Sheet Manager - Data, performance, automations
-- 🔧 Setup - Dropdown configuration
-- 🎭 Demo - Seed data, nuke functions
-- 🛡️ Data Integrity - Ghost validation, config health, workload dashboard (NEW v3.48)
-- ⚙️ Administrator - System health, RBAC, column toggles
-- 🧪 Tests - Unit, validation, integration tests
+**Menu System (6 Menus):**
+- 📊 509 Dashboard - Main dashboards, search, mobile app
+- 📋 Grievances - Grievance workflow, notifications, calendar
+- 👁️ View - Timeline, comfort view, theming
+- ⚙️ Settings - Setup, validations, triggers
+- 🔧 Admin - Diagnostics, data sync, demo data (dev only, conditionally shown)
+- 🛡️ Data Integrity - Ghost validation, config health, workload dashboard
 
 ### Previous Updates (v2.6)
 
@@ -341,8 +340,8 @@ Dashboard (Real-time metrics and visualizations)
 4. Copy and paste the entire contents of `Code.gs`
 5. Save the project
 6. Refresh your Google Sheet
-7. Seven menus will appear: **"👤 Dashboard"**, **"📊 Sheet Manager"**, **"🔧 Setup"**, **"🎭 Demo"**, **"🛡️ Data Integrity"**, **"⚙️ Administrator"**, and **"🧪 Tests"**
-8. Click **Administrator > Seed Functions > Seed Members** to generate test data
+7. Six menus will appear: **"📊 509 Dashboard"**, **"📋 Grievances"**, **"👁️ View"**, **"⚙️ Settings"**, **"🔧 Admin"**, and **"🛡️ Data Integrity"**
+8. Click **🔧 Admin > 🎭 Demo Data > 🚀 Seed All Sample Data** to generate test data
 
 ## 🏗️ Architecture
 
@@ -854,26 +853,18 @@ System improvement tracking
 
 ## Data Seeding
 
-Generate realistic test data for the dashboard:
+Generate realistic test data for the dashboard. All seed functions are in `DeveloperTools.gs` - **delete this file before production**.
 
 ### Seed All Sample Data (Recommended)
 - `SEED_SAMPLE_DATA()` - Seeds complete demo environment
-- Access via: **🎭 Demo > 🚀 Seed All Sample Data**
+- Access via: **🔧 Admin > 🎭 Demo Data > 🚀 Seed All Sample Data**
 - Seeds: 1,000 members + 300 grievances + 50 survey responses + 3 feedback entries
 - Automatically installs auto-sync trigger
 
 ### Unified Member & Grievance Seeding
 - `SEED_MEMBERS(count, grievancePercent)` - Seeds members with optional grievances
 - Grievances are directly linked to member data (no orphaned grievances)
-- Access via: **🎭 Demo > Seed Data > Seed Members & Grievances**
-
-### Quick Seed Options
-- **Seed 50 Members (30% Grievances)** - Quick test data
-- **Seed 100 Members (50% Grievances)** - More test data with higher grievance ratio
-
-### Advanced Seeding
-- **Seed Members (Advanced)** - Set exact count AND grievance percentage
-- Control how many members get grievances (0-100%)
+- Example: `SEED_MEMBERS(100, 50)` seeds 100 members with 50% having grievances
 
 ### Benefits of Merged Approach
 - All grievances are directly linked to actual member data
@@ -882,12 +873,18 @@ Generate realistic test data for the dashboard:
 - Avoids Google Apps Script timeout limits (max 2,000 members per call)
 
 ### Clear Data Options
-- **Nuke Seed Data (Exit Demo Mode)**: Removes core test data, sets SEED_NUKED flag, shows post-nuke guidance
-  - Access via: **⚙️ Administrator > Seed Functions > 🚨 Nuke Seed Data (Exit Demo Mode)**
-- **Nuke ALL Sheet Data (Comprehensive)**: Clears ALL sheets including analytics, surveys, feedback, archive
-  - Access via: **⚙️ Administrator > Seed Functions > 🗑️ Nuke ALL Sheet Data (Comprehensive)**
-- **Clear Core Data Only**: Clears only Member Directory and Grievance Log
-  - Access via: **⚙️ Administrator > Seed Functions > ⚠️ Clear Core Data Only**
+- **NUKE_SEEDED_DATA()**: Removes seeded data (pattern-matched IDs), hides Demo menu
+  - Access via: **🔧 Admin > 🎭 Demo Data > ☢️ NUKE SEEDED DATA**
+  - Only removes rows with seeded ID patterns (e.g., MJOSM123, GJOSM456)
+  - Preserves manually entered data
+- **NUKE_CONFIG_DROPDOWNS()**: Clears only Config dropdown values
+  - Access via: **🔧 Admin > 🎭 Demo Data > 🧹 Clear Config Dropdowns Only**
+
+### Production Deployment
+After testing is complete:
+1. Run `NUKE_SEEDED_DATA()` to clear test data
+2. Delete `DeveloperTools.gs` from the Apps Script editor
+3. Demo menu permanently disappears
 
 ## Key Improvements
 
@@ -1011,13 +1008,13 @@ Generate realistic test data for the dashboard:
 
 1. Click **⚙️ Administrator** menu
 2. Select **Seed Functions > Seed Members > Seed Members - Toggle 1 (5,000)**
-3. Repeat for additional member batches if needed (Toggle 2, 3, 4 for up to 20k total)
-4. Select **Seed Functions > Seed Grievances > Seed Grievances - Toggle 1 (2,500)**
-5. Repeat for additional grievance batch if needed (Toggle 2 for up to 5k total)
-6. Go to **Dashboard > Dashboards > Main Dashboard** to see populated metrics
-7. Use **Administrator > Seed Functions > 🚨 Nuke Seed Data (Exit Demo Mode)** when done testing
+3. Click **🔧 Admin > 🎭 Demo Data > 🚀 Seed All Sample Data**
+4. Wait for seeding to complete (seeds 1,000 members + 300 grievances)
+5. Go to **📊 509 Dashboard** to see populated metrics
+6. Use **🔧 Admin > 🎭 Demo Data > ☢️ NUKE SEEDED DATA** when done testing
+7. Delete `DeveloperTools.gs` from Apps Script editor for production
 
-**Note**: The toggle-based approach allows for incremental data generation to avoid timeouts
+**Note**: `SEED_MEMBERS(count, grievancePercent)` allows custom counts up to 2,000 members per call
 
 ### Example 7: Monthly Report Generation
 

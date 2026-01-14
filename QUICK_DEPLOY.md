@@ -70,7 +70,7 @@ Download `ConsolidatedDashboard.gs` from the repository.
 
 ### **Step 7: Seed Test Data (Optional)**
 
-1. Click **🎭 Demo → 🚀 Seed All Sample Data**
+1. Click **🔧 Admin → 🎭 Demo Data → 🚀 Seed All Sample Data**
 2. Wait for seeding to complete
 
 ---
