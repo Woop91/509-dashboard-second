@@ -437,7 +437,7 @@ function highlightOrphanedGrievances() {
   SpreadsheetApp.getUi().alert('⚠️ Orphaned Grievances Found', message, SpreadsheetApp.getUi().ButtonSet.OK);
 
   // Log to audit
-  logAuditEvent('GHOST_VALIDATION', 'Found ' + orphaned.length + ' orphaned grievances');
+  logIntegrityEvent('GHOST_VALIDATION', 'Found ' + orphaned.length + ' orphaned grievances');
 }
 
 /**
@@ -817,7 +817,7 @@ function autoFixMissingConfigValues() {
   });
 
   // Log the fix
-  logAuditEvent('CONFIG_AUTO_FIX', 'Added ' + report.autoFixable.length + ' missing values to Config');
+  logIntegrityEvent('CONFIG_AUTO_FIX', 'Added ' + report.autoFixable.length + ' missing values to Config');
 
   SpreadsheetApp.getUi().alert(
     '✅ Config Updated',
@@ -832,12 +832,13 @@ function autoFixMissingConfigValues() {
 // ============================================================================
 
 /**
- * Log an event to the audit log with timestamp and user info
+ * Log a data integrity event to the audit log with timestamp and user info
+ * Note: This is separate from the detailed edit audit in Code.gs logAuditEvent()
  * @param {string} eventType - Type of event (e.g., 'STATUS_CHANGE', 'DATA_EDIT')
  * @param {string} details - Description of what happened
  * @param {Object} additionalInfo - Optional additional information
  */
-function logAuditEvent(eventType, details, additionalInfo) {
+function logIntegrityEvent(eventType, details, additionalInfo) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var auditSheet = ss.getSheetByName(SHEETS.AUDIT_LOG);
 
@@ -885,7 +886,7 @@ function logAuditEvent(eventType, details, additionalInfo) {
  * @param {string} newStatus - New status
  */
 function logGrievanceStatusChange(grievanceId, oldStatus, newStatus) {
-  logAuditEvent('STATUS_CHANGE',
+  logIntegrityEvent('STATUS_CHANGE',
     'Grievance ' + grievanceId + ' status changed from "' + oldStatus + '" to "' + newStatus + '"',
     { grievanceId: grievanceId, oldStatus: oldStatus, newStatus: newStatus }
   );
@@ -898,7 +899,7 @@ function logGrievanceStatusChange(grievanceId, oldStatus, newStatus) {
  * @param {string} newSteward - New steward
  */
 function logStewardAssignmentChange(grievanceId, oldSteward, newSteward) {
-  logAuditEvent('STEWARD_CHANGE',
+  logIntegrityEvent('STEWARD_CHANGE',
     'Grievance ' + grievanceId + ' reassigned from "' + (oldSteward || 'None') + '" to "' + newSteward + '"',
     { grievanceId: grievanceId, oldSteward: oldSteward, newSteward: newSteward }
   );
@@ -1043,7 +1044,7 @@ function archiveClosedGrievances(daysOld) {
   });
 
   // Log the archive operation
-  logAuditEvent('AUTO_ARCHIVE',
+  logIntegrityEvent('AUTO_ARCHIVE',
     'Archived ' + rowsToArchive.length + ' closed grievances older than ' + daysOld + ' days',
     { count: rowsToArchive.length, daysOld: daysOld }
   );
@@ -1138,7 +1139,7 @@ function restoreFromArchive(grievanceIds) {
     archiveSheet.deleteRow(rowIndex);
   });
 
-  logAuditEvent('ARCHIVE_RESTORE',
+  logIntegrityEvent('ARCHIVE_RESTORE',
     'Restored ' + rowsToRestore.length + ' grievances from archive',
     { grievanceIds: grievanceIds }
   );
