@@ -193,15 +193,19 @@ function getWebAppDashboardHtml() {
     'var baseUrl="' + baseUrl + '";' +
     'function loadOverdue(){' +
     '  google.script.run.withSuccessHandler(function(data){' +
-    '    var overdue=data.filter(function(g){return g.isOverdue});' +
+    '    if(!data||!Array.isArray(data)){document.getElementById("overdue-preview").innerHTML="";return}' +
+    '    var overdue=data.filter(function(g){return g&&g.isOverdue});' +
     '    if(overdue.length===0){document.getElementById("overdue-preview").innerHTML="";return}' +
     '    var html="<div class=\\"overdue-section\\"><div class=\\"overdue-title\\">⚠️ Overdue Cases ("+overdue.length+")</div>";' +
     '    overdue.slice(0,3).forEach(function(g){' +
-    '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+g.id+"</div><div class=\\"overdue-name\\">"+g.name+"</div><div class=\\"overdue-detail\\">"+g.category+" • "+g.step+"</div></div>";' +
+    '      html+="<div class=\\"overdue-item\\"><div class=\\"overdue-id\\">"+(g.id||"")+"</div><div class=\\"overdue-name\\">"+(g.name||"")+"</div><div class=\\"overdue-detail\\">"+(g.category||"")+" • "+(g.step||"")+"</div></div>";' +
     '    });' +
     '    if(overdue.length>3)html+="<button class=\\"view-all-btn\\" onclick=\\"location.href=baseUrl+\'?page=grievances&filter=overdue\'\\">View All "+overdue.length+" Overdue Cases</button>";' +
     '    html+="</div>";' +
     '    document.getElementById("overdue-preview").innerHTML=html;' +
+    '  }).withFailureHandler(function(err){' +
+    '    console.error("Failed to load overdue cases:",err);' +
+    '    document.getElementById("overdue-preview").innerHTML="";' +
     '  }).getWebAppGrievanceList();' +
     '}' +
     'loadOverdue();' +
