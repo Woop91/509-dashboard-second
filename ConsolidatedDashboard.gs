@@ -12,9 +12,9 @@
  * 3. This file will be regenerated automatically
  *
  * Build Info:
- * - Version: 2.0.0 (Unknown)
- * - Build ID: unknown
- * - Build Date: 2026-01-14T04:19:38.090Z
+ * - Version: 2.2.0 (Survey Verification & Data Integrity)
+ * - Build ID: v3.48
+ * - Build Date: 2026-01-14T04:51:08.447Z
  * - Build Type: DEVELOPMENT
  * - Modules: 10 files
  * - Tests Included: Yes
@@ -34,9 +34,25 @@
  * Single source of truth for all configuration constants.
  * This file must be loaded first in the build order.
  *
- * @version 1.0.0
+ * @version 2.2.0
  * @license Free for use by non-profit collective bargaining groups and unions
  */
+
+// ============================================================================
+// VERSION INFO
+// ============================================================================
+
+/**
+ * Version information for build system and display
+ * @const {Object}
+ */
+var VERSION_INFO = {
+  MAJOR: 2,
+  MINOR: 2,
+  PATCH: 0,
+  BUILD: 'v3.48',
+  CODENAME: 'Survey Verification & Data Integrity'
+};
 
 // ============================================================================
 // SHEET NAMES

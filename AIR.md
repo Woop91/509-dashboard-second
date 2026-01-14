@@ -1046,7 +1046,7 @@ Changed `syncGrievanceFormulasToLog()` in `HiddenSheets.gs` to calculate Days Op
 
 ## Changelog
 
-### Version 2.2.0 (2026-01-14) - Survey Verification, Quarterly Tracking & Member Authentication
+### Version 2.2.0 / v3.48 (2026-01-14) - Survey Verification, Data Integrity & Steward Workload
 
 **New Survey Verification System:**
 - Survey responses are now verified against the Member Directory
@@ -1100,9 +1100,76 @@ If neither is configured, all submissions will be marked as "Pending Review" and
 - `getCurrentQuarter()` - Returns current quarter string
 - `getPublicSurveyData(includeHistory)` - Now accepts toggle for historical data
 
-**Files Modified:**
+**Files Modified (Survey Verification):**
 - `Constants.gs` - Added SATISFACTION_COLS verification columns
 - `Code.gs` - Updated form handler, added review interface, updated public dashboard
+
+**New Data Integrity Module (DataIntegrity.gs):**
+- New file: `DataIntegrity.gs` (~1000 lines) providing comprehensive data management
+- Menu: 🛡️ Data Integrity - New top-level menu with integrity tools
+
+**Batch Operations Utilities:**
+- `batchSetValues()` - Write multiple values in single operation
+- `batchSetRowValues()` - Update multiple columns in one row efficiently
+- `batchAppendRows()` - Add multiple rows at once (replaces slow appendRow loops)
+
+**Error Handling:**
+- `executeWithRetry()` - Retry with exponential backoff for transient failures
+- `safeSheetOperation()` - Wrapped operations with error capture
+
+**Confirmation Dialogs:**
+- `getOrCreateSheetSafe()` - Confirms before deleting sheets with data
+- `confirmDestructiveAction()` - Reusable confirmation helper
+
+**Dynamic Validation:**
+- `setDropdownValidationDynamic()` - Uses getLastRow() instead of fixed 100
+- `setMultiSelectValidationDynamic()` - Dynamic multi-select validation
+
+**Duplicate ID Validation:**
+- `checkDuplicateMemberId()` - Check for duplicate Member IDs
+- `validateMemberIdOnEdit()` - Real-time duplicate detection on edit
+
+**Ghost Validation (Orphaned Grievances):**
+- `findOrphanedGrievances()` - Find grievances with invalid Member IDs
+- `highlightOrphanedGrievances()` - Visual highlighting of issues
+- `runScheduledGhostValidation()` - Email alerts for data issues
+
+**Steward Load Balancing:**
+- `calculateStewardWorkload()` - Calculate load scores per steward
+- `showStewardWorkloadDashboard()` - Visual dashboard with metrics
+- `getStewardWithLowestWorkload()` - For auto-assignment
+
+**Self-Healing Config Tool:**
+- `findMissingConfigValues()` - Scan for values not in Config dropdowns
+- `showConfigHealthCheck()` - UI for reviewing issues
+- `autoFixMissingConfigValues()` - Auto-add missing values
+
+**Enhanced Audit Logging:**
+- `logIntegrityEvent()` - Comprehensive logging with timestamps
+- `logGrievanceStatusChange()` - Status change tracking
+- `logStewardAssignmentChange()` - Assignment change tracking
+- `showAuditLogViewer()` - UI to view recent entries
+
+**Auto-Archive:**
+- `archiveClosedGrievances()` - Move old closed cases to archive
+- `showArchiveDialog()` - UI with configurable age threshold
+- `restoreFromArchive()` - Restore archived grievances
+
+**Visual Enhancements:**
+- `applyDeadlineHeatmap()` - Conditional formatting for deadline urgency
+- `createMobileStewardPortal()` - Mobile-optimized view for field stewards
+
+**Enhanced Quick Actions (MobileQuickActions.gs):**
+- 📧 Email Survey to Member - Send satisfaction survey link via email
+- 📧 Email Contact Form - Send member info update form link
+- 📧 Email Dashboard Link - Share spreadsheet access with members
+- 📧 Email Grievance Status - Send status update for active grievances
+
+**Files Modified (Data Integrity):**
+- `DataIntegrity.gs` - New file with all data integrity functions
+- `MobileQuickActions.gs` - Added email quick actions
+- `build.js` - Added DataIntegrity.gs to module list and dependencies
+- `ConsolidatedDashboard.gs` - Rebuilt with DataIntegrity module
 
 ---
 
