@@ -45,6 +45,45 @@ A mobile-optimized portal sheet for stewards in the field:
 3. Bookmark the sheet URL on your phone
 4. Access your cases anywhere, anytime!
 
+### 📧 Email Survey to Members
+
+**Access:** Quick Actions menu in Member Directory or Grievance Log
+
+As a steward, you can now send satisfaction surveys directly to members:
+
+📧 **Available Email Actions:**
+- **Email Survey to Member** - Send satisfaction survey link via email
+- **Email Contact Form** - Send member info update form link
+- **Email Dashboard Link** - Share spreadsheet access with members
+- **Email Grievance Status** - Send status update for active grievances
+
+✅ **How to Send a Survey:**
+1. Select a member row in the Member Directory
+2. Check the Quick Actions checkbox (column AE)
+3. Choose "📧 Email Survey to Member" from the popup
+4. Survey link is emailed to the member automatically!
+
+💡 **Why Send Surveys:**
+- Gather member feedback on union services
+- Track satisfaction after grievance resolution
+- Build engagement with periodic check-ins
+- Data helps improve union representation
+
+### 📊 Survey Verification System (Admin Feature)
+
+**Note:** Survey verification is primarily an admin function, but stewards should be aware:
+
+🔍 **How It Works:**
+- Surveys are verified against Member Directory by email
+- Only verified responses count in statistics
+- Unmatched emails are flagged for admin review
+- Each response is tracked by quarter (e.g., "2026-Q1")
+
+📈 **What This Means for You:**
+- Encourage members to use their registered email when completing surveys
+- Survey stats reflect actual member feedback, not duplicate submissions
+- Historical responses are preserved for comparison
+
 ---
 
 ## 🆕 NEW: My Cases Tab - Track Your Assigned Grievances!

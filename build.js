@@ -47,6 +47,7 @@ const path = require('path');
  * Level 1 (Depends on Constants only):
  *   - Code.gs
  *   - HiddenSheets.gs
+ *   - DataIntegrity.gs
  *   - ComfortViewFeatures.gs
  *   - PerformanceUndo.gs
  *   - SeedNuke.gs
