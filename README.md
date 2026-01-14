@@ -29,6 +29,36 @@ Complete union member database and grievance tracking system for Local 509.
 **⚠️ Email Configuration Required:**
 For verification to work, enable "Collect email addresses" in your Google Form settings, or add an "Email Address" question. Without email collection, all submissions will be marked "Pending Review".
 
+### Data Integrity & Steward Workload Enhancements (January 2026)
+
+**New Data Integrity Module:**
+- **🛡️ Data Integrity Menu** - New top-level menu with integrity tools
+- **Ghost Validation** - Find and highlight orphaned grievances missing member data
+- **Config Health Check** - Self-healing tool to find and fix missing config values
+- **Duplicate ID Detection** - Warns when entering duplicate Member IDs
+
+**Steward Workload Features:**
+- **📊 Steward Workload Dashboard** - Visual dashboard showing case distribution across stewards
+- **Load Balancing Metrics** - Track caseload, complexity scores, and overdue percentages
+- **Auto-Assignment Helper** - `getStewardWithLowestWorkload()` for balanced case assignment
+
+**Enhanced Quick Actions:**
+- **📧 Email Survey to Member** - Send satisfaction survey link via email
+- **📧 Email Contact Form** - Send member info update form link
+- **📧 Email Dashboard Link** - Share spreadsheet access with members
+- **📧 Email Grievance Status** - Send status update for active grievances
+
+**Performance Improvements:**
+- **Batch Operations** - `batchSetValues()`, `batchSetRowValues()`, `batchAppendRows()` for faster data writes
+- **Error Retry Logic** - `executeWithRetry()` with exponential backoff for resilient operations
+- **Dynamic Validation Ranges** - Dropdown validations now use `getLastRow()` instead of fixed ranges
+
+**Additional Features:**
+- **📱 Mobile Steward Portal** - Create mobile-optimized portal sheet for field stewards
+- **🎨 Deadline Heatmap** - Apply visual heatmap coloring to deadline columns
+- **📦 Auto-Archive** - Archive closed grievances older than specified days
+- **📜 Audit Log Viewer** - View integrity events and changes with filtering
+
 ---
 
 ## 🆕 What's New in v3.47
@@ -144,11 +174,12 @@ For verification to work, enable "Collect email addresses" in your Google Form s
 - **Verification commands** - Built-in tools to verify code quality
 - **MAP/LAMBDA formulas** - Fixed Member Directory formulas for proper row-by-row calculations
 
-**Menu System (6 Menus):**
+**Menu System (7 Menus):**
 - 👤 Dashboard - Daily operations, search, grievance tools
 - 📊 Sheet Manager - Data, performance, automations
 - 🔧 Setup - Dropdown configuration
 - 🎭 Demo - Seed data, nuke functions
+- 🛡️ Data Integrity - Ghost validation, config health, workload dashboard (NEW v3.48)
 - ⚙️ Administrator - System health, RBAC, column toggles
 - 🧪 Tests - Unit, validation, integration tests
 
@@ -310,7 +341,7 @@ Dashboard (Real-time metrics and visualizations)
 4. Copy and paste the entire contents of `Code.gs`
 5. Save the project
 6. Refresh your Google Sheet
-7. Six menus will appear: **"👤 Dashboard"**, **"📊 Sheet Manager"**, **"🔧 Setup"**, **"🎭 Demo"**, **"⚙️ Administrator"**, and **"🧪 Tests"**
+7. Seven menus will appear: **"👤 Dashboard"**, **"📊 Sheet Manager"**, **"🔧 Setup"**, **"🎭 Demo"**, **"🛡️ Data Integrity"**, **"⚙️ Administrator"**, and **"🧪 Tests"**
 8. Click **Administrator > Seed Functions > Seed Members** to generate test data
 
 ## 🏗️ Architecture
@@ -318,11 +349,12 @@ Dashboard (Real-time metrics and visualizations)
 ### File Structure
 
 ```
-Project Files (9 source files → 1 consolidated deployment)
+Project Files (10 source files → 1 consolidated deployment)
 ├── Constants.gs           # SHEETS, COLORS, MEMBER_COLS, GRIEVANCE_COLS, SATISFACTION_COLS, FEEDBACK_COLS
 ├── Code.gs                # Main entry point, menus, sheet creation, Drive/Calendar/Email
 ├── SeedNuke.gs            # Demo data seeding and clearing (SEED_SAMPLE_DATA, NUKE_SEEDED_DATA)
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
+├── DataIntegrity.gs       # Data integrity, batch operations, validation, audit logging (NEW v3.48)
 ├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system

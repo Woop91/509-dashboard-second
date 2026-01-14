@@ -1,6 +1,6 @@
 # 509 Dashboard - Architecture & Implementation Reference
 
-**Version:** 2.2.0 (Survey Verification, Quarterly Tracking & Member Authentication)
+**Version:** 2.2.0 / v3.48 (Survey Verification, Data Integrity, Quarterly Tracking & Member Authentication)
 **Last Updated:** 2026-01-14
 **Purpose:** Union grievance tracking and member engagement system for SEIU Local 509
 
@@ -126,7 +126,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 
 ## File Architecture
 
-### Project Structure (9 Source Files)
+### Project Structure (10 Source Files)
 
 ```
 509-dashboard/
@@ -134,6 +134,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 ├── Code.gs                # Main entry point, setup, Drive/Calendar/Email, Audit Log
 ├── SeedNuke.gs            # Demo data seeding and clearing functions
 ├── HiddenSheets.gs        # Self-healing hidden calculation sheets with auto-sync
+├── DataIntegrity.gs       # Data integrity, batch operations, validation, audit logging (NEW v2.2.0)
 ├── ComfortViewFeatures.gs # Comfort View accessibility & theming (focus mode, themes, pomodoro)
 ├── TestingValidation.gs   # Test framework & data validation
 ├── PerformanceUndo.gs     # Caching layer & undo/redo system
@@ -172,8 +173,8 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
 - `REPAIR_DASHBOARD()` - Repair hidden sheets and triggers
 - `setupDataValidations()` - Apply dropdown validations
 - `setupHiddenSheets()` - Create hidden calculation sheets
-- `setDropdownValidation()` - Helper: apply single-select dropdown
-- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (allows comma-separated)
+- `setDropdownValidation()` - Helper: apply single-select dropdown (uses dynamic ranges with getLastRow())
+- `setMultiSelectValidation()` - Helper: apply multi-select dropdown (uses dynamic ranges)
 - `showMultiSelectDialog()` - Opens multi-select checkbox dialog
 - `applyMultiSelectValue()` - Saves multi-select values to cell
 - `onSelectionChangeMultiSelect()` - Auto-opens dialog on cell selection
@@ -211,6 +212,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `setupSatisfactionFormTrigger()` - Menu-driven trigger setup for survey submissions
 - Form URL Configuration:
   - `saveFormUrlsToConfig()` - Saves all form URLs (Grievance, Contact, Survey) to Config tab columns P, Q, AR
+  - `getFormUrlFromConfig(formType)` - Retrieves form URL from Config, falls back to default (NEW v2.2.0)
 - Google Drive Integration:
   - `setupDriveFolderForGrievance()` - Create folder for grievance
   - `getOrCreateDashboardFolder_()` - Get/create root folder
@@ -299,6 +301,50 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `verifyHiddenSheets()` - Verification and diagnostics
   - `refreshAllHiddenFormulas()` - Force recalculation and sync
 
+**DataIntegrity.gs** (~1000 lines) - Data Integrity, Batch Operations & Validation (NEW v2.2.0)
+- Batch Operations Utilities:
+  - `batchSetValues()` - Write multiple values in single operation
+  - `batchSetRowValues()` - Update multiple columns in one row efficiently
+  - `batchAppendRows()` - Add multiple rows at once (replaces slow appendRow loops)
+- Error Handling:
+  - `executeWithRetry()` - Retry with exponential backoff for transient failures
+  - `safeSheetOperation()` - Wrapped operations with error capture
+- Confirmation Dialogs:
+  - `getOrCreateSheetSafe()` - Confirms before deleting sheets with data
+  - `confirmDestructiveAction()` - Reusable confirmation helper
+- Dynamic Validation:
+  - `setDropdownValidationDynamic()` - Uses getLastRow() instead of fixed 100
+  - `setMultiSelectValidationDynamic()` - Dynamic multi-select validation
+- Duplicate ID Validation:
+  - `checkDuplicateMemberId()` - Check for duplicate Member IDs
+  - `validateMemberIdOnEdit()` - Real-time duplicate detection on edit
+- Ghost Validation (Orphaned Grievances):
+  - `findOrphanedGrievances()` - Find grievances with invalid Member IDs
+  - `highlightOrphanedGrievances()` - Visual highlighting of issues
+  - `runScheduledGhostValidation()` - Email alerts for data issues
+- Steward Load Balancing:
+  - `calculateStewardWorkload()` - Calculate load scores per steward
+  - `showStewardWorkloadDashboard()` - Visual dashboard with metrics
+  - `getStewardWithLowestWorkload()` - For auto-assignment
+- Self-Healing Config Tool:
+  - `findMissingConfigValues()` - Scan for values not in Config dropdowns
+  - `showConfigHealthCheck()` - UI for reviewing issues
+  - `autoFixMissingConfigValues()` - Auto-add missing values
+- Enhanced Audit Logging:
+  - `logIntegrityEvent()` - Comprehensive logging with timestamps
+  - `logGrievanceStatusChange()` - Status change tracking
+  - `logStewardAssignmentChange()` - Assignment change tracking
+  - `showAuditLogViewer()` - UI to view recent entries
+- Auto-Archive:
+  - `archiveClosedGrievances()` - Move old closed cases to archive
+  - `showArchiveDialog()` - UI with configurable age threshold
+  - `restoreFromArchive()` - Restore archived grievances
+- Visual Enhancements:
+  - `applyDeadlineHeatmap()` - Conditional formatting for deadline urgency
+  - `createMobileStewardPortal()` - Mobile-optimized view for field stewards
+- Menu Integration:
+  - `addDataIntegrityMenuItems()` - Adds "🛡️ Data Integrity" menu
+
 **ComfortViewFeatures.gs** (~400 lines) - Comfort View Accessibility & Theming
 - `showADHDControlPanel()` - Main Comfort View settings panel
 - `getADHDSettings()`, `saveADHDSettings()`, `resetADHDSettings()` - Settings management
@@ -361,7 +407,7 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `exportUndoHistoryToSheet()` - Export history to sheet
   - `createGrievanceSnapshot()`, `restoreFromSnapshot()` - Full snapshot backup
 
-**MobileQuickActions.gs** (~1164 lines) - Mobile Interface & Quick Actions
+**MobileQuickActions.gs** (~1900 lines) - Mobile Interface & Quick Actions
 - Mobile Interface:
   - `showMobileDashboard()` - Touch-optimized dashboard
   - `getMobileDashboardStats()` - Dashboard statistics
@@ -372,14 +418,21 @@ When the "Start Grievance" checkbox (column AE) is checked in Member Directory:
   - `showMyAssignedGrievances()` - View user's assigned cases
 - Quick Actions:
   - `showQuickActionsMenu()` - Context-aware quick actions
-  - `showMemberQuickActions()` - Quick actions for member row
-  - `showGrievanceQuickActions()` - Quick actions for grievance row
+  - `showMemberQuickActions()` - Quick actions for member row (enhanced v2.2.0)
+  - `showGrievanceQuickActions()` - Quick actions for grievance row (enhanced v2.2.0)
   - `quickUpdateGrievanceStatus()` - One-click status update
   - `composeEmailForMember()` - Email composition dialog
   - `sendQuickEmail()` - Send email via MailApp
   - `showMemberGrievanceHistory()` - Member's grievance history
   - `openGrievanceFormForMember()` - Start grievance for member
   - `syncSingleGrievanceToCalendar()` - Sync single grievance to calendar
+- Quick Action Email Functions (NEW v2.2.0):
+  - `emailSurveyToMember()` - Email satisfaction survey link to member
+  - `emailContactFormToMember()` - Email contact update form link to member
+  - `emailDashboardLinkToMember()` - Email dashboard access link to member
+  - `emailGrievanceStatusToMember()` - Email grievance status update to member
+  - `getMemberDataById_()` - Helper: lookup member data by ID
+  - `getOrgNameFromConfig_()` - Helper: get organization name from Config
 
 **WebApp.gs** (~510 lines) - Standalone Web App for Mobile Access
 - Web App Entry Point:
