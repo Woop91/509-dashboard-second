@@ -862,13 +862,12 @@ function onOpen() {
   // MENU 1: 509 Dashboard - Main user-facing menu
   // ============================================================================
   ui.createMenu('📊 509 Dashboard')
-    .addItem('📊 Smart Dashboard (Auto-Detect)', 'showSmartDashboard')
-    .addItem('🎯 Custom View', 'showInteractiveDashboardTab')
+    .addItem('📊 Dashboard', 'showInteractiveDashboardTab')
+    .addItem('📋 Dashboard Pend', 'showSmartDashboard')
     .addItem('📊 Member Satisfaction', 'showSatisfactionDashboard')
     .addItem('📱 Mobile Dashboard', 'showMobileDashboard')
     .addSeparator()
     .addItem('🔍 Search Members', 'searchMembers')
-    .addItem('⚡ Quick Actions', 'showQuickActionsMenu')
     .addItem('📱 Get Mobile App URL', 'showWebAppUrl')
     .addToUi();
 
@@ -11608,7 +11607,7 @@ function showSmartDashboard() {
   var html = HtmlService.createHtmlOutput(getSmartDashboardHtml())
     .setWidth(800)
     .setHeight(700);
-  SpreadsheetApp.getUi().showModalDialog(html, '📊 509 Dashboard');
+  SpreadsheetApp.getUi().showModalDialog(html, '📋 Dashboard Pend');
 }
 
 /**
@@ -11690,8 +11689,8 @@ function getSmartDashboardHtml() {
 
     // Header with dynamic device badge
     '<div class="header">' +
-    '<h1>📱 509 Dashboard</h1>' +
-    '<div class="subtitle">Union Grievance Management</div>' +
+    '<h1>📋 Dashboard Pend</h1>' +
+    '<div class="subtitle">Pending Actions & Quick Overview</div>' +
     '<div class="device-badge" id="deviceBadge">Detecting device...</div>' +
     '</div>' +
 
@@ -12167,7 +12166,7 @@ function showInteractiveDashboardTab() {
   var html = HtmlService.createHtmlOutput(getInteractiveDashboardHtml())
     .setWidth(900)
     .setHeight(750);
-  SpreadsheetApp.getUi().showModalDialog(html, '🎯 Custom View');
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Dashboard');
 }
 
 /**
@@ -12324,13 +12323,14 @@ function getInteractiveDashboardHtml() {
 
     // Header
     '<div class="header">' +
-    '<h1>🎯 Custom View</h1>' +
+    '<h1>📊 Dashboard</h1>' +
     '<div class="subtitle">Real-time union data at your fingertips</div>' +
     '</div>' +
 
-    // Tab Navigation (5 tabs now)
+    // Tab Navigation (6 tabs now - including My Cases)
     '<div class="tabs">' +
     '<button class="tab active" onclick="switchTab(\'overview\',this)" id="tab-overview"><span class="tab-icon">📊</span>Overview</button>' +
+    '<button class="tab" onclick="switchTab(\'mycases\',this)" id="tab-mycases"><span class="tab-icon">👤</span>My Cases</button>' +
     '<button class="tab" onclick="switchTab(\'members\',this)" id="tab-members"><span class="tab-icon">👥</span>Members</button>' +
     '<button class="tab" onclick="switchTab(\'grievances\',this)" id="tab-grievances"><span class="tab-icon">📋</span>Grievances</button>' +
     '<button class="tab" onclick="switchTab(\'analytics\',this)" id="tab-analytics"><span class="tab-icon">📈</span>Analytics</button>' +
@@ -12342,6 +12342,21 @@ function getInteractiveDashboardHtml() {
     '<div class="stats-grid" id="overview-stats"><div class="loading"><div class="spinner"></div><p>Loading stats...</p></div></div>' +
     '<div id="overview-actions" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px"></div>' +
     '<div id="overview-overdue" style="margin-top:15px"></div>' +
+    '</div>' +
+
+    // My Cases Tab - Shows steward's assigned grievances
+    '<div class="tab-content" id="content-mycases">' +
+    '<div class="section-card" style="background:linear-gradient(135deg,#f0f4ff,#e8f0fe);border-left:4px solid #7C3AED;margin-bottom:15px">' +
+    '<div style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">👤</span><div><strong>My Assigned Cases</strong><div style="font-size:12px;color:#666">Grievances where you are the assigned steward</div></div></div>' +
+    '</div>' +
+    '<div class="filter-bar" id="mycases-filter-bar">' +
+    '<button class="action-btn action-btn-primary active" data-filter="all" onclick="filterMyCasesStatus(\'all\',this)">All My Cases</button>' +
+    '<button class="action-btn action-btn-secondary" data-filter="Open" onclick="filterMyCasesStatus(\'Open\',this)">Open</button>' +
+    '<button class="action-btn action-btn-secondary" data-filter="Pending Info" onclick="filterMyCasesStatus(\'Pending Info\',this)">Pending</button>' +
+    '<button class="action-btn action-btn-danger" data-filter="Overdue" onclick="filterMyCasesStatus(\'Overdue\',this)">⚠️ Overdue</button>' +
+    '</div>' +
+    '<div id="mycases-stats" style="margin-bottom:15px"></div>' +
+    '<div class="list-container" id="mycases-list"><div class="loading"><div class="spinner"></div><p>Loading your cases...</p></div></div>' +
     '</div>' +
 
     // Members Tab
@@ -12398,7 +12413,7 @@ function getInteractiveDashboardHtml() {
 
     // JavaScript
     '<script>' +
-    'var allMembers=[];var allGrievances=[];var currentGrievanceFilter="all";var memberFilters={location:"all",unit:"all",officeDays:"all"};var resourceLinks={};' +
+    'var allMembers=[];var allGrievances=[];var myCases=[];var currentGrievanceFilter="all";var currentMyCasesFilter="all";var memberFilters={location:"all",unit:"all",officeDays:"all"};var resourceLinks={};' +
 
     // Error handler wrapper
     'function safeRun(fn,fallback){try{fn()}catch(e){console.error(e);if(fallback)fallback(e)}}' +
@@ -12410,6 +12425,7 @@ function getInteractiveDashboardHtml() {
     '    document.querySelectorAll(".tab-content").forEach(function(c){c.classList.remove("active")});' +
     '    btn.classList.add("active");' +
     '    document.getElementById("content-"+tabName).classList.add("active");' +
+    '    if(tabName==="mycases"&&myCases.length===0)loadMyCases();' +
     '    if(tabName==="members"&&allMembers.length===0)loadMembers();' +
     '    if(tabName==="grievances"&&allGrievances.length===0)loadGrievances();' +
     '    if(tabName==="analytics")loadAnalytics();' +
@@ -12459,6 +12475,71 @@ function getInteractiveDashboardHtml() {
     '    html+="</div></div>";' +
     '    document.getElementById("overview-overdue").innerHTML=html;' +
     '  }).getInteractiveGrievanceData();' +
+    '}' +
+
+    // Load my cases (steward's assigned grievances)
+    'function loadMyCases(){' +
+    '  google.script.run' +
+    '    .withSuccessHandler(function(data){myCases=data||[];renderMyCases(myCases);renderMyCasesStats(data)})'  +
+    '    .withFailureHandler(function(e){document.getElementById("mycases-list").innerHTML="<div class=\\"error-state\\">Failed to load your cases: "+e.message+"</div>"})' +
+    '    .getMyStewardCases();' +
+    '}' +
+
+    // Render my cases stats
+    'function renderMyCasesStats(data){' +
+    '  var total=data.length;' +
+    '  var open=data.filter(function(g){return g.status==="Open"}).length;' +
+    '  var pending=data.filter(function(g){return g.status==="Pending Info"}).length;' +
+    '  var overdue=data.filter(function(g){return g.isOverdue}).length;' +
+    '  var html="<div class=\\"stats-grid\\">";' +
+    '  html+="<div class=\\"stat-card\\"><div class=\\"stat-value\\">"+total+"</div><div class=\\"stat-label\\">Total Assigned</div></div>";' +
+    '  html+="<div class=\\"stat-card red\\"><div class=\\"stat-value\\">"+open+"</div><div class=\\"stat-label\\">Open</div></div>";' +
+    '  html+="<div class=\\"stat-card orange\\"><div class=\\"stat-value\\">"+pending+"</div><div class=\\"stat-label\\">Pending Info</div></div>";' +
+    '  if(overdue>0)html+="<div class=\\"stat-card\\" style=\\"border:2px solid #dc2626\\"><div class=\\"stat-value\\" style=\\"color:#dc2626\\">"+overdue+"</div><div class=\\"stat-label\\">⚠️ Overdue</div></div>";' +
+    '  html+="</div>";' +
+    '  document.getElementById("mycases-stats").innerHTML=html;' +
+    '}' +
+
+    // Render my cases list
+    'function renderMyCases(data){' +
+    '  var c=document.getElementById("mycases-list");' +
+    '  if(!data||data.length===0){c.innerHTML="<div class=\\"empty-state\\"><div class=\\"empty-state-icon\\">👤</div><p>No cases assigned to you</p><p style=\\"font-size:12px;color:#999;margin-top:8px\\">Cases where you are listed as the steward will appear here</p></div>";return}' +
+    '  c.innerHTML=data.map(function(g,i){' +
+    '    var badgeClass=g.isOverdue?"badge-overdue":(g.status==="Open"?"badge-open":(g.status==="Pending Info"?"badge-pending":"badge-closed"));' +
+    '    var statusText=g.isOverdue?"Overdue":g.status;' +
+    '    var priorityBorder=g.isOverdue?"border-left:4px solid #dc2626;":"";' +
+    '    return "<div class=\\"list-item\\" style=\\""+priorityBorder+"\\" onclick=\\"toggleMyCaseDetail(this)\\">' +
+    '      <div class=\\"list-item-header\\"><div class=\\"list-item-main\\"><div class=\\"list-item-title\\">"+g.id+" - "+g.memberName+"</div><div class=\\"list-item-subtitle\\">"+g.issueType+" • "+g.currentStep+"</div></div><div><span class=\\"badge "+badgeClass+"\\">"+statusText+"</span></div></div>' +
+    '      <div class=\\"list-item-details\\">' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📅 Filed:</span><span class=\\"detail-value\\">"+g.filedDate+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">⏰ Next Due:</span><span class=\\"detail-value\\">"+g.nextActionDue+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">⏱️ Days Open:</span><span class=\\"detail-value\\">"+g.daysOpen+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📍 Location:</span><span class=\\"detail-value\\">"+g.location+"</span></div>' +
+    '        <div class=\\"detail-row\\"><span class=\\"detail-label\\">📜 Articles:</span><span class=\\"detail-value\\">"+g.articles+"</span></div>' +
+    '        <div class=\\"detail-actions\\">' +
+    '          <button class=\\"action-btn action-btn-primary\\" onclick=\\"event.stopPropagation();google.script.run.showGrievanceQuickActions(\'"+g.id+"\')\\">⚡ Quick Actions</button>' +
+    '          <button class=\\"action-btn action-btn-secondary\\" onclick=\\"event.stopPropagation();google.script.run.navigateToGrievanceInSheet(\'"+g.id+"\')\\">📄 View in Sheet</button>' +
+    '        </div>' +
+    '      </div>' +
+    '    </div>"' +
+    '  }).join("");' +
+    '}' +
+
+    // Toggle my case detail
+    'function toggleMyCaseDetail(el){el.classList.toggle("expanded")}' +
+
+    // Filter my cases by status
+    'function filterMyCasesStatus(status,btn){' +
+    '  currentMyCasesFilter=status;' +
+    '  document.querySelectorAll("#mycases-filter-bar .action-btn").forEach(function(b){' +
+    '    b.classList.remove("active","action-btn-primary");' +
+    '    if(b.dataset.filter!=="Overdue")b.classList.add("action-btn-secondary");' +
+    '  });' +
+    '  if(btn){btn.classList.add("active");if(status!=="Overdue")btn.classList.add("action-btn-primary");btn.classList.remove("action-btn-secondary")}' +
+    '  var filtered=myCases;' +
+    '  if(status==="Overdue"){filtered=myCases.filter(function(g){return g.isOverdue})}' +
+    '  else if(status!=="all"){filtered=myCases.filter(function(g){return g.status===status})}' +
+    '  renderMyCases(filtered);' +
     '}' +
 
     // Load members with filters
