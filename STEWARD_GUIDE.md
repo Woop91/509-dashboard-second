@@ -3,6 +3,30 @@
 
 ---
 
+## 🆕 NEW: My Cases Tab - Track Your Assigned Grievances!
+
+**Access:** `📊 509 Dashboard > 📊 Dashboard > My Cases tab`
+
+The new **My Cases** tab lets you view all grievances assigned to YOU in one place:
+
+📊 **Quick Stats at a Glance:**
+- Total Cases assigned to you
+- Pending cases needing action
+- Cases currently In Progress
+
+🔍 **Easy Filtering:**
+- Filter by status (All, Open, Pending, Closed)
+- See the most urgent cases first
+
+📋 **Case Details:**
+- Click any case to expand and see full details
+- Member name, status, step, deadlines
+- Quick access to case information without navigating sheets
+
+**Pro Tip:** Check your My Cases tab at the start of each day to see what needs your attention! 🎯
+
+---
+
 ## 👏 Thank You for Being a Steward!
 
 Every time you update member information, you're **strengthening our union family**. Every blank field you fill in represents a member who's now better connected, better represented, and better protected. **You're making a real difference!**
@@ -482,8 +506,8 @@ Reach out to your fellow stewards or union leadership. We're all in this togethe
 
 ---
 
-**Last Updated**: December 2025
-**Version**: 3.28
+**Last Updated**: January 2026
+**Version**: 3.47
 **Created with**: Deep appreciation for steward dedication
 **Purpose**: Celebrating and supporting the backbone of Local 509 💙
 

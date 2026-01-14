@@ -40,13 +40,13 @@
 
 ### Tabs Are Now Ordered By Importance:
 
-1. **Custom View (Your Custom View)** ← START HERE
-   - YOUR personalized dashboard
-   - You control what you see
-   - Opens first every time
+1. **Dashboard** ← START HERE
+   - YOUR personalized dashboard with My Cases tab for stewards
+   - Overview, Grievances, Members, Analytics tabs
+   - Opens via menu: 📊 509 Dashboard > 📊 Dashboard
 
-2. **Dashboard**
-   - Quick overview
+2. **Dashboard Pend** (formerly Smart Dashboard)
+   - Quick overview with pending items
    - All key metrics
 
 3. **Member Directory**
@@ -64,9 +64,9 @@
 ## How to Use Your Dashboard (Optimized for Visual Comfort)
 
 ### Morning Routine (2 minutes)
-1. Open spreadsheet → **Custom View** tab opens automatically
+1. Open spreadsheet → Click **📊 509 Dashboard > 📊 Dashboard**
 2. Look at 4 big number cards at top
-3. Scan pie charts below
+3. Check **My Cases** tab if you're a steward
 4. Done! You're updated
 
 ### Quick Check (30 seconds)
@@ -130,7 +130,7 @@ When you open the tab, you'll see:
 ### Best Practices
 
 **DO:**
-- Start with **Custom View** tab (your custom view)
+- Start with **Dashboard** (your personalized view with My Cases tab)
 - Hide gridlines (cleaner look)
 - Use larger fonts if text feels overwhelming
 - Scan visual icons, not text
@@ -147,7 +147,7 @@ When you open the tab, you'll see:
 ### Focus Techniques
 
 **If You Feel Overwhelmed:**
-1. Close all tabs except **Custom View**
+1. Close all tabs except **Dashboard**
 2. Look ONLY at the 4 big numbers
 3. Take a breath
 4. That's enough!
@@ -241,7 +241,7 @@ When you open the tab, you'll see:
 ## FAQs
 
 ### Q: I feel overwhelmed. Where do I start?
-**A:** Open **Custom View** tab. Look at the 4 big numbers. That's it. You're done.
+**A:** Open **Dashboard** via menu. Look at the 4 big numbers. That's it. You're done.
 
 ### Q: The text is too small!
 **A:**
@@ -266,7 +266,7 @@ When you open the tab, you'll see:
 3. Click Apply
 
 ### Q: The dashboard has too much information!
-**A:** Use the **Custom View** tab and select ONLY the metrics you care about. Ignore everything else.
+**A:** Use the **Dashboard** and focus ONLY on the metrics you care about. Check the My Cases tab if you're a steward.
 
 ### Q: How do I remember to check this?
 **A:**
@@ -287,7 +287,7 @@ When you open the tab, you'll see:
 
 ### Remember by Color & Icon
 
-**Blue Circle** = Your Custom View
+**Blue Circle** = Your Dashboard
 - Your dashboard, your rules
 
 **Blue Chart** = Main Dashboard
@@ -308,7 +308,7 @@ When you open the tab, you'll see:
 
 ### Morning (2 min)
 1. Open spreadsheet
-2. **Custom View** tab opens automatically
+2. Click **📊 509 Dashboard > 📊 Dashboard**
 3. Look at 4 big numbers:
    - Total Members (blue)
    - Active Grievances (orange)
@@ -339,7 +339,7 @@ When you open the tab, you'll see:
 ### Quick Check on Phone
 1. Open Google Sheets app
 2. Open 509 Dashboard
-3. Tap **Custom View** tab
+3. Tap **📊 509 Dashboard > 📊 Dashboard**
 4. Pinch to zoom on big numbers
 5. Glance at colors
 6. Done!
@@ -386,7 +386,7 @@ When you open the tab, you'll see:
 ### How Others Use It
 
 **"The 4-Number Rule"**
-> "I only look at the 4 big numbers on Custom View tab. If they're all green/low, I'm done. Takes 10 seconds!" - Jamie, Union Rep
+> "I only look at the 4 big numbers on Dashboard. If they're all green/low, I'm done. Takes 10 seconds!" - Jamie, Union Rep
 
 **"No More Overwhelm"**
 > "Hiding gridlines was a game-changer. My brain can actually focus on the data now instead of getting lost in the lines." - Alex, Steward
@@ -443,7 +443,7 @@ When you open the tab, you'll see:
 509 DASHBOARD CHEAT SHEET
 
 MORNING:
-- Open Custom View tab
+- Open Dashboard via menu
 - Look at 4 numbers
 - Check if Overdue = 0
 - Done!
@@ -452,8 +452,8 @@ COLORS:
 Green = Good    Yellow = Watch    Red = Act
 
 TABS TO USE:
-Custom View = Daily check
-Dashboard = Full overview
+Dashboard = Daily check (+ My Cases for stewards)
+Dashboard Pend = Pending items overview
 
 NEED HELP?
 View → Comfort View → Comfort View Panel

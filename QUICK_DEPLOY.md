@@ -82,7 +82,7 @@ Your dashboard is fully operational with:
 - ✅ Member Directory (31 columns)
 - ✅ Grievance Log (34 columns)
 - ✅ 💼 Dashboard (12 analytics sections)
-- ✅ 🎯 Custom View (interactive metrics)
+- ✅ 📊 Dashboard (interactive metrics with My Cases tab for stewards)
 - ✅ 📊 Member Satisfaction (survey tracking)
 - ✅ 💡 Feedback & Development (bug/feature tracking)
 - ✅ ✅ Function Checklist (function reference)

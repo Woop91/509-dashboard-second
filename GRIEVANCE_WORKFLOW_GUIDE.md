@@ -239,7 +239,7 @@ All grievance workflow features are in:
 
 1. **Keep Contact Info Updated**: Regularly check that steward contact info in Config is current
 2. **Review Submissions**: Check the Grievance Log after form submissions to verify accuracy
-3. **Use Custom Views**: Set up the Interactive Dashboard to monitor your grievances
+3. **Use Dashboard & My Cases**: Open Dashboard via menu and check the My Cases tab to monitor your assigned grievances
 4. **Email Multiple Recipients**: You can send PDFs to multiple people at once (comma-separated emails)
 5. **Train Members**: Show members how to access the grievance form if they need to file directly
 

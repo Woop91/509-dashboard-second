@@ -4,14 +4,15 @@
 
 There are **two** Interactive Dashboard options available:
 
-### 1. 🎯 Modal Popup Dashboard (⚠️ PROTECTED)
+### 1. 📊 Dashboard Modal Popup (⚠️ PROTECTED)
 
-**Menu:** `👤 Dashboard > 🎯 Interactive Dashboard`
+**Menu:** `📊 509 Dashboard > 📊 Dashboard`
 
 A **popup modal dialog** with a tabbed interface featuring:
 - **Overview Tab** - Quick stats and metrics at a glance
-- **Members Tab** - Searchable member directory with filtering
+- **My Cases Tab** (NEW) - Stewards can view their assigned grievances with stats and filtering
 - **Grievances Tab** - Status-filtered grievance list
+- **Members Tab** - Searchable member directory with filtering
 - **Analytics Tab** - Bar charts for status distribution and categories
 
 > ⚠️ **PROTECTED CODE:** This feature is user-approved and should not be modified.
@@ -31,17 +32,18 @@ A **customizable spreadsheet tab** that lets you:
 
 ---
 
-## 🎯 Modal Popup Dashboard (Protected)
+## 📊 Dashboard Modal Popup (Protected)
 
-Access via: `👤 Dashboard > 🎯 Interactive Dashboard`
+Access via: `📊 509 Dashboard > 📊 Dashboard`
 
-This opens a popup with 4 tabs:
+This opens a popup with 5 tabs:
 
 | Tab | Features |
 |-----|----------|
 | **Overview** | Total members, stewards, grievance counts, win rate |
-| **Members** | Searchable list, click to view details |
+| **My Cases** (NEW) | Steward's assigned grievances with stats and status filtering |
 | **Grievances** | Status filter buttons, search, click for details |
+| **Members** | Searchable list, click to view details |
 | **Analytics** | Bar charts, location/unit breakdowns, resolution stats |
 
 **Mobile-Friendly:** Touch-optimized with responsive design.
