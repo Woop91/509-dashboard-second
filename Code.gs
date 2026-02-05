@@ -22,6 +22,9 @@
 function onOpen() {
   var ui = SpreadsheetApp.getUi();
 
+  // Ensure hidden sheets stay hidden (fixes mobile visibility issue)
+  ensureHiddenSheetsAreHidden();
+
   // ============================================================================
   // MENU 1: 509 Dashboard - Main user-facing menu
   // ============================================================================
@@ -2620,6 +2623,35 @@ function DIAGNOSE_SETUP() {
 
   // Also log it
   Logger.log(report.join('\n'));
+}
+
+// ============================================================================
+// ENSURE HIDDEN SHEETS STAY HIDDEN
+// ============================================================================
+
+/**
+ * Ensures all hidden calculation sheets remain hidden
+ * Called on spreadsheet open to fix mobile visibility issue
+ * Google Sheets mobile app sometimes shows hidden sheets - this re-hides them
+ */
+function ensureHiddenSheetsAreHidden() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var hiddenSheets = [
+    SHEETS.GRIEVANCE_CALC,
+    SHEETS.GRIEVANCE_FORMULAS,
+    SHEETS.MEMBER_LOOKUP,
+    SHEETS.STEWARD_CONTACT_CALC,
+    SHEETS.DASHBOARD_CALC,
+    SHEETS.STEWARD_PERFORMANCE_CALC,
+    SHEETS.AUDIT_LOG
+  ];
+
+  hiddenSheets.forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (sheet && !sheet.isSheetHidden()) {
+      sheet.hideSheet();
+    }
+  });
 }
 
 // ============================================================================
